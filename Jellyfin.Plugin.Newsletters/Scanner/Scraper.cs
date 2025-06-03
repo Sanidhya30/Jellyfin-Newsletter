@@ -259,7 +259,7 @@ public class Scraper
                         {
                             string url = SetImageURL(currFileObj);
 
-                            if ((url == "429") || (url == "ERR"))
+                            if ((url == "429") || (url == "ERR") || string.IsNullOrEmpty(url))
                             {
                                 logger.Debug("URL is not attainable at this time. Stopping scan.. Will resume during next scan.");
                                 logger.Debug("Not processing current file: " + currFileObj.Filename);

@@ -41,103 +41,119 @@ public class PosterImageHandler
 
     public string FetchImagePoster(JsonFileObj item)
     {
-        WebClient wc = new();
         string apiKey = "d63d13c187e20a4d436a9fd842e7e39c";
+        const int maxRetries = 5;
+        const int retryDelayMs = 1000;
 
-        try
+        foreach (var kvp in item.ExternalIds)
         {
-            foreach (var kvp in item.ExternalIds)
+            var externalIdName = kvp.Key;
+            var externalIdValue = kvp.Value;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                var externalIdName = kvp.Key;
-                var externalIdValue = kvp.Value;
-                string url = string.Empty;
+                WebClient wc = new();
 
-                logger.Debug($"Trying to fetch TMDB poster path using {externalIdName} => {externalIdValue}");
+                // We can add proxy support here if needed, as tmdb is blocked in some regions.
+                // Currently we have the retry logic in place to handle rate-limiting and other issues.
 
-                if (externalIdName == "tmdb")
+                // Setup proxy (change address and port as needed)
+                // WebProxy proxy = new WebProxy("http://192.168.1.63:3128"); 
+
+                // If your proxy requires authentication, use:
+                // proxy.Credentials = new NetworkCredential("proxyUser", "proxyPassword");
+
+                // wc.Proxy = proxy;
+
+                try
                 {
-                    if (item.Type == "Series")
+                    string url = string.Empty;
+
+                    logger.Debug($"Trying to fetch TMDB poster path using {externalIdName} => {externalIdValue}");
+
+                    if (externalIdName == "tmdb")
                     {
-                        url = $"https://api.themoviedb.org/3/tv/{externalIdValue}?api_key={apiKey}";
+                        if (item.Type == "Series")
+                        {
+                            url = $"https://api.themoviedb.org/3/tv/{externalIdValue}?api_key={apiKey}";
+                        }
+                        else if (item.Type == "Movie")
+                        {
+                            url = $"https://api.themoviedb.org/3/movie/{externalIdValue}?api_key={apiKey}";
+                        }
                     }
-                    else if (item.Type == "Movie")
+                    else
                     {
-                        url = $"https://api.themoviedb.org/3/movie/{externalIdValue}?api_key={apiKey}";
+                        url = $"https://api.themoviedb.org/3/find/{externalIdValue}?external_source={externalIdName}&api_key={apiKey}";
                     }
-                }
-                else
-                {
-                    url = $"https://api.themoviedb.org/3/find/{externalIdValue}?external_source={externalIdName}&api_key={apiKey}";
-                }
 
-                // TMDB api has rate-limiting which is 50 requests/second (https://developer.themoviedb.org/docs/rate-limiting)
-                // This is a very poor attempt for now, we can add a better rate limit logic in future :)
-                // Rate-limiting logic
-                lock (RateLimitLock)
-                {
-                    var now = DateTime.UtcNow;
-                    var timeSinceLast = now - lastRequestTime;
-                    if (timeSinceLast < MinInterval)
+                    // Rate-limiting
+                    lock (RateLimitLock)
                     {
-                        logger.Debug($"Sleeping for {MinInterval - timeSinceLast}");
-                        Thread.Sleep(MinInterval - timeSinceLast);
+                        var now = DateTime.UtcNow;
+                        var timeSinceLast = now - lastRequestTime;
+                        if (timeSinceLast < MinInterval)
+                        {
+                            logger.Debug($"Sleeping for {MinInterval - timeSinceLast}");
+                            Thread.Sleep(MinInterval - timeSinceLast);
+                        }
+
+                        lastRequestTime = DateTime.UtcNow;
                     }
 
-                    lastRequestTime = DateTime.UtcNow;
-                }
+                    string response = wc.DownloadString(url);
+                    logger.Debug("TMDB Response: " + response);
 
-                string response = wc.DownloadString(url);
-                logger.Debug("TMDB Response: " + response);
+                    JObject json = JObject.Parse(response);
+                    JToken? posterPathToken = null;
 
-                JObject json = JObject.Parse(response);
-
-                JToken? posterPathToken = null;
-
-                if (externalIdName == "tmdb")
-                {
-                    posterPathToken = json["poster_path"];
-                }
-                else
-                {
-                    if (item.Type == "Series")
+                    if (externalIdName == "tmdb")
                     {
-                        posterPathToken = json["tv_results"]?.FirstOrDefault()?["poster_path"];
+                        posterPathToken = json["poster_path"];
                     }
-                    else if (item.Type == "Movie")
+                    else
                     {
-                        posterPathToken = json["movie_results"]?.FirstOrDefault()?["poster_path"];
+                        if (item.Type == "Series")
+                        {
+                            posterPathToken = json["tv_results"]?.FirstOrDefault()?["poster_path"];
+                        }
+                        else if (item.Type == "Movie")
+                        {
+                            posterPathToken = json["movie_results"]?.FirstOrDefault()?["poster_path"];
+                        }
+                    }
+
+                    if (posterPathToken != null)
+                    {
+                        string posterPath = posterPathToken.ToString();
+                        logger.Debug("TMDB Poster Path: " + posterPath);
+                        return "https://image.tmdb.org/t/p/original" + posterPath;
+                    }
+                    else
+                    {
+                        logger.Debug($"TMDB Poster path not found for {externalIdName} => {externalIdValue}");
+                        break; // Don't retry for 404-like situations
                     }
                 }
+                catch (WebException e)
+                {
+                    logger.Warn($"[Attempt {attempt}] Failed for {externalIdName} => {externalIdValue}. Status: {e.Status}");
 
-                if (posterPathToken != null)
-                {
-                    string posterPath = posterPathToken.ToString();
-                    logger.Debug("TMDB Poster Path: " + posterPath);
-                    return "https://image.tmdb.org/t/p/original" + posterPath;
-                }
-                else
-                {
-                    logger.Debug($"TMDB Poster path not found for {externalIdName} => {externalIdValue}");
-                    logger.Debug("Trying the next...");
+                    if (attempt == maxRetries)
+                    {
+                        logger.Debug("Max retry attempts reached for this external ID.");
+                        logger.Debug("WebClient Return STATUS: " + e.Status);
+                        logger.Debug(e.ToString().Split(")")[0].Split("(")[1]);
+                    }
+
+                    Thread.Sleep(retryDelayMs);
                 }
             }
 
-            return string.Empty;
+            logger.Debug("Trying the next external ID...");
         }
-        catch (WebException e)
-        {
-            logger.Debug("WebClient Return STATUS: " + e.Status);
-            logger.Debug(e.ToString().Split(")")[0].Split("(")[1]);
-            try
-            {
-                return e.ToString().Split(")")[0].Split("(")[1];
-            }
-            catch (Exception ex)
-            {
-                logger.Error("Error caught while trying to parse webException error: " + ex);
-                return "ERR";
-            }
-        }
+
+        return string.Empty;
     }
 
     // private string UploadToImgur(string posterFilePath)
