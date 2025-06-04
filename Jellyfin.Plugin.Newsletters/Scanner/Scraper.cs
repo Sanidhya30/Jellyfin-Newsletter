@@ -220,20 +220,40 @@ public class Scraper
                 currFileObj.RunTime = (int)((float)episode.RunTimeTicks / 10000 / 60000);
                 currFileObj.OfficialRating = series.OfficialRating;
                 currFileObj.CommunityRating = series.CommunityRating;
+                currFileObj.ItemID = series.Id.ToString("N");
+                
+                if (episode.IndexNumber is int && episode.IndexNumber is not null)
+                {
+                    currFileObj.Episode = (int)episode.IndexNumber;
+                }
 
-                if (!InDatabase("CurrRunData", currFileObj.Filename.Replace("'", string.Empty, StringComparison.Ordinal)) && 
-                    !InDatabase("CurrNewsletterData", currFileObj.Filename.Replace("'", string.Empty, StringComparison.Ordinal)) && 
-                    !InDatabase("ArchiveData", currFileObj.Filename.Replace("'", string.Empty, StringComparison.Ordinal)))
+                if (type == "Series")
+                {
+                    logger.Debug("Parsing Season Number");
+                    try
+                    {
+                        currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
+                        logger.Debug(e);
+                        logger.Warn("Setting Season number to 0 (SPECIALS)");
+                        currFileObj.Season = 0;
+                    }
+                }
+                else if (type == "Movie")
+                {
+                    currFileObj.Season = 0;
+                }
+
+                if (!InDatabase("CurrRunData", currFileObj.ItemID.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("CurrNewsletterData", currFileObj.ItemID.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("ArchiveData", currFileObj.ItemID.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
                 {
                     try
                     {
-                        if (episode.IndexNumber is int && episode.IndexNumber is not null)
-                        {
-                            currFileObj.Episode = (int)episode.IndexNumber;
-                        }
-
                         currFileObj.SeriesOverview = series.Overview;
-                        currFileObj.ItemID = series.Id.ToString("N");
 
                         logger.Debug("Checking if Primary Image Exists for series");
                         if (series.PrimaryImagePath != null)
@@ -267,26 +287,6 @@ public class Scraper
                             }
 
                             currFileObj.ImageURL = url;
-                        }
-                        
-                        if (type == "Series")
-                        {
-                            logger.Debug("Parsing Season Number");
-                            try
-                            {
-                                currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
-                            }
-                            catch (Exception e)
-                            {
-                                logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
-                                logger.Debug(e);
-                                logger.Warn("Setting Season number to 0 (SPECIALS)");
-                                currFileObj.Season = 0;
-                            }
-                        }
-                        else if (type == "Movie")
-                        {
-                            currFileObj.Season = 0;
                         }
                     }
                     catch (Exception e)
@@ -361,9 +361,17 @@ public class Scraper
         return currFileObj;
     }
 
-    private bool InDatabase(string tableName, string fileName)
+    // Instead of checking the fileName, we check the using the item ID,
+    // and in case of series we check the season and episode number as well.
+    // There are cases in which file names might change due to upgrade of the library.
+    private bool InDatabase(string tableName, string itemId, int season = 0, int episode = 0)
     {
-        foreach (var row in db.Query("SELECT COUNT(*) FROM " + tableName + " WHERE Filename='" + fileName + "';"))
+        if (string.IsNullOrEmpty(itemId) || string.IsNullOrEmpty(tableName))
+        {
+            return false;
+        }
+
+        foreach (var row in db.Query("SELECT COUNT(*) FROM " + tableName + " WHERE ItemID='" + itemId + "' AND Season=" + season + " AND Episode=" + episode + ";"))
         {
             if (row is not null)
             {
