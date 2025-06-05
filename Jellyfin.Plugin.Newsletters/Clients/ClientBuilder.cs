@@ -90,7 +90,7 @@ public class ClientBuilder
 
             void AddNewSeason()
             {
-                // Logger.Debug("AddNewSeason()");
+                Logger.Debug("AddNewSeason()");
                 currSeriesDetailsObj.Season = currSeason = item.Season;
                 newSeason = false;
                 tempEpsList.Add(item.Episode);
@@ -112,7 +112,7 @@ public class ClientBuilder
                 {
                     Logger.Debug("tempEpsList is populated");
                     tempEpsList.Sort();
-                    if (IsIncremental(tempEpsList))
+                    if (IsIncremental(tempEpsList) && tempEpsList.Count > 1)
                     {
                         currSeriesDetailsObj.EpisodeRange = tempEpsList.First() + " - " + tempEpsList.Last();
                     }
@@ -228,10 +228,6 @@ public class ClientBuilder
             {
                 EndOfSeason();
                 AddNewSeason();
-            }
-            else if (count == list_len)
-            {
-                EndOfSeason();
             }
             else
             {

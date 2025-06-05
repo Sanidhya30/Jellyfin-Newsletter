@@ -117,16 +117,25 @@ public class SQLiteDatabase
                 new_cols.Add("OfficialRating", "TEXT");
                 new_cols.Add("CommunityRating", "REAL");
 
+                var existingColumns = GetTableColumns(table);
+
                 foreach (KeyValuePair<string, string> col in new_cols)
                 {
-                    try
+                    if (!existingColumns.Contains(col.Key))
                     {
-                        logger.Debug($"Adding Table Columns for DB updates...");
-                        ExecuteSQL($"ALTER TABLE {table} ADD COLUMN {col.Key} {col.Value};");
+                        try
+                        {
+                            logger.Debug($"Adding column {col.Key} to table {table}...");
+                            ExecuteSQL($"ALTER TABLE {table} ADD COLUMN {col.Key} {col.Value};");
+                        }
+                        catch (SQLiteException sle)
+                        {
+                            logger.Warn(sle);
+                        }
                     }
-                    catch (SQLiteException sle)
+                    else
                     {
-                        logger.Warn(sle);
+                        logger.Debug($"Column {col.Key} already exists in table {table}, skipping.");
                     }
                 }
             }
@@ -163,5 +172,20 @@ public class SQLiteDatabase
             {
                 logger.Debug("Database lock file does not exist. Database is not use: " + dbLockPath);
             }
+        }
+
+        private List<string> GetTableColumns(string tableName)
+        {
+            var columns = new List<string>();
+            var query = $"PRAGMA table_info({tableName});";
+            
+            foreach (var row in _db.Query(query))
+            {
+                // Column name is at index 1
+                string colName = row[1].ToString();
+                columns.Add(colName);
+            }
+
+            return columns;
         }
     }
