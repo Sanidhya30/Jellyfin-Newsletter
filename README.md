@@ -87,7 +87,7 @@ Manifest is up an running! You can now import the manifest in Jellyfin and this 
 - Go to the "Repositories" tab
 - Click the '+' to add a new Repository
   - Give it a name (i.e. Newsletters)
-  - In "Repository URL," put "https://raw.githubusercontent.com/Cloud9Developer/Jellyfin-Newsletter-Plugin/master/manifest.json"
+  - In "Repository URL," put "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/manifest.json"
   - Click "Save"
 - You should now see Jellyfin Newsletters in Catalog under the Category "Newsletters"
 - Once installed, restart Jellyfin to activate the plugin and configure your settings for the plugin
