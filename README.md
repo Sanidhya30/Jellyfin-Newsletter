@@ -1,3 +1,12 @@
+# Note
+
+This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https://github.com/Cloud9Developer/Jellyfin-Newsletter-Plugin), originally created by [Cloud9Developer](https://github.com/Cloud9Developer). As the original repository is no longer actively maintained, this introduces several improvements, new features, and bug fixes, including:
+
+* Discord Webhook Support
+* Removal of Imgur and Local Hosted Image Dependencies
+* TMDB Integration
+* Multiple Bug Fixes and Enhancements
+
 # Jellyfin Newsletter Plugin
 
 <p align='center'>
