@@ -71,6 +71,6 @@ zip -r ${zipfile} ./Templates
 echo "----------"
 echo "Contents in ${zipfile}"
 unzip -l ${zipfile}
-sed -i "s/github.com\/Cloud9Developer\/Jellyfin-Newsletter-Plugin\/releases\/download\/newsletters/github.com\/Cloud9Developer\/Jellyfin-Newsletter-Plugin\/releases\/download\/v${VERSION}/g" manifest.json
+sed -i "s/github.com\/Sanidhya30\/Jellyfin-Newsletter\/releases\/download\/newsletters/github.com\/Sanidhya30\/Jellyfin-Newsletter\/releases\/download\/v${VERSION}/g" manifest.json
 md5sum ${zipfile}
 exit $rc

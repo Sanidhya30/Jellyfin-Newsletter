@@ -62,7 +62,7 @@ public class EmbedBuilder : ClientBuilder
                         fieldsList.Add(new EmbedField
                         {
                             name = "PG rating",
-                            value = item.OfficialRating,
+                            value = !string.IsNullOrEmpty(item.OfficialRating) ? item.OfficialRating : "N/A",
                             inline = true
                         });
                     }
