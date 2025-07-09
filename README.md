@@ -100,7 +100,7 @@ Manifest is up an running! You can now import the manifest in Jellyfin and this 
 
 ### Server URL
 
-- The server url of your jellyfin. This will be used if JF Hosting is selected for images and for direct link in discord webhook.
+- The server url of your jellyfin. This will be used for direct link in discord webhook.
 
 ### Library Selection
 
