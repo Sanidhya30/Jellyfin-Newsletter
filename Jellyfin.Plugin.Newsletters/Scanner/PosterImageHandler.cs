@@ -41,119 +41,121 @@ public class PosterImageHandler
 
     public string FetchImagePoster(JsonFileObj item)
     {
-        string apiKey = "d63d13c187e20a4d436a9fd842e7e39c";
-        const int maxRetries = 5;
-        const int retryDelayMs = 1000;
+        return item.PosterPath;
+        // return "data:image/jpeg;base64, " + Convert.ToBase64String(File.ReadAllBytes(item.PosterPath));
+        // string apiKey = "d63d13c187e20a4d436a9fd842e7e39c";
+        // const int maxRetries = 5;
+        // const int retryDelayMs = 1000;
 
-        foreach (var kvp in item.ExternalIds)
-        {
-            var externalIdName = kvp.Key;
-            var externalIdValue = kvp.Value;
+        // foreach (var kvp in item.ExternalIds)
+        // {
+        //     var externalIdName = kvp.Key;
+        //     var externalIdValue = kvp.Value;
 
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
-            {
-                WebClient wc = new();
+        //     for (int attempt = 1; attempt <= maxRetries; attempt++)
+        //     {
+        //         WebClient wc = new();
 
-                // We can add proxy support here if needed, as tmdb is blocked in some regions.
-                // Currently we have the retry logic in place to handle rate-limiting and other issues.
+        //         // We can add proxy support here if needed, as tmdb is blocked in some regions.
+        //         // Currently we have the retry logic in place to handle rate-limiting and other issues.
 
-                // Setup proxy (change address and port as needed)
-                // WebProxy proxy = new WebProxy("http://192.168.1.63:3128"); 
+        //         // Setup proxy (change address and port as needed)
+        //         // WebProxy proxy = new WebProxy("http://192.168.1.63:3128"); 
 
-                // If your proxy requires authentication, use:
-                // proxy.Credentials = new NetworkCredential("proxyUser", "proxyPassword");
+        //         // If your proxy requires authentication, use:
+        //         // proxy.Credentials = new NetworkCredential("proxyUser", "proxyPassword");
 
-                // wc.Proxy = proxy;
+        //         // wc.Proxy = proxy;
 
-                try
-                {
-                    string url = string.Empty;
+        //         try
+        //         {
+        //             string url = string.Empty;
 
-                    logger.Debug($"Trying to fetch TMDB poster path using {externalIdName} => {externalIdValue}");
+        //             logger.Debug($"Trying to fetch TMDB poster path using {externalIdName} => {externalIdValue}");
 
-                    if (externalIdName == "tmdb")
-                    {
-                        if (item.Type == "Series")
-                        {
-                            url = $"https://api.themoviedb.org/3/tv/{externalIdValue}?api_key={apiKey}";
-                        }
-                        else if (item.Type == "Movie")
-                        {
-                            url = $"https://api.themoviedb.org/3/movie/{externalIdValue}?api_key={apiKey}";
-                        }
-                    }
-                    else
-                    {
-                        url = $"https://api.themoviedb.org/3/find/{externalIdValue}?external_source={externalIdName}&api_key={apiKey}";
-                    }
+        //             if (externalIdName == "tmdb")
+        //             {
+        //                 if (item.Type == "Series")
+        //                 {
+        //                     url = $"https://api.themoviedb.org/3/tv/{externalIdValue}?api_key={apiKey}";
+        //                 }
+        //                 else if (item.Type == "Movie")
+        //                 {
+        //                     url = $"https://api.themoviedb.org/3/movie/{externalIdValue}?api_key={apiKey}";
+        //                 }
+        //             }
+        //             else
+        //             {
+        //                 url = $"https://api.themoviedb.org/3/find/{externalIdValue}?external_source={externalIdName}&api_key={apiKey}";
+        //             }
 
-                    // Rate-limiting
-                    lock (RateLimitLock)
-                    {
-                        var now = DateTime.UtcNow;
-                        var timeSinceLast = now - lastRequestTime;
-                        if (timeSinceLast < MinInterval)
-                        {
-                            logger.Debug($"Sleeping for {MinInterval - timeSinceLast}");
-                            Thread.Sleep(MinInterval - timeSinceLast);
-                        }
+        //             // Rate-limiting
+        //             lock (RateLimitLock)
+        //             {
+        //                 var now = DateTime.UtcNow;
+        //                 var timeSinceLast = now - lastRequestTime;
+        //                 if (timeSinceLast < MinInterval)
+        //                 {
+        //                     logger.Debug($"Sleeping for {MinInterval - timeSinceLast}");
+        //                     Thread.Sleep(MinInterval - timeSinceLast);
+        //                 }
 
-                        lastRequestTime = DateTime.UtcNow;
-                    }
+        //                 lastRequestTime = DateTime.UtcNow;
+        //             }
 
-                    string response = wc.DownloadString(url);
-                    logger.Debug("TMDB Response: " + response);
+        //             string response = wc.DownloadString(url);
+        //             logger.Debug("TMDB Response: " + response);
 
-                    JObject json = JObject.Parse(response);
-                    JToken? posterPathToken = null;
+        //             JObject json = JObject.Parse(response);
+        //             JToken? posterPathToken = null;
 
-                    if (externalIdName == "tmdb")
-                    {
-                        posterPathToken = json["poster_path"];
-                    }
-                    else
-                    {
-                        if (item.Type == "Series")
-                        {
-                            posterPathToken = json["tv_results"]?.FirstOrDefault()?["poster_path"];
-                        }
-                        else if (item.Type == "Movie")
-                        {
-                            posterPathToken = json["movie_results"]?.FirstOrDefault()?["poster_path"];
-                        }
-                    }
+        //             if (externalIdName == "tmdb")
+        //             {
+        //                 posterPathToken = json["poster_path"];
+        //             }
+        //             else
+        //             {
+        //                 if (item.Type == "Series")
+        //                 {
+        //                     posterPathToken = json["tv_results"]?.FirstOrDefault()?["poster_path"];
+        //                 }
+        //                 else if (item.Type == "Movie")
+        //                 {
+        //                     posterPathToken = json["movie_results"]?.FirstOrDefault()?["poster_path"];
+        //                 }
+        //             }
 
-                    if (posterPathToken != null)
-                    {
-                        string posterPath = posterPathToken.ToString();
-                        logger.Debug("TMDB Poster Path: " + posterPath);
-                        return "https://image.tmdb.org/t/p/original" + posterPath;
-                    }
-                    else
-                    {
-                        logger.Debug($"TMDB Poster path not found for {externalIdName} => {externalIdValue}");
-                        break; // Don't retry for 404-like situations
-                    }
-                }
-                catch (WebException e)
-                {
-                    logger.Warn($"[Attempt {attempt}] Failed for {externalIdName} => {externalIdValue}. Status: {e.Status}");
+        //             if (posterPathToken != null)
+        //             {
+        //                 string posterPath = posterPathToken.ToString();
+        //                 logger.Debug("TMDB Poster Path: " + posterPath);
+        //                 return "https://image.tmdb.org/t/p/original" + posterPath;
+        //             }
+        //             else
+        //             {
+        //                 logger.Debug($"TMDB Poster path not found for {externalIdName} => {externalIdValue}");
+        //                 break; // Don't retry for 404-like situations
+        //             }
+        //         }
+        //         catch (WebException e)
+        //         {
+        //             logger.Warn($"[Attempt {attempt}] Failed for {externalIdName} => {externalIdValue}. Status: {e.Status}");
 
-                    if (attempt == maxRetries)
-                    {
-                        logger.Debug("Max retry attempts reached for this external ID.");
-                        logger.Debug("WebClient Return STATUS: " + e.Status);
-                        logger.Debug(e.ToString().Split(")")[0].Split("(")[1]);
-                    }
+        //             if (attempt == maxRetries)
+        //             {
+        //                 logger.Debug("Max retry attempts reached for this external ID.");
+        //                 logger.Debug("WebClient Return STATUS: " + e.Status);
+        //                 logger.Debug(e.ToString().Split(")")[0].Split("(")[1]);
+        //             }
 
-                    Thread.Sleep(retryDelayMs);
-                }
-            }
+        //             Thread.Sleep(retryDelayMs);
+        //         }
+        //     }
 
-            logger.Debug("Trying the next external ID...");
-        }
+        //     logger.Debug("Trying the next external ID...");
+        // }
 
-        return string.Empty;
+        // return string.Empty;
     }
 
     // private string UploadToImgur(string posterFilePath)
