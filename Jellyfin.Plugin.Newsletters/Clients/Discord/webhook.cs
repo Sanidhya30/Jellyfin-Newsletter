@@ -111,10 +111,37 @@ public class DiscordWebhook : Client, IClient, IDisposable
                 var embedTuples = builder.BuildEmbedsFromNewsletterData(ApplicationHost.SystemId);
 
                 // Discord webhook does not support more than 10 embeds per message
-                // Therefore, we're sending in chunks with atmost 10 embed in a payload
-                for (int i = 0; i < embedTuples.Count; i += 1)
+                // Therefore, we're sending in chunks with atmost 10 embed in a payload.
+                // For attachmenents, we will also send in chunks to avoid exceeding the limit i.e. 10 MB per message.
+                int maxEmbedsPerMessage = 10;
+                long maxTotalImageSize = 10 * 1024 * 1024; // 10MB
+
+                int index = 0;
+
+                while (index < embedTuples.Count)
                 {
-                    var chunk = embedTuples.Skip(i).Take(1).ToList();
+                    var chunk = new List<(Embed embed, string imageFullPath, string uniqueFileName)>();
+                    long currentTotalSize = 0;
+
+                    while (index < embedTuples.Count && chunk.Count < maxEmbedsPerMessage)
+                    {
+                        var tuple = embedTuples[index];
+                        long imageSize = 0;
+
+                        if (!string.IsNullOrEmpty(tuple.imageFullPath) && System.IO.File.Exists(tuple.imageFullPath))
+                        {
+                            var fileInfo = new FileInfo(tuple.imageFullPath);
+                            imageSize = fileInfo.Length;
+                        }
+
+                        if (currentTotalSize + imageSize > maxTotalImageSize)
+                            break;
+
+                        chunk.Add(tuple);
+                        currentTotalSize += imageSize;
+                        index++;
+                    }
+
                     var embeds = chunk.Select(t => t.embed).ToList();
 
                     var payload = new DiscordPayload
@@ -124,30 +151,19 @@ public class DiscordWebhook : Client, IClient, IDisposable
                     };
 
                     var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
-                    Logger.Debug("Sending discord message in chunks: " + jsonPayload);
+                    Logger.Debug("Sending discord message with payload: " + jsonPayload);
 
                     var multipartContent = new MultipartFormDataContent();
-
                     multipartContent.Add(new StringContent(jsonPayload, Encoding.UTF8, "application/json"), "payload_json");
 
-                    // Add the image attachments used in this chunk
-                    foreach (var (embed, imagePath, uniqueFileName) in chunk)
+                    foreach (var (embed, imageFullPath, uniqueFileName) in chunk)
                     {
-                        if (imagePath != null)
+                        if (!string.IsNullOrEmpty(imageFullPath) && System.IO.File.Exists(imageFullPath))
                         {
-                            if (System.IO.File.Exists(imagePath))
-                            {
-                                var imageBytes = System.IO.File.ReadAllBytes(imagePath);
-                                var fileContent = new ByteArrayContent(imageBytes);
-                                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-
-                                // Important: the name and fileName must match the attachment name used in the embed
-                                multipartContent.Add(fileContent, uniqueFileName, uniqueFileName);
-                            }
-                            else
-                            {
-                                Logger.Warn($"Thumbnail file not found: {imagePath}");
-                            }
+                            var imageBytes = System.IO.File.ReadAllBytes(imageFullPath);
+                            var fileContent = new ByteArrayContent(imageBytes);
+                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                            multipartContent.Add(fileContent, uniqueFileName, uniqueFileName);
                         }
                     }
 
