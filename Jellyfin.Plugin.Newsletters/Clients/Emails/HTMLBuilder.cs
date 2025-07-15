@@ -1,7 +1,11 @@
 #pragma warning disable 1591, SYSLIB0014, CA1002, CS0162, SA1005 // remove SA1005 for cleanup
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
 using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
 using Newtonsoft.Json;
@@ -90,10 +94,11 @@ public class HtmlBuilder : ClientBuilder
         return htmlObj;
     }
 
-    public string BuildDataHtmlStringFromNewsletterData()
+    public (string htmlString, List<(MemoryStream imageStream, string contentId)>) BuildDataHtmlStringFromNewsletterData()
     {
         List<string> completed = new List<string>();
         string builtHTMLString = string.Empty;
+        List<(MemoryStream imageStream, string contentId)> linkedImages = new List<(MemoryStream imageStream, string contentId)>();
         // pull data from CurrNewsletterData table
 
         try
@@ -124,6 +129,57 @@ public class HtmlBuilder : ClientBuilder
                     // Logger.Debug("TESTING");
                     // Logger.Debug(item.GetDict()["Filename"]);
 
+                    MemoryStream? resizedStream = null;
+                    string contentId = Guid.NewGuid().ToString();
+                    int maxRetries = 5;
+                    int delayMilliseconds = 200;
+                    int attempt = 0;
+                    bool success = false;
+
+                    while (attempt < maxRetries && !success)
+                    {
+                        try
+                        {
+                            using (var image = Image.Load(item.PosterPath))
+                            {
+                                int targetWidth = 200;
+                                int targetHeight = image.Height * targetWidth / image.Width;
+
+                                image.Mutate(x => x.Resize(new ResizeOptions
+                                {
+                                    Mode = ResizeMode.Max,
+                                    Size = new Size(targetWidth, targetHeight)
+                                }));
+
+                                resizedStream = new MemoryStream();
+                                image.Save(resizedStream, new JpegEncoder { Quality = 60 });
+                                resizedStream.Position = 0;
+
+                                item.ImageURL = $"cid:{contentId}";
+                                linkedImages.Add((resizedStream, contentId));
+                                success = true;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            attempt++;
+                            Logger.Warn($"[Attempt {attempt}] Failed to load/process image for {item.Title}: {ex.Message}");
+
+                            if (attempt < maxRetries)
+                            {
+                                Thread.Sleep(delayMilliseconds); // small delay before retrying
+                            }
+                        }
+                    }
+
+                    if (!success) {
+                        Logger.Error($"Failed to process image for {item.Title} after {maxRetries} attempts. Skipping this item.");
+                        continue; // skips to next item in foreach
+                    }
+
+                    Logger.Debug("Image content ID: " + contentId);
+                    item.ImageURL = $"cid:{contentId}";
+
                     foreach (KeyValuePair<string, object?> ele in item.GetReplaceDict())
                     {
                         if (ele.Value is not null)
@@ -134,6 +190,7 @@ public class HtmlBuilder : ClientBuilder
 
                     builtHTMLString += tmp_entry.Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
                                                 .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+                    linkedImages.Add((resizedStream, contentId));
                     completed.Add(item.Title);
                 }
             }
@@ -147,7 +204,7 @@ public class HtmlBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
-        return builtHTMLString;
+        return (builtHTMLString, linkedImages);
     }
 
     private string GetSeasonEpisodeHTML(List<NlDetailsJson> list)
@@ -180,5 +237,30 @@ public class HtmlBuilder : ClientBuilder
         {
             File.WriteAllText(path, value);
         }
+    }
+
+    private bool IsValidImageFile(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return false;
+            
+            var fileInfo = new FileInfo(path);
+            if (fileInfo.Length == 0) return false;
+            
+            // Basic header check for JPEG
+            // Try to identify the format without fully loading
+            using var fs = File.OpenRead(path);
+            var format = Image.DetectFormat(fs);
+            return format != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    public string ReplaceBodyWithBuiltString(string body, string nlData)
+    {
+        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
     }
 }

@@ -457,6 +457,6 @@ public class Scraper
             unsanitized_string = string.Empty;
         }
 
-        return "'" + unsanitized_string.Replace("'", string.Empty, StringComparison.Ordinal) + "'";
+        return "'" + unsanitized_string.Replace("'", "''", StringComparison.Ordinal) + "'";
     }
 }

@@ -1,4 +1,7 @@
 #pragma warning disable 1591, SYSLIB0014, CA1002, CS0162
+// using SixLabors.ImageSharp;
+// using SixLabors.ImageSharp.Processing;
+// using SixLabors.ImageSharp.Formats.Jpeg;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -41,8 +44,26 @@ public class PosterImageHandler
 
     public string FetchImagePoster(JsonFileObj item)
     {
+        // string imagePath = item.PosterPath;
+        // int targetWidth = 100; // Desired width for the resized image
+        // using var image = Image.Load(imagePath); // Load original image
+
+        // // Calculate new height while maintaining aspect ratio
+        // int newHeight = image.Height * targetWidth / image.Width;
+
+        // // Resize the image in memory
+        // image.Mutate(x => x.Resize(targetWidth, newHeight));
+
+        // using var ms = new MemoryStream();
+        // image.Save(ms, new JpegEncoder { Quality = 60 }); // Compress with 60% quality
+
+        // var base64 = Convert.ToBase64String(ms.ToArray());
+        // return $"data:image/jpeg;base64, {base64}";
+
         return item.PosterPath;
+
         // return "data:image/jpeg;base64, " + Convert.ToBase64String(File.ReadAllBytes(item.PosterPath));
+
         // string apiKey = "d63d13c187e20a4d436a9fd842e7e39c";
         // const int maxRetries = 5;
         // const int retryDelayMs = 1000;
