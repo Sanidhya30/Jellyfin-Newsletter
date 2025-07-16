@@ -13,10 +13,10 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
 
 public class EmbedBuilder : ClientBuilder
 {
-    public List<(Embed embed, string? imageFullPath, string? uniqueFileName)> BuildEmbedsFromNewsletterData(string serverId)
+    public List<(Embed embed, MemoryStream? resizedImageStream, string? uniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
     {
         List<string> completed = new List<string>();
-        var result = new List<(Embed, string?, string?)>();
+        var result = new List<(Embed, MemoryStream?, string?)>();
 
         try
         {
@@ -106,23 +106,28 @@ public class EmbedBuilder : ClientBuilder
                         embed.description = item.SeriesOverview;
                     }
 
-                    string? fullImagePath = null;
-                    string? uniqueFileName = null;
+                    MemoryStream? resizedImageStream = null;
+                    string uniqueImageName = string.Empty;
 
                     // Check if DiscordThumbnailEnabled is true
                     if (Config.DiscordThumbnailEnabled)
                     {
-                        uniqueFileName = $"{Guid.NewGuid()}.jpg";
-                        fullImagePath = item.ImageURL;
+                        (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.ImageURL);
+                        
+                        if (!success)
+                        {
+                            continue;
+                        }
 
+                        uniqueImageName = $"image_{uniqueImageName}.jpg";
                         embed.thumbnail = new Thumbnail
                         {
-                            url = $"attachment://{uniqueFileName}"
+                            url = $"attachment://{uniqueImageName}"
                         };
                     }
 
                     completed.Add(item.Title);
-                    result.Add((embed, fullImagePath, uniqueFileName));
+                    result.Add((embed, resizedImageStream, uniqueImageName));
                 }
             }
         }

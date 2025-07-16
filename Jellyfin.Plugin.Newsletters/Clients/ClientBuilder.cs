@@ -1,4 +1,7 @@
 #pragma warning disable 1591, SYSLIB0014, CA1002, CS0162, SA1005 // remove SA1005 for cleanup
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -250,6 +253,49 @@ public class ClientBuilder
         }
 
         return finalList;
+    }
+
+    protected (MemoryStream? resizedStream, string contentId, bool success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 200, int jpegQuality = 95)
+    {
+        string contentId = $"image_{Guid.NewGuid().ToString()}.jpg";
+        int attempt = 0;
+        MemoryStream? resizedStream = null;
+
+        while (attempt < maxRetries)
+        {
+            try
+            {
+                using (var image = Image.Load(imagePath))
+                {
+                    int targetHeight = image.Height * targetWidth / image.Width;
+
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(targetWidth, targetHeight)
+                    }));
+
+                    resizedStream = new MemoryStream();
+                    image.Save(resizedStream, new JpegEncoder { Quality = jpegQuality });
+                    resizedStream.Position = 0;
+
+                    return (resizedStream, contentId, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                attempt++;
+                Logger.Warn($"[Attempt {attempt}] Failed to load/process image for {imagePath}: {ex.Message}");
+
+                if (attempt < maxRetries)
+                {
+                    Thread.Sleep(delayMilliseconds);
+                }
+            }
+        }
+
+        Logger.Error($"Failed to process image for {imagePath} after {maxRetries} attempts.");
+        return (null, contentId, false);
     }
 
     private bool IsIncremental(List<int> values)
