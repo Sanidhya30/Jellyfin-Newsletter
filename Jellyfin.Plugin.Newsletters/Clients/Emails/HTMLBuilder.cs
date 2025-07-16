@@ -152,7 +152,7 @@ public class HtmlBuilder : ClientBuilder
                                 }));
 
                                 resizedStream = new MemoryStream();
-                                image.Save(resizedStream, new JpegEncoder { Quality = 60 });
+                                image.Save(resizedStream, new JpegEncoder { Quality = 95 });
                                 resizedStream.Position = 0;
 
                                 item.ImageURL = $"cid:{contentId}";
@@ -190,7 +190,6 @@ public class HtmlBuilder : ClientBuilder
 
                     builtHTMLString += tmp_entry.Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
                                                 .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
-                    linkedImages.Add((resizedStream, contentId));
                     completed.Add(item.Title);
                 }
             }
@@ -227,6 +226,11 @@ public class HtmlBuilder : ClientBuilder
         WriteFile(write, newsletterHTMLFile, htmlBody);
     }
 
+    public string ReplaceBodyWithBuiltString(string body, string nlData)
+    {
+        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
+    }
+
     private void WriteFile(string method, string path, string value)
     {
         if (method == append)
@@ -258,9 +262,5 @@ public class HtmlBuilder : ClientBuilder
         {
             return false;
         }
-    }
-    public string ReplaceBodyWithBuiltString(string body, string nlData)
-    {
-        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
     }
 }
