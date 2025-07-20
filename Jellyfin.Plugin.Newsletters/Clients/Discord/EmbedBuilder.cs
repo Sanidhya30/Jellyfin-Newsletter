@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
 using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
 using MediaBrowser.Controller.Library;
@@ -13,10 +11,10 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
 
 public class EmbedBuilder : ClientBuilder
 {
-    public List<(Embed embed, string? imageFullPath, string? uniqueFileName)> BuildEmbedsFromNewsletterData(string serverId)
+    public List<Embed> BuildEmbedsFromNewsletterData(string serverId)
     {
         List<string> completed = new List<string>();
-        var result = new List<(Embed, string?, string?)>();
+        List<Embed> embeds = new List<Embed>();
 
         try
         {
@@ -106,23 +104,17 @@ public class EmbedBuilder : ClientBuilder
                         embed.description = item.SeriesOverview;
                     }
 
-                    string? fullImagePath = null;
-                    string? uniqueFileName = null;
-
                     // Check if DiscordThumbnailEnabled is true
-                    if (Config.DiscordThumbnailEnabled)
+                    if (Config.DiscordThumbnailEnabled && IsValidUrl(item.ImageURL))
                     {
-                        uniqueFileName = $"{Guid.NewGuid()}.jpg";
-                        fullImagePath = item.ImageURL;
-
                         embed.thumbnail = new Thumbnail
                         {
-                            url = $"attachment://{uniqueFileName}"
+                            url = item.ImageURL
                         };
                     }
 
                     completed.Add(item.Title);
-                    result.Add((embed, fullImagePath, uniqueFileName));
+                    embeds.Add(embed);
                 }
             }
         }
@@ -135,12 +127,7 @@ public class EmbedBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
-        return result;
-    }
-
-    string Sanitize(string input)
-    {
-        return string.Concat(input.Where(c => char.IsLetterOrDigit(c) || c == '_')).Replace(' ', '_');
+        return embeds;
     }
 
     public List<Embed> BuildEmbedForTest()

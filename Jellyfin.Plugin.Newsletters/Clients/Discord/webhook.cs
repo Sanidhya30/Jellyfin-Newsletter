@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -108,50 +107,26 @@ public class DiscordWebhook : Client, IClient, IDisposable
                 Logger.Debug("Sending out Discord message!");
 
                 EmbedBuilder builder = new EmbedBuilder();
-                var embedTuples = builder.BuildEmbedsFromNewsletterData(ApplicationHost.SystemId);
+                List<Embed> embedList = builder.BuildEmbedsFromNewsletterData(ApplicationHost.SystemId);
 
                 // Discord webhook does not support more than 10 embeds per message
                 // Therefore, we're sending in chunks with atmost 10 embed in a payload
-                for (int i = 0; i < embedTuples.Count; i += 1)
+                for (int i = 0; i < embedList.Count; i += 10)
                 {
-                    var chunk = embedTuples.Skip(i).Take(1).ToList();
-                    var embeds = chunk.Select(t => t.embed).ToList();
+                    var chunk = embedList.Skip(i).Take(10).ToList();
 
                     var payload = new DiscordPayload
                     {
                         username = Config.DiscordWebhookName,
-                        embeds = embeds
+                        embeds = chunk
                     };
 
                     var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
                     Logger.Debug("Sending discord message in chunks: " + jsonPayload);
 
-                    var multipartContent = new MultipartFormDataContent();
+                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                    multipartContent.Add(new StringContent(jsonPayload, Encoding.UTF8, "application/json"), "payload_json");
-
-                    // Add the image attachments used in this chunk
-                    foreach (var (embed, imagePath, uniqueFileName) in chunk)
-                    {
-                        if (imagePath != null)
-                        {
-                            if (System.IO.File.Exists(imagePath))
-                            {
-                                var imageBytes = System.IO.File.ReadAllBytes(imagePath);
-                                var fileContent = new ByteArrayContent(imageBytes);
-                                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-
-                                // Important: the name and fileName must match the attachment name used in the embed
-                                multipartContent.Add(fileContent, uniqueFileName, uniqueFileName);
-                            }
-                            else
-                            {
-                                Logger.Warn($"Thumbnail file not found: {imagePath}");
-                            }
-                        }
-                    }
-
-                    var response = _httpClient.PostAsync(webhookUrl, multipartContent).GetAwaiter().GetResult();
+                    var response = _httpClient.PostAsync(webhookUrl, content).GetAwaiter().GetResult();
 
                     if (response.IsSuccessStatusCode)
                     {
