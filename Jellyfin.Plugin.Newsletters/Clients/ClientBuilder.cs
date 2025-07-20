@@ -266,4 +266,9 @@ public class ClientBuilder
     {
         return list.OrderBy(x => x.Episode).ToList();
     }
+
+    public string ReplaceBodyWithBuiltString(string body, string nlData)
+    {
+        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
+    }
 }

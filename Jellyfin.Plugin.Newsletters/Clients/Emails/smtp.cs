@@ -1,11 +1,8 @@
 #pragma warning disable 1591
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Net.Mail;
-using System.Net.Mime;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENT;
 using Jellyfin.Plugin.Newsletters.Clients.Emails.HTMLBuilder;
@@ -95,33 +92,18 @@ public class Smtp : Client, IClient
                 HtmlBuilder hb = new HtmlBuilder();
 
                 string body = hb.GetDefaultHTMLBody();
-                (string builtString, List<(MemoryStream imageStream, string contentId)> inlineImages) = hb.BuildDataHtmlStringFromNewsletterData();
+                string builtString = hb.BuildDataHtmlStringFromNewsletterData();
                 // string finalBody = hb.ReplaceBodyWithBuiltString(body, builtString);
                 // string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
                 builtString = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
                 string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
                 builtString = builtString.Replace("{Date}", currDate, StringComparison.Ordinal);
 
-                AlternateView htmlView = AlternateView.CreateAlternateViewFromString(builtString, null, MediaTypeNames.Text.Html);
-
-                foreach (var (stream, cid) in inlineImages)
-                {
-                    var imgRes = new LinkedResource(stream, MediaTypeNames.Image.Jpeg)
-                    {
-                        ContentId = cid,
-                        TransferEncoding = TransferEncoding.Base64,
-                        ContentType = new ContentType("image/jpeg"),
-                        ContentLink = new Uri("cid:" + cid)
-                    };
-                    htmlView.LinkedResources.Add(imgRes);
-                }
-
                 mail.From = new MailAddress(emailFromAddress, emailFromAddress);
                 mail.To.Clear();
                 mail.Subject = subject;
-                // mail.Body = Regex.Replace(builtString, "{[A-za-z]*}", " "); // Final cleanup
+                mail.Body = Regex.Replace(builtString, "{[A-za-z]*}", " "); // Final cleanup
                 mail.IsBodyHtml = true;
-                mail.AlternateViews.Add(htmlView);
 
                 foreach (string email in emailToAddress.Split(','))
                 {
