@@ -13,10 +13,10 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
 
 public class EmbedBuilder : ClientBuilder
 {
-    public List<(Embed embed, MemoryStream? resizedImageStream, string? uniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
+    public List<(Embed embed, string? imageFullPath, string? uniqueFileName)> BuildEmbedsFromNewsletterData(string serverId)
     {
         List<string> completed = new List<string>();
-        var result = new List<(Embed, MemoryStream?, string?)>();
+        var result = new List<(Embed, string?, string?)>();
 
         try
         {
@@ -106,28 +106,23 @@ public class EmbedBuilder : ClientBuilder
                         embed.description = item.SeriesOverview;
                     }
 
-                    MemoryStream? resizedImageStream = null;
-                    string uniqueImageName = string.Empty;
+                    string? fullImagePath = null;
+                    string? uniqueFileName = null;
 
                     // Check if DiscordThumbnailEnabled is true
                     if (Config.DiscordThumbnailEnabled)
                     {
-                        (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.ImageURL);
-                        
-                        if (!success)
-                        {
-                            continue;
-                        }
+                        uniqueFileName = $"{Guid.NewGuid()}.jpg";
+                        fullImagePath = item.ImageURL;
 
-                        uniqueImageName = $"image_{uniqueImageName}.jpg";
                         embed.thumbnail = new Thumbnail
                         {
-                            url = $"attachment://{uniqueImageName}"
+                            url = $"attachment://{uniqueFileName}"
                         };
                     }
 
                     completed.Add(item.Title);
-                    result.Add((embed, resizedImageStream, uniqueImageName));
+                    result.Add((embed, fullImagePath, uniqueFileName));
                 }
             }
         }

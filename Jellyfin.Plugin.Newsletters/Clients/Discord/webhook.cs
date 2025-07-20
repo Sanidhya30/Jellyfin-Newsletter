@@ -120,7 +120,7 @@ public class DiscordWebhook : Client, IClient, IDisposable
 
                 while (index < embedTuples.Count)
                 {
-                    var chunk = new List<(Embed embed, MemoryStream resizedImageStream, string uniqueImageName)>();
+                    var chunk = new List<(Embed embed, string imageFullPath, string uniqueFileName)>();
                     long currentTotalSize = 0;
 
                     while (index < embedTuples.Count && chunk.Count < maxEmbedsPerMessage)
@@ -128,7 +128,11 @@ public class DiscordWebhook : Client, IClient, IDisposable
                         var tuple = embedTuples[index];
                         long imageSize = 0;
 
-                        imageSize = tuple.resizedImageStream?.Length ?? 0;
+                        if (!string.IsNullOrEmpty(tuple.imageFullPath) && System.IO.File.Exists(tuple.imageFullPath))
+                        {
+                            var fileInfo = new FileInfo(tuple.imageFullPath);
+                            imageSize = fileInfo.Length;
+                        }
 
                         if (currentTotalSize + imageSize > maxTotalImageSize)
                             break;
@@ -152,13 +156,14 @@ public class DiscordWebhook : Client, IClient, IDisposable
                     var multipartContent = new MultipartFormDataContent();
                     multipartContent.Add(new StringContent(jsonPayload, Encoding.UTF8, "application/json"), "payload_json");
 
-                    foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
+                    foreach (var (embed, imageFullPath, uniqueFileName) in chunk)
                     {
-                        if (resizedImageStream != null)
+                        if (!string.IsNullOrEmpty(imageFullPath) && System.IO.File.Exists(imageFullPath))
                         {
-                            var fileContent = new ByteArrayContent(resizedImageStream.ToArray());
+                            var imageBytes = System.IO.File.ReadAllBytes(imageFullPath);
+                            var fileContent = new ByteArrayContent(imageBytes);
                             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-                            multipartContent.Add(fileContent, uniqueImageName, uniqueImageName);
+                            multipartContent.Add(fileContent, uniqueFileName, uniqueFileName);
                         }
                     }
 

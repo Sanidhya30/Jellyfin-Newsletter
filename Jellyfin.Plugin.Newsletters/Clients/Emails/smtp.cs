@@ -114,7 +114,7 @@ public class Smtp : Client, IClient
                         ContentLink = new Uri("cid:" + cid)
                     };
 
-                    imgRes.ContentType.Name = cid;
+                    imgRes.ContentType.Name = $"image_{cid}.jpg";
                     htmlView.LinkedResources.Add(imgRes);
                 }
 
