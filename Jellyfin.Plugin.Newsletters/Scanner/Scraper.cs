@@ -247,9 +247,9 @@ public class Scraper
                     currFileObj.Season = 0;
                 }
 
-                if (!InDatabase("CurrRunData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
-                    !InDatabase("CurrNewsletterData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
-                    !InDatabase("ArchiveData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
+                if (!InDatabase("CurrRunData", currFileObj.Title.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("CurrNewsletterData", currFileObj.Title.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("ArchiveData", currFileObj.Title.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
                 {
                     try
                     {
@@ -389,7 +389,7 @@ public class Scraper
     private string SetImageURL(JsonFileObj currObj)
     {
         JsonFileObj fileObj;
-        string currTitle = currObj.Title.Replace("'", "''", StringComparison.Ordinal);
+        string currTitle = currObj.Title.Replace("'", string.Empty, StringComparison.Ordinal);
 
         // check if URL for series already exists CurrRunData table
         foreach (var row in db.Query("SELECT * FROM CurrRunData;"))
