@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
 using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
 using MediaBrowser.Controller.Library;
@@ -11,10 +13,10 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
 
 public class EmbedBuilder : ClientBuilder
 {
-    public List<Embed> BuildEmbedsFromNewsletterData(string serverId)
+    public List<(Embed embed, MemoryStream? resizedImageStream, string? uniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
     {
         List<string> completed = new List<string>();
-        List<Embed> embeds = new List<Embed>();
+        var result = new List<(Embed, MemoryStream?, string?)>();
 
         try
         {
@@ -104,17 +106,38 @@ public class EmbedBuilder : ClientBuilder
                         embed.description = item.SeriesOverview;
                     }
 
+                    MemoryStream? resizedImageStream = null;
+                    string uniqueImageName = string.Empty;
+
                     // Check if DiscordThumbnailEnabled is true
-                    if (Config.DiscordThumbnailEnabled && IsValidUrl(item.ImageURL))
+                    if (Config.DiscordThumbnailEnabled)
                     {
-                        embed.thumbnail = new Thumbnail
+                        if (Config.PosterType == "attachment")
                         {
-                            url = item.ImageURL
-                        };
+                            (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
+                        
+                            if (!success)
+                            {
+                                continue;
+                            }
+
+                            embed.thumbnail = new Thumbnail
+                            {
+                                url = $"attachment://{uniqueImageName}"
+                            };
+                        }
+                        else {
+                            // If PosterType is not "attachment", use the image URL
+                            embed.thumbnail = new Thumbnail
+                            {
+                                url = item.ImageURL
+                            };
+                        }
+                        
                     }
 
                     completed.Add(item.Title);
-                    embeds.Add(embed);
+                    result.Add((embed, resizedImageStream, uniqueImageName));
                 }
             }
         }
@@ -127,7 +150,12 @@ public class EmbedBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
-        return embeds;
+        return result;
+    }
+
+    string Sanitize(string input)
+    {
+        return string.Concat(input.Where(c => char.IsLetterOrDigit(c) || c == '_')).Replace(' ', '_');
     }
 
     public List<Embed> BuildEmbedForTest()
@@ -230,17 +258,6 @@ public class EmbedBuilder : ClientBuilder
         }
 
         return seaEps;
-    }
-
-    private bool IsValidUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return false;
-        }
-
-        return Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
-            && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
     }
 }
 

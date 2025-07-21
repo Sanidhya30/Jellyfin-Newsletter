@@ -1,9 +1,13 @@
 #pragma warning disable 1591
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENT;
 using Jellyfin.Plugin.Newsletters.Clients.Emails.HTMLBuilder;
 using Jellyfin.Plugin.Newsletters.Configuration;
@@ -77,8 +81,6 @@ public class Smtp : Client, IClient
             if (NewsletterDbIsPopulated())
             {
                 Logger.Debug("Sending out mail!");
-                // Smtp varsmtp = new Smtp();
-                MailMessage mail = new MailMessage();
                 string smtpAddress = Config.SMTPServer;
                 int portNumber = Config.SMTPPort;
                 bool enableSSL = true;
@@ -87,37 +89,83 @@ public class Smtp : Client, IClient
                 string password = Config.SMTPPass;
                 string emailToAddress = Config.ToAddr;
                 string subject = Config.Subject;
+                int smtpTimeout = 100000;
                 // string body;
 
                 HtmlBuilder hb = new HtmlBuilder();
 
                 string body = hb.GetDefaultHTMLBody();
-                string builtString = hb.BuildDataHtmlStringFromNewsletterData();
+                List<(string htmlString, List<(MemoryStream imageStream, string contentId)> inlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData();
                 // string finalBody = hb.ReplaceBodyWithBuiltString(body, builtString);
                 // string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
-                builtString = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
+
                 string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-                builtString = builtString.Replace("{Date}", currDate, StringComparison.Ordinal);
 
-                mail.From = new MailAddress(emailFromAddress, emailFromAddress);
-                mail.To.Clear();
-                mail.Subject = subject;
-                mail.Body = Regex.Replace(builtString, "{[A-za-z]*}", " "); // Final cleanup
-                mail.IsBodyHtml = true;
-
-                foreach (string email in emailToAddress.Split(','))
+                int partNum = 1; // for multi-part email subjects if needed
+                foreach (var (builtString, inlineImages) in chunks)
                 {
-                    mail.Bcc.Add(email.Trim());
+                    Logger.Debug($"Email part {partNum} image count: {inlineImages.Count}");
+                    // Add template substitutions
+                    string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
+                                        .Replace("{Date}", currDate, StringComparison.Ordinal);
+
+                    using (MailMessage mail = new MailMessage())
+                    {
+                        mail.From = new MailAddress(emailFromAddress, emailFromAddress);
+                        mail.IsBodyHtml = true;
+
+                        // Add all Bccs every time (to keep code structure the same)
+                        foreach (string email in emailToAddress.Split(','))
+                        {
+                            mail.Bcc.Add(email.Trim());
+                        }
+
+                        // Multi-part subject (optional, for clarity)
+                        mail.Subject = (chunks.Count > 1)
+                            ? $"{subject} (Part {partNum} of {chunks.Count})"
+                            : subject;
+
+                        if (Config.PosterType == "attachment")
+                        {
+                            AlternateView htmlView = AlternateView.CreateAlternateViewFromString(finalBody, null, MediaTypeNames.Text.Html);
+
+                            foreach (var (stream, cid) in inlineImages)
+                            {
+                                var imgRes = new LinkedResource(stream, MediaTypeNames.Image.Jpeg)
+                                {
+                                    ContentId = cid,
+                                    TransferEncoding = TransferEncoding.Base64,
+                                    ContentType = new ContentType("image/jpeg"),
+                                    ContentLink = new Uri("cid:" + cid)
+                                };
+                                imgRes.ContentType.Name = cid;
+                                htmlView.LinkedResources.Add(imgRes);
+                            }
+                            mail.AlternateViews.Add(htmlView);
+
+                            // Increase timeout for larger attachments
+                            // This is useful if the email contains large images or attachments
+                            smtpTimeout = 300000; // 5 minutes timeout
+                        }
+                        else
+                        {
+                            mail.Body = Regex.Replace(finalBody, "{[A-za-z]*}", " ");
+                        }
+
+                        using (SmtpClient smtp = new SmtpClient(smtpAddress, portNumber))
+                        {   
+                            smtp.Credentials = new NetworkCredential(username, password);
+                            smtp.EnableSsl = enableSSL;
+                            smtp.Timeout = smtpTimeout;
+                            Logger.Debug($"Sending email part {partNum} with finalBody: {finalBody}");
+                            smtp.Send(mail);
+                        }
+                    }
+                    Logger.Debug($"Email part {partNum} sent successfully.");
+                    hb.CleanUp(finalBody); // or as appropriate for the chunk
+                    partNum++;
                 }
-
-                // mail.Attachments.Add(new Attachment("D:\\TestFile.txt"));//--Uncomment this to send any attachment
-                SmtpClient smtp = new SmtpClient(smtpAddress, portNumber);
-                smtp.Credentials = new NetworkCredential(username, password);
-                smtp.EnableSsl = enableSSL;
-                smtp.Send(mail);
                 result = true;
-
-                hb.CleanUp(builtString);
             }
             else
             {

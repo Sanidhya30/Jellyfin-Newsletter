@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -107,26 +108,64 @@ public class DiscordWebhook : Client, IClient, IDisposable
                 Logger.Debug("Sending out Discord message!");
 
                 EmbedBuilder builder = new EmbedBuilder();
-                List<Embed> embedList = builder.BuildEmbedsFromNewsletterData(ApplicationHost.SystemId);
+                var embedTuples = builder.BuildEmbedsFromNewsletterData(ApplicationHost.SystemId);
 
                 // Discord webhook does not support more than 10 embeds per message
-                // Therefore, we're sending in chunks with atmost 10 embed in a payload
-                for (int i = 0; i < embedList.Count; i += 10)
+                // Therefore, we're sending in chunks with atmost 10 embed in a payload.
+                // For attachmenents, we will also send in chunks to avoid exceeding the limit i.e. 10 MB per message.
+                int maxEmbedsPerMessage = 10;
+                long maxTotalImageSize = 10 * 1024 * 1024; // 10MB
+
+                int index = 0;
+
+                while (index < embedTuples.Count)
                 {
-                    var chunk = embedList.Skip(i).Take(10).ToList();
+                    var chunk = new List<(Embed embed, MemoryStream resizedImageStream, string uniqueImageName)>();
+                    long currentTotalSize = 0;
+
+                    while (index < embedTuples.Count && chunk.Count < maxEmbedsPerMessage)
+                    {
+                        var tuple = embedTuples[index];
+                        long imageSize = 0;
+
+                        // TODO: Can make this better, but even in case of tmdb url this will work as the resizedImageStream will be null
+                        imageSize = tuple.resizedImageStream?.Length ?? 0;
+
+                        if (currentTotalSize + imageSize > maxTotalImageSize)
+                            break;
+
+                        chunk.Add(tuple);
+                        currentTotalSize += imageSize;
+                        index++;
+                    }
+
+                    var embeds = chunk.Select(t => t.embed).ToList();
 
                     var payload = new DiscordPayload
                     {
                         username = Config.DiscordWebhookName,
-                        embeds = chunk
+                        embeds = embeds
                     };
 
                     var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
-                    Logger.Debug("Sending discord message in chunks: " + jsonPayload);
+                    Logger.Debug("Sending discord message with payload: " + jsonPayload);
 
-                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                    var multipartContent = new MultipartFormDataContent();
+                    multipartContent.Add(new StringContent(jsonPayload, Encoding.UTF8, "application/json"), "payload_json");
 
-                    var response = _httpClient.PostAsync(webhookUrl, content).GetAwaiter().GetResult();
+                    if (Config.PosterType == "attachment") {
+                        foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
+                        {
+                            if (resizedImageStream != null)
+                            {
+                                var fileContent = new ByteArrayContent(resizedImageStream.ToArray());
+                                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                                multipartContent.Add(fileContent, uniqueImageName, uniqueImageName);
+                            }
+                        }
+                    }
+
+                    var response = _httpClient.PostAsync(webhookUrl, multipartContent).GetAwaiter().GetResult();
 
                     if (response.IsSuccessStatusCode)
                     {
