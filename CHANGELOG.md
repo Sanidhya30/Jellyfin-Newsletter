@@ -1,3 +1,9 @@
+# 0.8.0.0
+
+- Local Poster attachment support.
+- In-memory size reduction for poster images.
+- Bug fixes.
+
 # 0.7.0.0
 
 - Discord webhook support.

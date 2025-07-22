@@ -133,10 +133,8 @@ public class HtmlBuilder : ClientBuilder
                     if (Config.PosterType == "attachment") {
                         var (resizedStream, contentId, success) = ResizeImage(item.PosterPath);
 
-                        if (!success) continue;
-
                         item.ImageURL = $"cid:{contentId}";
-                        entryImageBytes = (int)Math.Ceiling(resizedStream.Length * 4.0 / 3.0); // Base64 encoding overhead;
+                        entryImageBytes = (resizedStream != null) ? (int)Math.Ceiling(resizedStream.Length * 4.0 / 3.0) : 0; // Base64 encoding overhead;
                         imgToAdd = (resizedStream, contentId);
                     }
 

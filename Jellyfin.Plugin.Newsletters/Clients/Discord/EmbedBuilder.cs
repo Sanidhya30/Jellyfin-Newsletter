@@ -115,11 +115,6 @@ public class EmbedBuilder : ClientBuilder
                         if (Config.PosterType == "attachment")
                         {
                             (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
-                        
-                            if (!success)
-                            {
-                                continue;
-                            }
 
                             embed.thumbnail = new Thumbnail
                             {

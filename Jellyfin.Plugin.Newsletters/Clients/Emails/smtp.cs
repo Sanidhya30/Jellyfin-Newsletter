@@ -92,6 +92,31 @@ public class Smtp : Client, IClient
                 int smtpTimeout = 100000;
                 // string body;
 
+                // Tuple format: (display-name, value)
+                var requiredFields = new[]
+                {
+                    (name: "SMTP Server Address", value: smtpAddress),
+                    (name: "From Address", value: emailFromAddress),
+                    (name: "SMTP Username", value: username),
+                    (name: "SMTP Password", value: password),
+                    (name: "To Address", value: emailToAddress),
+                };
+
+                bool missingField = false;
+                foreach (var (name, value) in requiredFields)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        Logger.Error($"[EMAIL CONFIG] Required field not set: {name}");
+                        missingField = true;
+                    }
+                }
+                if (missingField)
+                {
+                    Logger.Error("One or more required email configuration fields are missing. Aborting send.");
+                    return false;
+                }
+
                 HtmlBuilder hb = new HtmlBuilder();
 
                 string body = hb.GetDefaultHTMLBody();
@@ -131,6 +156,11 @@ public class Smtp : Client, IClient
 
                             foreach (var (stream, cid) in inlineImages)
                             {
+                                if (stream == null)
+                                {
+                                    Logger.Warn($"Skipped LinkedResource creation for cid {cid}: stream is null.");
+                                    continue;
+                                }
                                 var imgRes = new LinkedResource(stream, MediaTypeNames.Image.Jpeg)
                                 {
                                     ContentId = cid,

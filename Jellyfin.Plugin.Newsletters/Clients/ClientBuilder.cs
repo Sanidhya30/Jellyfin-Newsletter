@@ -260,7 +260,9 @@ public class ClientBuilder
         string contentId = $"image_{Guid.NewGuid().ToString()}.jpg";
         int attempt = 0;
         MemoryStream? resizedStream = null;
-
+        
+        // Sometimes we're getting I/O exceptions when trying to load images, so we retry a few times
+        Logger.Debug($"Attempting to resize image: {imagePath}, Target Width: {targetWidth}, JPEG Quality: {jpegQuality}");
         while (attempt < maxRetries)
         {
             try
