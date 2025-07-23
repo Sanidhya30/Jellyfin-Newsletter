@@ -13,8 +13,8 @@
                 "changelog": "- Local Poster attachment support. - In-memory size reduction for poster images. - Bug fixes. FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.10.0.0",
                 "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v0.8.0.0/newsletters_0.8.0.0.zip",
-                "checksum": "d9c4c6d6eb88aa8585754e2fe91c111b",
-                "timestamp": "2025-07-23T08:15:47Z"
+                "checksum": "bf4f8f5fdff06ad3eb01b9c9f6a9429d",
+                "timestamp": "2025-07-23T13:54:25Z"
             },
             {
                 "version": "0.7.0.0",
