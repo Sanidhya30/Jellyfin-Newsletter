@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Threading;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
 using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
 using Newtonsoft.Json;
@@ -90,11 +92,17 @@ public class HtmlBuilder : ClientBuilder
         return htmlObj;
     }
 
-    public string BuildDataHtmlStringFromNewsletterData()
+    public List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData()
     {
         List<string> completed = new List<string>();
-        string builtHTMLString = string.Empty;
-        // pull data from CurrNewsletterData table
+        var chunks = new List<(string, List<(MemoryStream?, string)>)>();
+
+        StringBuilder currentChunkBuilder = new StringBuilder();
+        var currentChunkImages = new List<(MemoryStream?, string)>();
+        int currentChunkBytes = 0;
+        const int overheadPerMail = 50000;
+        int maxChunkSizeBytes = Config.EmailSize * 1024 * 1024; // Convert MB to bytes
+        Logger.Debug($"Max email size set to {maxChunkSizeBytes} bytes");
 
         try
         {
@@ -105,8 +113,6 @@ public class HtmlBuilder : ClientBuilder
                 if (row is not null)
                 {
                     JsonFileObj item = JsonHelper.ConvertToObj(row);
-                    // scan through all items and get all Season numbers and Episodes
-                    // (string seasonInfo, string episodeInfo) = ParseSeriesInfo(obj, readDataFile);
                     if (completed.Contains(item.Title))
                     {
                         continue;
@@ -115,16 +121,25 @@ public class HtmlBuilder : ClientBuilder
                     string seaEpsHtml = string.Empty;
                     if (item.Type == "Series")
                     {
-                        // for series only
-                        List<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
+                        var parsedInfoList = ParseSeriesInfo(item);
                         seaEpsHtml += GetSeasonEpisodeHTML(parsedInfoList);
                     }
 
                     var tmp_entry = Config.Entry;
-                    // Logger.Debug("TESTING");
-                    // Logger.Debug(item.GetDict()["Filename"]);
 
-                    foreach (KeyValuePair<string, object?> ele in item.GetReplaceDict())
+                    // Track image size if needed
+                    int entryImageBytes = 0;
+                    (MemoryStream?, string) imgToAdd = default;
+                    if (Config.PosterType == "attachment") 
+                    {
+                        var (resizedStream, contentId, success) = ResizeImage(item.PosterPath);
+
+                        item.ImageURL = $"cid:{contentId}";
+                        entryImageBytes = (resizedStream != null) ? (int)Math.Ceiling(resizedStream.Length * 4.0 / 3.0) : 0; // Base64 encoding overhead;
+                        imgToAdd = (resizedStream, contentId);
+                    }
+
+                    foreach (var ele in item.GetReplaceDict())
                     {
                         if (ele.Value is not null)
                         {
@@ -132,8 +147,28 @@ public class HtmlBuilder : ClientBuilder
                         }
                     }
 
-                    builtHTMLString += tmp_entry.Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                                                .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+                    // Compose the entry's HTML now (for accurate size)
+                    string entryHTML = tmp_entry
+                        .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
+                        .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+
+                    int entryBytes = Encoding.UTF8.GetByteCount(entryHTML) + entryImageBytes;
+
+                    Logger.Debug($"Processing item: {item.Title}, Size: {entryBytes} bytes, Current Chunk Size: {currentChunkBytes} bytes");
+                    if (currentChunkBuilder.Length > 0 && (currentChunkBytes + entryBytes + overheadPerMail) > maxChunkSizeBytes)
+                    {
+                        // finalize current chunk as one part (HTML fragment)
+                        Logger.Debug($"Email size exceeded, finalizing current chunk. Size : {currentChunkBytes} bytes");
+                        chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
+                        currentChunkBuilder.Clear();
+                        currentChunkImages.Clear();
+                        currentChunkBytes = 0;
+                    }
+
+                    currentChunkBuilder.Append(entryHTML);
+                    currentChunkImages.Add(imgToAdd);
+                    currentChunkBytes += entryBytes;
+
                     completed.Add(item.Title);
                 }
             }
@@ -147,7 +182,14 @@ public class HtmlBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
-        return builtHTMLString;
+        // Add final chunk if any
+        if (currentChunkBuilder.Length > 0)
+        {
+            Logger.Debug($"Adding final chunk. Size : {currentChunkBytes} bytes");
+            chunks.Add((currentChunkBuilder.ToString(), currentChunkImages));
+        }
+
+        return chunks;
     }
 
     private string GetSeasonEpisodeHTML(List<NlDetailsJson> list)
@@ -168,6 +210,11 @@ public class HtmlBuilder : ClientBuilder
         // save newsletter to file
         Logger.Info("Saving HTML file");
         WriteFile(write, newsletterHTMLFile, htmlBody);
+    }
+
+    public string ReplaceBodyWithBuiltString(string body, string nlData)
+    {
+        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
     }
 
     private void WriteFile(string method, string path, string value)

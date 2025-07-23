@@ -121,6 +121,14 @@ For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
 
 - The formatting for each individual entry/series/movie that was found and will be sent out
 
+## Scrapper Config
+
+### Poster Type
+
+* TMDB Poster - Uses image URLs from TheMovieDB (default, smallest emails).
+* Local Poster Images - Embeds local poster images directly in the email/discord embed (larger messages).
+  * Maximum Email Size: Maximum email size allowed by your email provider (in MB). **Default: 15 MB.**
+
 ## Email & SMTP Config
 
 ### To Addresses:

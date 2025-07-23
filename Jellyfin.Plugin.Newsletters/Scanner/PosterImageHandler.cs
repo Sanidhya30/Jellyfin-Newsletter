@@ -1,4 +1,7 @@
 #pragma warning disable 1591, SYSLIB0014, CA1002, CS0162
+// using SixLabors.ImageSharp;
+// using SixLabors.ImageSharp.Processing;
+// using SixLabors.ImageSharp.Formats.Jpeg;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;

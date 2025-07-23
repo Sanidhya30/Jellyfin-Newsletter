@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/logo.png",
         "versions": [
             {
+                "version": "0.8.0.0",
+                "changelog": "- Local Poster attachment support. - In-memory size reduction for poster images. - Bug fixes. FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.10.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v0.8.0.0/newsletters_0.8.0.0.zip",
+                "checksum": "d9c4c6d6eb88aa8585754e2fe91c111b",
+                "timestamp": "2025-07-23T08:15:47Z"
+            },
+            {
                 "version": "0.7.0.0",
                 "changelog": "- Discord webhook support. - Discord config addition in the plugin page. - Moving to TMDB api for fetching poster image. - Plugin page update. - Code refactoring to support future clients support. FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.10.0.0",
