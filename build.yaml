@@ -12,6 +12,7 @@ owner: "jellyfin"
 artifacts:
   - "Jellyfin.Plugin.Newsletters.dll"
   - "SQLitePCL.pretty.dll"
+  - "SixLabors.ImageSharp.dll"
 changelog: >
   - Local Poster attachment support.
   - In-memory size reduction for poster images.
