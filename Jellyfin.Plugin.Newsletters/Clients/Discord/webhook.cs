@@ -120,7 +120,7 @@ public class DiscordWebhook : Client, IClient, IDisposable
 
                 while (index < embedTuples.Count)
                 {
-                    var chunk = new List<(Embed embed, MemoryStream resizedImageStream, string uniqueImageName)>();
+                    var chunk = new List<(Embed, MemoryStream?, string)>();
                     long currentTotalSize = 0;
 
                     while (index < embedTuples.Count && chunk.Count < maxEmbedsPerMessage)
@@ -128,18 +128,20 @@ public class DiscordWebhook : Client, IClient, IDisposable
                         var tuple = embedTuples[index];
                         long imageSize = 0;
 
-                        // TODO: Can make this better, but even in case of tmdb url this will work as the resizedImageStream will be null
-                        imageSize = tuple.resizedImageStream?.Length ?? 0;
+                        // TODO: Can make this better, but even in case of tmdb url this will work as the ResizedImageStream will be null
+                        imageSize = tuple.ResizedImageStream?.Length ?? 0;
 
                         if (currentTotalSize + imageSize > maxTotalImageSize)
-                            break;
+                        {
+                            break; // Stop adding to the chunk if it exceeds the max size
+                        }
 
                         chunk.Add(tuple);
                         currentTotalSize += imageSize;
                         index++;
                     }
 
-                    var embeds = chunk.Select(t => t.embed).ToList();
+                    var embeds = chunk.Select(t => t.Item1).ToList();
 
                     var payload = new DiscordPayload
                     {
@@ -153,7 +155,8 @@ public class DiscordWebhook : Client, IClient, IDisposable
                     var multipartContent = new MultipartFormDataContent();
                     multipartContent.Add(new StringContent(jsonPayload, Encoding.UTF8, "application/json"), "payload_json");
 
-                    if (Config.PosterType == "attachment") {
+                    if (Config.PosterType == "attachment") 
+                    {
                         foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
                         {
                             if (resizedImageStream != null)

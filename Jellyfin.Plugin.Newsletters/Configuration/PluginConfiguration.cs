@@ -228,16 +228,14 @@ public class PluginConfiguration : BasePluginConfiguration
 
     // Scraper Config
 
-    // / <summary>
-    // / Gets or sets a value indicating poster type.
-    // / </summary>
-    // Deprecating imgur support
-    // public string PHType { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating poster type.
+    /// </summary>
     public string PosterType { get; set; }
 
-    // / <summary>
-    // / Gets or sets a value indicating maximum email size.
-    // / </summary>
+    /// <summary>
+    /// Gets or sets a value indicating maximum email size.
+    /// </summary>
     public int EmailSize { get; set; }
 
     /// <summary>

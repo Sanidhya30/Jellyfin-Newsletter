@@ -92,13 +92,13 @@ public class HtmlBuilder : ClientBuilder
         return htmlObj;
     }
 
-    public List<(string htmlString, List<(MemoryStream imageStream, string contentId)> images)> BuildChunkedHtmlStringsFromNewsletterData()
+    public List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData()
     {
         List<string> completed = new List<string>();
-        var chunks = new List<(string, List<(MemoryStream, string)>)>();
+        var chunks = new List<(string, List<(MemoryStream?, string)>)>();
 
         StringBuilder currentChunkBuilder = new StringBuilder();
-        var currentChunkImages = new List<(MemoryStream, string)>();
+        var currentChunkImages = new List<(MemoryStream?, string)>();
         int currentChunkBytes = 0;
         const int overheadPerMail = 50000;
         int maxChunkSizeBytes = Config.EmailSize * 1024 * 1024; // Convert MB to bytes
@@ -129,8 +129,9 @@ public class HtmlBuilder : ClientBuilder
 
                     // Track image size if needed
                     int entryImageBytes = 0;
-                    var imgToAdd = default((MemoryStream, string));
-                    if (Config.PosterType == "attachment") {
+                    (MemoryStream?, string) imgToAdd = default;
+                    if (Config.PosterType == "attachment") 
+                    {
                         var (resizedStream, contentId, success) = ResizeImage(item.PosterPath);
 
                         item.ImageURL = $"cid:{contentId}";
@@ -141,7 +142,9 @@ public class HtmlBuilder : ClientBuilder
                     foreach (var ele in item.GetReplaceDict())
                     {
                         if (ele.Value is not null)
+                        {
                             tmp_entry = this.TemplateReplace(tmp_entry, ele.Key, ele.Value);
+                        }
                     }
 
                     // Compose the entry's HTML now (for accurate size)
@@ -156,7 +159,7 @@ public class HtmlBuilder : ClientBuilder
                     {
                         // finalize current chunk as one part (HTML fragment)
                         Logger.Debug($"Email size exceeded, finalizing current chunk. Size : {currentChunkBytes} bytes");
-                        chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream, string)>(currentChunkImages)));
+                        chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
                         currentChunkBuilder.Clear();
                         currentChunkImages.Clear();
                         currentChunkBytes = 0;
@@ -181,8 +184,10 @@ public class HtmlBuilder : ClientBuilder
 
         // Add final chunk if any
         if (currentChunkBuilder.Length > 0)
+        {
             Logger.Debug($"Adding final chunk. Size : {currentChunkBytes} bytes");
             chunks.Add((currentChunkBuilder.ToString(), currentChunkImages));
+        }
 
         return chunks;
     }

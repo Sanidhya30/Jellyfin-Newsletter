@@ -13,10 +13,10 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
 
 public class EmbedBuilder : ClientBuilder
 {
-    public List<(Embed embed, MemoryStream? resizedImageStream, string? uniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
+    public List<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
     {
         List<string> completed = new List<string>();
-        var result = new List<(Embed, MemoryStream?, string?)>();
+        var result = new List<(Embed, MemoryStream?, string)>();
 
         try
         {
@@ -121,14 +121,14 @@ public class EmbedBuilder : ClientBuilder
                                 url = $"attachment://{uniqueImageName}"
                             };
                         }
-                        else {
+                        else 
+                        {
                             // If PosterType is not "attachment", use the image URL
                             embed.thumbnail = new Thumbnail
                             {
                                 url = item.ImageURL
                             };
                         }
-                        
                     }
 
                     completed.Add(item.Title);
@@ -146,11 +146,6 @@ public class EmbedBuilder : ClientBuilder
         }
 
         return result;
-    }
-
-    string Sanitize(string input)
-    {
-        return string.Concat(input.Where(c => char.IsLetterOrDigit(c) || c == '_')).Replace(' ', '_');
     }
 
     public List<Embed> BuildEmbedForTest()

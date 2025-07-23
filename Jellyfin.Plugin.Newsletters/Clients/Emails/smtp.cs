@@ -111,6 +111,7 @@ public class Smtp : Client, IClient
                         missingField = true;
                     }
                 }
+
                 if (missingField)
                 {
                     Logger.Error("One or more required email configuration fields are missing. Aborting send.");
@@ -120,7 +121,7 @@ public class Smtp : Client, IClient
                 HtmlBuilder hb = new HtmlBuilder();
 
                 string body = hb.GetDefaultHTMLBody();
-                List<(string htmlString, List<(MemoryStream imageStream, string contentId)> inlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData();
+                List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData();
                 // string finalBody = hb.ReplaceBodyWithBuiltString(body, builtString);
                 // string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
 
@@ -161,6 +162,7 @@ public class Smtp : Client, IClient
                                     Logger.Warn($"Skipped LinkedResource creation for cid {cid}: stream is null.");
                                     continue;
                                 }
+
                                 var imgRes = new LinkedResource(stream, MediaTypeNames.Image.Jpeg)
                                 {
                                     ContentId = cid,
@@ -171,6 +173,7 @@ public class Smtp : Client, IClient
                                 imgRes.ContentType.Name = cid;
                                 htmlView.LinkedResources.Add(imgRes);
                             }
+
                             mail.AlternateViews.Add(htmlView);
 
                             // Increase timeout for larger attachments
@@ -191,10 +194,12 @@ public class Smtp : Client, IClient
                             smtp.Send(mail);
                         }
                     }
+
                     Logger.Debug($"Email part {partNum} sent successfully.");
                     hb.CleanUp(finalBody); // or as appropriate for the chunk
                     partNum++;
                 }
+
                 result = true;
             }
             else

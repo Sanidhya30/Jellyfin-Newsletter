@@ -1,7 +1,4 @@
 #pragma warning disable 1591, SYSLIB0014, CA1002, CS0162, SA1005 // remove SA1005 for cleanup
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Formats.Jpeg;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -25,6 +22,9 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 // using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
@@ -255,7 +255,7 @@ public class ClientBuilder
         return finalList;
     }
 
-    protected (MemoryStream? resizedStream, string contentId, bool success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 500, int jpegQuality = 80)
+    protected (MemoryStream? ResizedStream, string ContentId, bool Success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 500, int jpegQuality = 80)
     {
         string contentId = $"image_{Guid.NewGuid().ToString()}.jpg";
         int attempt = 0;
