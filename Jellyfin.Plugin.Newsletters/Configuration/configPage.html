@@ -83,37 +83,37 @@
                     </div>
                     <br>
                     
-                    <!-- Deprecating scraper configuration part as we have moved to tmdb api for poster images -->
                     <!-- Scraper configuration Details -->
-                    <!-- <div id="HiddenDetails" name="ScraperConfig" class="DropdownSection">
+                    <div id="HiddenDetails" name="ScraperConfig" class="DropdownSection">
                         <details>
                             <summary>Scraper Config</summary><br>
                             <div class="selectContainer">
-                                <label class="selectLabel" for="HostingSelector">Poster Hosting Type:</label>
+                                <label class="selectLabel" for="HostingSelector">Poster Type:</label>
                                 <select is="emby-select" id="HostingSelector" name="HostingSelector" class="emby-select-withcolor emby-select">
-                                    <option id="defaultImgur" value="Imgur">Imgur (Default)</option>
-                                    <option id="localJFHosting" value="JfHosting">Local JF Hosting</option>
+                                    <option id="defaultTmdb" value="tmdb">TMDB Poster (Default)</option>
+                                    <option id="localJFHosting" value="attachment">Local Poster Images</option>
                                 </select>
                             </div>
                             <hr>
-                            <div id="Imgur" name="options">
-                                <div class="inputContainer" id="ImgurClientID">
-                                    <label class="inputLabel inputLabelUnfocused" for="ApiKey">Imgur API Key:</label>
-                                    <input id="ApiKey" name="ApiKey" type="text" is="emby-input" />
-                                    <div class="fieldDescription">Required for image uploading so HTML formatting of newsletter can pull images (posters). Follow instructions <a href="https://dev.to/bearer/how-to-configure-the-imgur-api-2ap9" target="_blank">Here</a> and <a href="http://siberiancmscustomization.blogspot.com/2020/10/how-to-get-imgur-client-id.html" target="_blank">Here</a> </div>
-                                </div>
-                            </div>
-                            <div id="JfHosting" name="options">
-                                <div class="inputContainer" id="JfHostingID">
+                            <div id="MaxEmailSizeContainer" name="options" style="display: none;">
+                                <div class="inputContainer" id="MaxEmailSize">
+                                    <label class="inputLabel inputLabelUnfocused" for="EmailSize">Maximum Email Size:</label>
+                                    <input id="EmailSize" name="EmailSize" type="text" type="number" is="emby-input" min="5" />
                                     <div class="fieldDescription">
-                                        Server URL will be used.
+                                        Enter the maximum email size allowed by your email provider (in MB).
+                                        For reliable delivery, set this value slightly below your provider's official limit (e.g., use 20 MB if your provider supports up to 25 MB).
+                                        <b>Default: 15 MB</b>
                                     </div>
                                 </div>
                             </div>
+                            <div class="fieldDescription">
+                                Choose how newsletter posters should be included in the emails.<br>
+                                <b>TMDB</b>: Uses image URLs from TheMovieDB (default, smallest emails).<br>
+                                <b>Local Attachments</b>: Embeds images directly in the email (larger messages).
+                            </div>
                         </details>
                     </div>
-
-                    <br> -->
+                    <br>
                     <!-- SMTP Server Details -->
                     <div id="HiddenDetails" name="ServerDetails" class="DropdownSection">
                         <details>
@@ -289,15 +289,25 @@
                 pluginUniqueId: '60f478ab-2dd6-4ea0-af10-04d033f75979'
             };
 
-            function hideScraperConfig() {
-                let options = document.getElementsByName("options");
-                options.forEach((option) => {
-                    option.style.display = 'none';
-                });
-            }
+            // function hideScraperConfig() {
+            //     let options = document.getElementsByName("options");
+            //     options.forEach((option) => {
+            //         option.style.display = 'none';
+            //     });
+            // }
 
-            function showScraperConfig(id) {
-                document.getElementById(id).style.display = 'block';
+            // function showScraperConfig(id) {
+            //     document.getElementById(id).style.display = 'block';
+            // }
+
+            function updateMaxEmailSizeVisibility() {
+                var posterType = document.querySelector('#HostingSelector').value;
+                var maxEmailSizeDiv = document.getElementById('MaxEmailSizeContainer');
+                if (posterType === "attachment") {
+                    maxEmailSizeDiv.style.display = '';
+                } else {
+                    maxEmailSizeDiv.style.display = 'none';
+                }
             }
             
             function saveConfig() {
@@ -330,8 +340,9 @@
                     //librariesEnabled
                     config.SeriesEnabled = document.querySelector('#SeriesEnabled').checked;
                     config.MoviesEnabled = document.querySelector('#MoviesEnabled').checked;
-                    //scraperConfig (Deprecated)
-                    //config.PHType = document.querySelector('#HostingSelector').value;
+                    // scraperConfig
+                    config.PosterType = document.querySelector('#HostingSelector').value;
+                    config.EmailSize = document.querySelector('#EmailSize').value;
                     //config.ApiKey = document.querySelector('#ApiKey').value;
                     //hosting options
                     config.Hostname = document.querySelector('#Hostname').value;
@@ -374,13 +385,16 @@
                     //librariesEnabled
                     document.querySelector('#SeriesEnabled').checked = config.SeriesEnabled;
                     document.querySelector('#MoviesEnabled').checked = config.MoviesEnabled;
-                    //scraperConfig (Deprecated)
-                    //document.querySelector('#HostingSelector').value = config.PHType;
-                    //hideScraperConfig();
-                    //showScraperConfig(config.PHType);
+                    // scraperConfig
+                    document.querySelector('#HostingSelector').value = config.PosterType;
+                    document.querySelector('#EmailSize').value = config.EmailSize;
+                    // hideScraperConfig();
+                    // showScraperConfig(config.PHType);
                     //document.querySelector('#ApiKey').value = config.ApiKey;
                     //hosting options
                     document.querySelector('#Hostname').value = config.Hostname;
+
+                    updateMaxEmailSizeVisibility();
 
                     Dashboard.hideLoadingMsg();
                 });
@@ -443,12 +457,11 @@
                 return false;
             });
             
-            // Scrapper config (Deprecated)
-            // document.querySelector('#HostingSelector')
-            //     .addEventListener('change', function() {
-            //     hideScraperConfig();
-            //     showScraperConfig(this.value);
-            // });
+            // Scrapper config
+            document.querySelector('#HostingSelector')
+                .addEventListener('change', function() {
+                updateMaxEmailSizeVisibility();
+            });
 
         </script>
     </div>

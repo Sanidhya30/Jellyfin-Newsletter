@@ -40,20 +40,10 @@ public class PluginConfiguration : BasePluginConfiguration
         
         try
         {
-            string[] dirs = Directory.GetDirectories(@".", "config/plugins/Newsletters_*.*.*.*", SearchOption.AllDirectories);
-            string pluginDir = string.Empty;
-            if (dirs.Length > 1)
+            var pluginDir = Path.GetDirectoryName(typeof(PluginConfiguration).Assembly.Location);
+            if (pluginDir == null)
             {
-                Console.WriteLine($"[NLP] :: Found {dirs.Length} matches for plugin directory...");
-            }
-            else
-            {
-                foreach (string dir in dirs)
-                {
-                    Console.WriteLine("[NLP] :: Plugin Directory is: {0}", dir);
-                    pluginDir = dir;
-                    break;
-                }
+                Console.WriteLine("[NLP] :: [ERR] Failed to locate plugin directory.");
             }
             
             try
@@ -105,9 +95,10 @@ public class PluginConfiguration : BasePluginConfiguration
         MoviesEnabled = true;
         SeriesEnabled = true;
 
-        // poster hosting
-        // Deprecating imgur support
+        // poster type
         // PHType = "Imgur";
+        PosterType = "tmdb";
+        EmailSize = 15;
         Hostname = string.Empty;
 
         // default discord fields
@@ -237,11 +228,15 @@ public class PluginConfiguration : BasePluginConfiguration
 
     // Scraper Config
 
-    // / <summary>
-    // / Gets or sets a value indicating hosting type.
-    // / </summary>
-    // Deprecating imgur support
-    // public string PHType { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating poster type.
+    /// </summary>
+    public string PosterType { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating maximum email size.
+    /// </summary>
+    public int EmailSize { get; set; }
 
     /// <summary>
     /// Gets or sets a value for JF hostname accessible outside of network.

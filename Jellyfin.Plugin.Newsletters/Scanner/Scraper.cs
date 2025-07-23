@@ -95,6 +95,84 @@ public class Scraper
         return Task.CompletedTask;
     }
 
+    // public void CheckPreviousPosterType()
+    // {
+    //     logger.Info("Checking Previous Run Poster Type...");
+        
+    //     try
+    //     {
+    //         db.CreateConnection();
+
+    //         tables = new List<string>
+    //         {
+    //             "CurrRunData",
+    //             "CurrNewsletterData",
+    //             "ArchiveData"
+    //         };
+
+    //         var previousPosterType = string.Empty;
+
+    //         foreach (var table in tables) {
+    //             previousPosterType = db.Query($"SELECT ImageURL FROM CurrNewsletterData ORDER BY ROWID ASC LIMIT 1;");
+    //             if (!string.IsNullOrEmpty(previousPosterType))
+    //             {
+    //                 if (IsValidUrl(previousPosterType))
+    //                 {
+    //                     logger.Info($"Previous Poster Type found is URL.");
+    //                     previousPosterType = "tmdb";
+    //                 }
+    //                 else
+    //                 {
+    //                     logger.Info($"Previous Poster Type is not a valid URL.");
+    //                     previousPosterType = "attachment";
+    //                 }
+    //                 break;
+    //             }
+    //         }
+
+    //         if (string.IsNullOrEmpty(previousPosterType))
+    //         {
+    //             logger.Info("No previous poster type found.");
+    //             return;
+    //         }
+
+    //         if (config.PosterType == previousPosterType)
+    //         {
+    //             logger.Info($"Current Poster Type is the same as previous: {config.PosterType}. No need to update Database.");
+    //             return;
+    //         }
+    //         else {
+    //             logger.Info($"Current Poster Type is different from previous: {config.PosterType}. Updating Database.");
+    //             UpdatePosterTypeInDatabase();
+    //         }
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         logger.Error("An error has occured: " + e);
+    //     }
+    //     finally
+    //     {
+    //         db.CloseConnection();
+    //     }
+    // }
+
+    // private bool IsValidUrl(string url)
+    // {
+    //     if (string.IsNullOrWhiteSpace(url))
+    //     {
+    //         return false;
+    //     }
+
+    //     return Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
+    //         && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+    // }
+
+    // private void UpdatePosterTypeInDatabase()
+    // {
+    //     logger.Debug("Updating Poster Type in Database...");
+
+    // }
+
     private void BuildJsonObjsToCurrScanfile()
     {
         if (!config.SeriesEnabled && !config.MoviesEnabled)
@@ -213,8 +291,18 @@ public class Scraper
 
                 if (series.PremiereDate is not null)
                 {
-                    currFileObj.PremiereYear = series.PremiereDate.ToString()!.Split(' ')[0].Split('/')[2]; // NEW {PremierYear}
-                    logger.Debug($"PremiereYear: {currFileObj.PremiereYear}");
+                    // currFileObj.PremiereYear = series.PremiereDate.ToString()!.Split(' ')[0].Split('/')[2]; // NEW {PremierYear}
+                    try 
+                    {
+                        currFileObj.PremiereYear = (series.PremiereDate?.Year ?? 0).ToString(CultureInfo.InvariantCulture);
+                        logger.Debug($"PremiereYear: {currFileObj.PremiereYear}");
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Warn($"Encountered an error parsing PremiereYear for: {currFileObj.Filename}");
+                        logger.Debug(e);
+                        currFileObj.PremiereYear = "0"; // Set to 0 if parsing fails
+                    }
                 }
 
                 currFileObj.RunTime = (int)((float)episode.RunTimeTicks / 10000 / 60000);
@@ -247,9 +335,9 @@ public class Scraper
                     currFileObj.Season = 0;
                 }
 
-                if (!InDatabase("CurrRunData", currFileObj.Title.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
-                    !InDatabase("CurrNewsletterData", currFileObj.Title.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
-                    !InDatabase("ArchiveData", currFileObj.Title.Replace("'", string.Empty, StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
+                if (!InDatabase("CurrRunData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("CurrNewsletterData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("ArchiveData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
                 {
                     try
                     {
@@ -389,7 +477,7 @@ public class Scraper
     private string SetImageURL(JsonFileObj currObj)
     {
         JsonFileObj fileObj;
-        string currTitle = currObj.Title.Replace("'", string.Empty, StringComparison.Ordinal);
+        string currTitle = currObj.Title.Replace("'", "''", StringComparison.Ordinal);
 
         // check if URL for series already exists CurrRunData table
         foreach (var row in db.Query("SELECT * FROM CurrRunData;"))
@@ -457,6 +545,6 @@ public class Scraper
             unsanitized_string = string.Empty;
         }
 
-        return "'" + unsanitized_string.Replace("'", string.Empty, StringComparison.Ordinal) + "'";
+        return "'" + unsanitized_string.Replace("'", "''", StringComparison.Ordinal) + "'";
     }
 }
