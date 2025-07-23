@@ -291,8 +291,18 @@ public class Scraper
 
                 if (series.PremiereDate is not null)
                 {
-                    currFileObj.PremiereYear = series.PremiereDate.ToString()!.Split(' ')[0].Split('/')[2]; // NEW {PremierYear}
-                    logger.Debug($"PremiereYear: {currFileObj.PremiereYear}");
+                    // currFileObj.PremiereYear = series.PremiereDate.ToString()!.Split(' ')[0].Split('/')[2]; // NEW {PremierYear}
+                    try 
+                    {
+                        currFileObj.PremiereYear = (series.PremiereDate?.Year ?? 0).ToString(CultureInfo.InvariantCulture);
+                        logger.Debug($"PremiereYear: {currFileObj.PremiereYear}");
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Warn($"Encountered an error parsing PremiereYear for: {currFileObj.Filename}");
+                        logger.Debug(e);
+                        currFileObj.PremiereYear = "0"; // Set to 0 if parsing fails
+                    }
                 }
 
                 currFileObj.RunTime = (int)((float)episode.RunTimeTicks / 10000 / 60000);
