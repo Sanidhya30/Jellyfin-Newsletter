@@ -5,6 +5,7 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 * Discord Webhook Support
 * Removal of Imgur and Local Hosted Image Dependencies
 * TMDB Integration
+* Local Poster images support as attachments
 * Multiple Bug Fixes and Enhancements
 
 # Jellyfin Newsletter Plugin
