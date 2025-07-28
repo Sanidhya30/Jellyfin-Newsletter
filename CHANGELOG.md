@@ -1,3 +1,7 @@
+# 0.8.0.1
+
+- Minor bug fix
+
 # 0.8.0.0
 
 - Local Poster attachment support.
