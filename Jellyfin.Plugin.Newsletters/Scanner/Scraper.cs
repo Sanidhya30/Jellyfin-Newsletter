@@ -335,9 +335,9 @@ public class Scraper
                     currFileObj.Season = 0;
                 }
 
-                if (!InDatabase("CurrRunData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
-                    !InDatabase("CurrNewsletterData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
-                    !InDatabase("ArchiveData", currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
+                if (!InDatabase("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("CurrNewsletterData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                    !InDatabase("ArchiveData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
                 {
                     try
                     {
@@ -449,17 +449,19 @@ public class Scraper
         return currFileObj;
     }
 
-    // Instead of checking the fileName, we check the using the title,
-    // and in case of series we check the season and episode number as well.
+    // Check the filename or the Title of the item in the database, we can't just rely on either the filename or the title,
+    // because during the media upgrade the filename might change and during the metadata refresh the title might change.
+    // itemId is not used here because it is not reliable, as it can change if the item is upgraded.
+    // In case of series we check the season and episode number as well.
     // There are cases in which file names might change due to upgrade of the library.
-    private bool InDatabase(string tableName, string title, int season = 0, int episode = 0)
+    private bool InDatabase(string tableName, string fileName, string title, int season = 0, int episode = 0)
     {
-        if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(tableName))
+        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(title) || string.IsNullOrEmpty(tableName))
         {
             return false;
         }
 
-        foreach (var row in db.Query("SELECT COUNT(*) FROM " + tableName + " WHERE Title='" + title + "' AND Season=" + season + " AND Episode=" + episode + ";"))
+        foreach (var row in db.Query("SELECT COUNT(*) FROM " + tableName + " WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + ";"))
         {
             if (row is not null)
             {
