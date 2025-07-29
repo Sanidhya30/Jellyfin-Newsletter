@@ -38,29 +38,72 @@ public class Smtp : Client, IClient
     [HttpPost("SendTestMail")]
     public void SendTestMail()
     {
-        MailMessage mail;
-        SmtpClient smtp;
-
         try
         {
             Logger.Debug("Sending out test mail!");
-            mail = new MailMessage();
+            string smtpAddress = Config.SMTPServer;
+            int portNumber = Config.SMTPPort;
+            bool enableSSL = true;
+            string emailFromAddress = Config.FromAddr;
+            string username = Config.SMTPUser;
+            string password = Config.SMTPPass;
+            string emailToAddress = Config.ToAddr;
+            string subject = Config.Subject;
+            // string body;
 
-            mail.From = new MailAddress(Config.FromAddr);
+            // Tuple format: (display-name, value)
+            var requiredFields = new[]
+            {
+                (name: "SMTP Server Address", value: smtpAddress),
+                (name: "From Address", value: emailFromAddress),
+                (name: "SMTP Username", value: username),
+                (name: "SMTP Password", value: password),
+                (name: "To Address", value: emailToAddress),
+            };
+
+            bool missingField = false;
+            foreach (var (name, value) in requiredFields)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    Logger.Error($"[EMAIL CONFIG] Required field not set: {name}");
+                    missingField = true;
+                }
+            }
+
+            if (missingField)
+            {
+                Logger.Error("One or more required email configuration fields are missing. Aborting send.");
+                return;
+            }
+
+            HtmlBuilder hb = new HtmlBuilder();
+
+            string body = hb.GetDefaultHTMLBody();
+            string builtString = hb.BuildHtmlStringsForTest();
+            builtString = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
+            string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            builtString = builtString.Replace("{Date}", currDate, StringComparison.Ordinal);
+
+            MailMessage mail = new MailMessage();
+
+            mail.From = new MailAddress(emailFromAddress, emailFromAddress);
             mail.To.Clear();
-            mail.Subject = "Jellyfin Newsletters - Test";
-            mail.Body = "Success! You have properly configured your email notification settings";
-            mail.IsBodyHtml = false;
+            mail.Subject = subject;
+            mail.Body = Regex.Replace(builtString, "{[A-za-z]*}", " ");
+            mail.IsBodyHtml = true;
 
             foreach (string email in Config.ToAddr.Split(','))
             {
                 mail.Bcc.Add(email.Trim());
             }
 
-            smtp = new SmtpClient(Config.SMTPServer, Config.SMTPPort);
-            smtp.Credentials = new NetworkCredential(Config.SMTPUser, Config.SMTPPass);
-            smtp.EnableSsl = true;
+            SmtpClient smtp = new SmtpClient(smtpAddress, portNumber);
+            smtp.Credentials = new NetworkCredential(username, password);
+            smtp.EnableSsl = enableSSL;
             smtp.Send(mail);
+
+            Logger.Debug($"Test email sent successfully sent.");
         }
         catch (Exception e)
         {

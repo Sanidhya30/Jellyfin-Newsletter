@@ -3,10 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
 using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
 using Newtonsoft.Json;
+using SQLitePCL.pretty;
 // using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Emails.HTMLBuilder;
@@ -190,6 +190,40 @@ public class HtmlBuilder : ClientBuilder
         }
 
         return chunks;
+    }
+
+    public string BuildHtmlStringsForTest()
+    {
+        string entryHTML = string.Empty;
+
+        try
+        {
+            JsonFileObj item = JsonHelper.GetTestObj();
+            Logger.Debug("Test Entry ITEM: " + JsonConvert.SerializeObject(item));
+
+            string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10 (Test)";
+
+            string tmp_entry = Config.Entry;
+
+            foreach (KeyValuePair<string, object?> ele in item.GetReplaceDict())
+            {
+                if (ele.Value is not null)
+                {
+                    tmp_entry = this.TemplateReplace(tmp_entry, ele.Key, ele.Value);
+                }
+            }
+
+            // Compose the entry's HTML now
+            entryHTML = tmp_entry
+                .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
+                .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+        }
+        catch (Exception e)
+        {
+            Logger.Error("An error has occured: " + e);
+        }
+
+        return entryHTML;
     }
 
     private string GetSeasonEpisodeHTML(List<NlDetailsJson> list)

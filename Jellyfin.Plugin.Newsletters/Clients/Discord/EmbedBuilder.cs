@@ -224,7 +224,7 @@ public class EmbedBuilder : ClientBuilder
             {
                 embed.thumbnail = new Thumbnail
                 {
-                    url = "https://raw.githubusercontent.com/Cloud9Developer/Jellyfin-Newsletter-Plugin/refs/heads/master/logo.png"
+                    url = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/logo.png"
                 };
             }
 
