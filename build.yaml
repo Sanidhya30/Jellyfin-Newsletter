@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/logo.png"
-version: "0.8.0.1"
+version: "0.8.1.0"
 targetAbi: "10.10.0.0"
 framework: "net8.0"
 overview: "Send newsletters for recently added media"
@@ -14,5 +14,6 @@ artifacts:
   - "SQLitePCL.pretty.dll"
   - "SixLabors.ImageSharp.dll"
 changelog: >
-  - Minor bug fix.
+  - Test custom email templates before sending newsletters.
+  - Fix default email templates not being applied.
   FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

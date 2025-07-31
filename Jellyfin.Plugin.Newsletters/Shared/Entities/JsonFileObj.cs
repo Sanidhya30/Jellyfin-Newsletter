@@ -118,4 +118,36 @@ public class JsonFileObj
 
         return item_dict;        
     }
+
+    public JsonFileObj GetTestObj()
+    {
+        // Filename = string.Empty; 0
+        // Title = string.Empty; 1
+        // Season = 0; 2
+        // Episode = 0; 3
+        // SeriesOverview = string.Empty; 4
+        // ImageURL = string.Empty; 5
+        // ItemID = string.Empty; 6
+        // PosterPath = string.Empty; 7
+
+        logger = new Logger();
+        JsonFileObj obj = new JsonFileObj()
+        {
+            Filename = "/data/series/Newsletter/Newsletter-test.mkv",
+            Title = "Newsletter-Test",
+            Season = 1,
+            Episode = 1,
+            SeriesOverview = "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.",
+            ImageURL = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/logo.png",
+            ItemID = "0123456789",
+            PosterPath = "/data/series/Newsletter/test.jpg",
+            Type = "Series",
+            PremiereYear = "2025",
+            RunTime = 60,
+            OfficialRating = "TV-14",
+            CommunityRating = 10
+        };
+
+        return obj;
+    }
 }

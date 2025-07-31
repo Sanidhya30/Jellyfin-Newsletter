@@ -1,3 +1,8 @@
+# 0.8.1.0
+
+- Test custom email templates before sending newsletter.
+- Fix default email templates not being applied.
+
 # 0.8.0.1
 
 - Minor bug fix

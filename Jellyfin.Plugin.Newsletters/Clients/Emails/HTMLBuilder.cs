@@ -3,10 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading;
 using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
 using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
 using Newtonsoft.Json;
+using SQLitePCL.pretty;
 // using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Emails.HTMLBuilder;
@@ -28,6 +28,8 @@ public class HtmlBuilder : ClientBuilder
 
     public HtmlBuilder()
     {
+        DefaultBodyAndEntry(); // set default body and entry HTML from template file if not set in config
+
         emailBody = Config.Body;
 
         newslettersDir = Config.NewsletterDir; // newsletterdir
@@ -192,6 +194,45 @@ public class HtmlBuilder : ClientBuilder
         return chunks;
     }
 
+    public string BuildHtmlStringsForTest()
+    {
+        string entryHTML = string.Empty;
+
+        try
+        {
+            JsonFileObj item = JsonHelper.GetTestObj();
+            Logger.Debug("Test Entry ITEM: " + JsonConvert.SerializeObject(item));
+
+            string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10";
+
+            string tmp_entry = Config.Entry;
+
+            foreach (KeyValuePair<string, object?> ele in item.GetReplaceDict())
+            {
+                if (ele.Value is not null)
+                {
+                    tmp_entry = this.TemplateReplace(tmp_entry, ele.Key, ele.Value);
+                }
+            }
+
+            // Compose the entry's HTML now
+            entryHTML = tmp_entry
+                .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
+                .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+        }
+        catch (Exception e)
+        {
+            Logger.Error("An error has occured: " + e);
+        }
+
+        return entryHTML;
+    }
+
+    public string ReplaceBodyWithBuiltString(string body, string nlData)
+    {
+        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
+    }
+
     private string GetSeasonEpisodeHTML(List<NlDetailsJson> list)
     {
         string html = string.Empty;
@@ -212,11 +253,6 @@ public class HtmlBuilder : ClientBuilder
         WriteFile(write, newsletterHTMLFile, htmlBody);
     }
 
-    public string ReplaceBodyWithBuiltString(string body, string nlData)
-    {
-        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
-    }
-
     private void WriteFile(string method, string path, string value)
     {
         if (method == append)
@@ -226,6 +262,52 @@ public class HtmlBuilder : ClientBuilder
         else if (method == write)
         {
             File.WriteAllText(path, value);
+        }
+    }
+
+    private void DefaultBodyAndEntry()
+    {
+        Logger.Debug("Checking for default Body and Entry HTML from Template file..");
+        try
+        {
+            var pluginDir = Path.GetDirectoryName(typeof(HtmlBuilder).Assembly.Location);
+            if (pluginDir == null)
+            {
+                Logger.Error("Failed to locate plugin directory.");
+            }
+            
+            if (string.IsNullOrWhiteSpace(Config.Body)) 
+            {
+                try
+                {
+                    Config.Body = File.ReadAllText($"{pluginDir}/Templates/template_modern_body.html");
+                    Logger.Debug("Body HTML set from Template file!");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to set default Body HTML from Template file");
+                    Logger.Error(ex);
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(Config.Entry))
+            {
+                try
+                {
+                    Config.Entry = File.ReadAllText($"{pluginDir}/Templates/template_modern_entry.html");
+                    Logger.Debug("Entry HTML set from Template file!");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to set default Entry HTML from Template file");
+                    Logger.Error(ex);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Error("Failed to locate/set html body from template file..");
+            Logger.Error(e);
         }
     }
 }

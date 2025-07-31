@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/logo.png",
         "versions": [
             {
+                "version": "0.8.1.0",
+                "changelog": "- Test custom email templates before sending newsletters. - Fix default email templates not being applied. FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.10.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v0.8.1.0/newsletters_0.8.1.0.zip",
+                "checksum": "95e70498affb4027f0c32b1fc461caf9",
+                "timestamp": "2025-07-31T06:09:03Z"
+            },
+            {
                 "version": "0.8.0.1",
                 "changelog": "- Minor bug fix. FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.10.0.0",

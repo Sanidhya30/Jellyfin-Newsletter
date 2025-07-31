@@ -156,7 +156,7 @@ public class EmbedBuilder : ClientBuilder
         {
             // Populating embed with reference to a Series, as it'll will cover all the cases
             int embedColor = Convert.ToInt32(Config.DiscordSeriesEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
-            string seaEps = "Season: 1 - Eps. 1 - 10\nSeason: 2 - Eps. 1 - 10\nSeason: 3 - Eps. 1 - 10 (Test)";
+            string seaEps = "Season: 1 - Eps. 1 - 10\nSeason: 2 - Eps. 1 - 10\nSeason: 3 - Eps. 1 - 10";
 
             var fieldsList = new List<EmbedField>();
 
@@ -166,7 +166,7 @@ public class EmbedBuilder : ClientBuilder
                 fieldsList.Add(new EmbedField
                 {
                     name = "PG rating",
-                    value = "TV-14 (Test)",
+                    value = "TV-14",
                     inline = true
                 });
             }
@@ -177,7 +177,7 @@ public class EmbedBuilder : ClientBuilder
                 fieldsList.Add(new EmbedField
                 {
                     name = "Rating",
-                    value = "8.4 (Test)",
+                    value = "8.4",
                     inline = true
                 });
             }
@@ -188,7 +188,7 @@ public class EmbedBuilder : ClientBuilder
                 fieldsList.Add(new EmbedField
                 {
                     name = "Duration",
-                    value = "45 min (Test)",
+                    value = "45 min",
                     inline = true
                 });
             }
@@ -206,7 +206,7 @@ public class EmbedBuilder : ClientBuilder
 
             var embed = new Embed
             {
-                title = "Newsletter Test Title",
+                title = "Newsletter-Test",
                 url = Config.Hostname,
                 color = embedColor,
                 timestamp = DateTime.UtcNow.ToString("o"),
@@ -216,7 +216,7 @@ public class EmbedBuilder : ClientBuilder
             // Check if DiscordDescriptionEnabled is true
             if (Config.DiscordDescriptionEnabled)
             {
-                embed.description = "This is a test embed from Newsletter plugin";
+                embed.description = "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
             }
 
             // Check if DiscordThumbnailEnabled is true
@@ -224,7 +224,7 @@ public class EmbedBuilder : ClientBuilder
             {
                 embed.thumbnail = new Thumbnail
                 {
-                    url = "https://raw.githubusercontent.com/Cloud9Developer/Jellyfin-Newsletter-Plugin/refs/heads/master/logo.png"
+                    url = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/logo.png"
                 };
             }
 
