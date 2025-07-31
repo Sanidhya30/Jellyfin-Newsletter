@@ -137,7 +137,7 @@ public class JsonFileObj
             Title = "Newsletter-Test",
             Season = 1,
             Episode = 1,
-            SeriesOverview = "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Maecenas sed augue a enim facilisis suscipit sit amet sit amet odio. Phasellus tincidunt tortor arcu, vel vestibulum ipsum ullamcorper id. Etiam feugiat cursus ultricies. Nullam ornare ultrices pharetra. Phasellus vehicula nisl ex, id accumsan enim dapibus eu. Phasellus ultrices rhoncus metus ut vehicula. Curabitur tincidunt, eros non ullamcorper eleifend, orci sapien ornare nisi, eu tempor mauris lorem eget mi. Morbi nec cursus augue. Phasellus congue, risus non iaculis consequat, neque est ullamcorper enim, vitae commodo mi risus quis turpis. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            SeriesOverview = "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.",
             ImageURL = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/logo.png",
             ItemID = "0123456789",
             PosterPath = "/data/series/Newsletter/test.jpg",

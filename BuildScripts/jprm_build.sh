@@ -48,7 +48,7 @@ JELLYFIN_REPO_URL=${JELLYFIN_REPO_URL:-${DEFAULT_REPO_URL}}
 
 # Each segment of the version is a 16bit number.
 # Max number is 65535.
-VERSION_SUFFIX=${VERSION_SUFFIX:-$(date -u +%y%m.%d%H.%M%S)}
+# VERSION_SUFFIX=${VERSION_SUFFIX:-$(date -u +%y%m.%d%H.%M%S)}
 
 meta_version=$(grep -Po '^ *version: * "*\K[^"$]+' "${PLUGIN}/build.yaml")
 VERSION=${VERSION:-$(echo $meta_version)}
@@ -58,19 +58,25 @@ VERSION=${VERSION:-$(echo $meta_version)}
 
 find "${PLUGIN}" -name project.assets.json -exec rm -v '{}' ';'
 
-zipfile=$($JPRM --verbosity=debug plugin build "${PLUGIN}" --output="${ARTIFACT_DIR}" --version="${VERSION}") && {
-    $JPRM --verbosity=debug repo add --url=${JELLYFIN_REPO_URL} "${JELLYFIN_REPO}" "${zipfile}"
-}
-rc=$?
+zipfile=$($JPRM --verbosity=debug plugin build "${PLUGIN}" --output="${ARTIFACT_DIR}" --version="${VERSION}")
+rc_build=$?
 
-# echo $JELLYFIN_REPO
 # package Templates/ as well
-cd ${MY}/../${JELLYFIN_REPO}
-zipfile="./newsletters/newsletters_${VERSION}.zip"
-zip -r ${zipfile} ./Templates
+(cd ${MY}/../${JELLYFIN_REPO} && zip -r ${zipfile} ./Templates)
 echo "----------"
 echo "Contents in ${zipfile}"
 unzip -l ${zipfile}
-sed -i "s/github.com\/Sanidhya30\/Jellyfin-Newsletter\/releases\/download\/newsletters/github.com\/Sanidhya30\/Jellyfin-Newsletter\/releases\/download\/v${VERSION}/g" manifest.json
 md5sum ${zipfile}
+$JPRM --verbosity=debug repo add --url=${JELLYFIN_REPO_URL} "${JELLYFIN_REPO}" "${zipfile}"
+rc_repo=$?
+
+# Now: rc_and = 0 if both succeeded, or non-zero if either failed
+if [[ $rc_build -eq 0 && $rc_repo -eq 0 ]]; then
+    rc=0
+else
+    rc=1
+fi
+
+cd ${MY}/../${JELLYFIN_REPO}
+sed -i "s/github.com\/Sanidhya30\/Jellyfin-Newsletter\/releases\/download\/newsletters/github.com\/Sanidhya30\/Jellyfin-Newsletter\/releases\/download\/v${VERSION}/g" manifest.json
 exit $rc
