@@ -1,3 +1,8 @@
+# 0.8.1.1
+
+- Feature to add support for to and bcc email addresses.
+- ImageSharp updated to the latest version.
+
 # 0.8.1.0
 
 - Test custom email templates before sending newsletter.
