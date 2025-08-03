@@ -47,7 +47,8 @@ public class Smtp : Client, IClient
             string emailFromAddress = Config.FromAddr;
             string username = Config.SMTPUser;
             string password = Config.SMTPPass;
-            string emailToAddress = Config.ToAddr;
+            string emailToAddress = Config.VisibleToAddr;
+            string emailBccAddress = Config.ToAddr;
             string subject = Config.Subject;
             // string body;
 
@@ -58,7 +59,6 @@ public class Smtp : Client, IClient
                 (name: "From Address", value: emailFromAddress),
                 (name: "SMTP Username", value: username),
                 (name: "SMTP Password", value: password),
-                (name: "To Address", value: emailToAddress),
             };
 
             bool missingField = false;
@@ -69,6 +69,13 @@ public class Smtp : Client, IClient
                     Logger.Error($"[EMAIL CONFIG] Required field not set: {name}");
                     missingField = true;
                 }
+            }
+
+            // Check if at least one recipient field is provided
+            if (string.IsNullOrWhiteSpace(emailToAddress) && string.IsNullOrWhiteSpace(emailBccAddress))
+            {
+                Logger.Error("[EMAIL CONFIG] At least one recipient address (TO or BCC) must be provided.");
+                missingField = true;
             }
 
             if (missingField)
@@ -89,13 +96,31 @@ public class Smtp : Client, IClient
 
             mail.From = new MailAddress(emailFromAddress, emailFromAddress);
             mail.To.Clear();
+            mail.Bcc.Clear();
             mail.Subject = subject;
             mail.Body = Regex.Replace(builtString, "{[A-za-z]*}", " ");
             mail.IsBodyHtml = true;
 
-            foreach (string email in Config.ToAddr.Split(','))
+            if (!string.IsNullOrWhiteSpace(emailToAddress))
             {
-                mail.Bcc.Add(email.Trim());
+                foreach (string email in emailToAddress.Split(','))
+                {
+                    if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        mail.To.Add(email.Trim());
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(emailBccAddress))
+            {
+                foreach (string email in emailBccAddress.Split(','))
+                {
+                    if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        mail.Bcc.Add(email.Trim());
+                    }
+                }
             }
 
             SmtpClient smtp = new SmtpClient(smtpAddress, portNumber);
@@ -130,7 +155,8 @@ public class Smtp : Client, IClient
                 string emailFromAddress = Config.FromAddr;
                 string username = Config.SMTPUser;
                 string password = Config.SMTPPass;
-                string emailToAddress = Config.ToAddr;
+                string emailToAddress = Config.VisibleToAddr;
+                string emailBccAddress = Config.ToAddr;
                 string subject = Config.Subject;
                 int smtpTimeout = 100000;
                 // string body;
@@ -142,7 +168,6 @@ public class Smtp : Client, IClient
                     (name: "From Address", value: emailFromAddress),
                     (name: "SMTP Username", value: username),
                     (name: "SMTP Password", value: password),
-                    (name: "To Address", value: emailToAddress),
                 };
 
                 bool missingField = false;
@@ -153,6 +178,13 @@ public class Smtp : Client, IClient
                         Logger.Error($"[EMAIL CONFIG] Required field not set: {name}");
                         missingField = true;
                     }
+                }
+
+                // Check if at least one recipient field is provided
+                if (string.IsNullOrWhiteSpace(emailToAddress) && string.IsNullOrWhiteSpace(emailBccAddress))
+                {
+                    Logger.Error("[EMAIL CONFIG] At least one recipient address (TO or BCC) must be provided.");
+                    missingField = true;
                 }
 
                 if (missingField)
@@ -183,10 +215,26 @@ public class Smtp : Client, IClient
                         mail.From = new MailAddress(emailFromAddress, emailFromAddress);
                         mail.IsBodyHtml = true;
 
-                        // Add all Bccs every time (to keep code structure the same)
-                        foreach (string email in emailToAddress.Split(','))
+                        if (!string.IsNullOrWhiteSpace(emailToAddress))
                         {
-                            mail.Bcc.Add(email.Trim());
+                            foreach (string email in emailToAddress.Split(','))
+                            {
+                                if (!string.IsNullOrWhiteSpace(email))
+                                {
+                                    mail.To.Add(email.Trim());
+                                }
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(emailBccAddress))
+                        {
+                            foreach (string email in emailBccAddress.Split(','))
+                            {
+                                if (!string.IsNullOrWhiteSpace(email))
+                                {
+                                    mail.Bcc.Add(email.Trim());
+                                }
+                            }
                         }
 
                         // Multi-part subject (optional, for clarity)

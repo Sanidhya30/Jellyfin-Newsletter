@@ -26,7 +26,8 @@ public class PluginConfiguration : BasePluginConfiguration
         SMTPPass = string.Empty;
 
         // default Email Details
-        ToAddr = string.Empty;
+        VisibleToAddr = string.Empty;
+        ToAddr = string.Empty;         // This is the bcc email address
         FromAddr = "JellyfinNewsletter@donotreply.com";
         Subject = "Jellyfin Newsletter";
 
@@ -149,6 +150,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a string setting.
     /// </summary>
     public string ToAddr { get; set; }
+
+    /// <summary>
+    /// Gets or sets a string setting.
+    /// </summary>
+    public string VisibleToAddr { get; set; }
 
     /// <summary>
     /// Gets or sets a string setting.
