@@ -18,6 +18,8 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Tasks;
 using Newtonsoft.Json;
@@ -44,16 +46,12 @@ public class Scraper
     private SQLiteDatabase db;
     private JsonFileObj jsonHelper;
     private Logger logger;
-    private IProgress<double> progress;
-    private CancellationToken cancelToken;
     // private List<JsonFileObj> archiveObj;
 
-    public Scraper(ILibraryManager libraryManager, IProgress<double> passedProgress, CancellationToken cancellationToken)
+    public Scraper(ILibraryManager libraryManager)
     {
         logger = new Logger();
         jsonHelper = new JsonFileObj();
-        progress = passedProgress;
-        cancelToken = cancellationToken;
         config = Plugin.Instance!.Configuration;
         libManager = libraryManager;
 
@@ -74,13 +72,13 @@ public class Scraper
     }
 
     // This is the main function
-    public Task GetSeriesData()
+    public Task GetSeriesData(List<BaseItem> items)
     {
         logger.Info("Gathering Data...");
         try
         {
             db.CreateConnection();
-            BuildJsonObjsToCurrScanfile();
+            BuildJsonObjsToCurrScanfile(items);
             CopyCurrRunDataToNewsletterData();
         }
         catch (Exception e)
@@ -95,103 +93,25 @@ public class Scraper
         return Task.CompletedTask;
     }
 
-    // public void CheckPreviousPosterType()
-    // {
-    //     logger.Info("Checking Previous Run Poster Type...");
-        
-    //     try
-    //     {
-    //         db.CreateConnection();
-
-    //         tables = new List<string>
-    //         {
-    //             "CurrRunData",
-    //             "CurrNewsletterData",
-    //             "ArchiveData"
-    //         };
-
-    //         var previousPosterType = string.Empty;
-
-    //         foreach (var table in tables) {
-    //             previousPosterType = db.Query($"SELECT ImageURL FROM CurrNewsletterData ORDER BY ROWID ASC LIMIT 1;");
-    //             if (!string.IsNullOrEmpty(previousPosterType))
-    //             {
-    //                 if (IsValidUrl(previousPosterType))
-    //                 {
-    //                     logger.Info($"Previous Poster Type found is URL.");
-    //                     previousPosterType = "tmdb";
-    //                 }
-    //                 else
-    //                 {
-    //                     logger.Info($"Previous Poster Type is not a valid URL.");
-    //                     previousPosterType = "attachment";
-    //                 }
-    //                 break;
-    //             }
-    //         }
-
-    //         if (string.IsNullOrEmpty(previousPosterType))
-    //         {
-    //             logger.Info("No previous poster type found.");
-    //             return;
-    //         }
-
-    //         if (config.PosterType == previousPosterType)
-    //         {
-    //             logger.Info($"Current Poster Type is the same as previous: {config.PosterType}. No need to update Database.");
-    //             return;
-    //         }
-    //         else {
-    //             logger.Info($"Current Poster Type is different from previous: {config.PosterType}. Updating Database.");
-    //             UpdatePosterTypeInDatabase();
-    //         }
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         logger.Error("An error has occured: " + e);
-    //     }
-    //     finally
-    //     {
-    //         db.CloseConnection();
-    //     }
-    // }
-
-    // private bool IsValidUrl(string url)
-    // {
-    //     if (string.IsNullOrWhiteSpace(url))
-    //     {
-    //         return false;
-    //     }
-
-    //     return Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
-    //         && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
-    // }
-
-    // private void UpdatePosterTypeInDatabase()
-    // {
-    //     logger.Debug("Updating Poster Type in Database...");
-
-    // }
-
-    private void BuildJsonObjsToCurrScanfile()
+    private void BuildJsonObjsToCurrScanfile(List<BaseItem> items)
     {
         if (!config.SeriesEnabled && !config.MoviesEnabled)
         {
             logger.Info("No Libraries Enabled In Config!");
         }
 
-        if (config.SeriesEnabled)
+        // Filter items by type and process accordingly
+        var episodeItems = items.Where(item => item is Episode).ToList();
+        var movieItems = items.Where(item => item is Movie).ToList();
+
+        if (episodeItems.Count != 0)
         {
-            InternalItemsQuery series = new InternalItemsQuery();
-            series.IncludeItemTypes = new[] { BaseItemKind.Episode };
-            BuildObjs(libManager.GetItemList(series), "Series"); // populate series
+            BuildObjs(episodeItems, "Series"); // populate series
         }
 
-        if (config.MoviesEnabled)
+        if (movieItems.Count != 0)
         {
-            InternalItemsQuery movie = new InternalItemsQuery();
-            movie.IncludeItemTypes = new[] { BaseItemKind.Movie };
-            BuildObjs(libManager.GetItemList(movie), "Movie"); // populate movies
+            BuildObjs(movieItems, "Movie"); // populate movies
         }
     }
 
@@ -214,7 +134,6 @@ public class Scraper
         {
             logger.Debug("---------------");
             currCount++;
-            progress.Report((double)currCount / (double)totalLibCount * 100);
             if (item is not null)
             {
                 try

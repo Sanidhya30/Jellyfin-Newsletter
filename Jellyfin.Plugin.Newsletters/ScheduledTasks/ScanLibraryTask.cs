@@ -4,9 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.Newsletters.Scripts.SCRAPER;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Globalization;
+using Jellyfin.Plugin.Newsletters.ItemEventNotifier.ITEMEVENTMANAGER;
 using MediaBrowser.Model.Tasks;
 
 namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
@@ -16,11 +14,15 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
     /// </summary>
     public class ScanLibraryTask : IScheduledTask
     {
-        private readonly ILibraryManager _libraryManager;
+        private const int RecheckIntervalSec = 30;
+        private readonly ItemEventManager itemManager;
 
-        public ScanLibraryTask(ILibraryManager libraryManager)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScanLibraryTask"/> class.
+        /// </summary>
+        public ScanLibraryTask(ItemEventManager itemAddedManager)
         {
-            _libraryManager = libraryManager;
+            itemManager = itemAddedManager;
         }
 
         /// <inheritdoc />
@@ -44,18 +46,14 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
             yield return new TaskTriggerInfo
             {
                 Type = TaskTriggerInfo.TriggerInterval,
-                IntervalTicks = TimeSpan.FromHours(1).Ticks
+                IntervalTicks = TimeSpan.FromSeconds(RecheckIntervalSec).Ticks
             };
         }
 
         /// <inheritdoc />
         public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            progress.Report(0);
-
-            Scraper myScraper = new Scraper(_libraryManager, progress, cancellationToken);
-            return myScraper.GetSeriesData();
+            return itemManager.ProcessItemsAsync();
         }
     }
 }
