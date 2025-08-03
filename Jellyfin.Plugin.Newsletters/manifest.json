@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/logo.png",
         "versions": [
             {
+                "version": "0.8.1.1",
+                "changelog": "- Feature to add support for to and bcc email addresses. - Update ImageSharp to the latest version. FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.10.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v0.8.1.1/newsletters_0.8.1.1.zip",
+                "checksum": "7d282952d486b1071e73f377d97d15af",
+                "timestamp": "2025-08-03T13:43:35Z"
+            },
+            {
                 "version": "0.8.1.0",
                 "changelog": "- Test custom email templates before sending newsletters. - Fix default email templates not being applied. FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.10.0.0",

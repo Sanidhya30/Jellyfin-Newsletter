@@ -119,9 +119,14 @@
                         <details>
                             <summary>Email & SMTP Config</summary><br>
                             <div class="inputContainer" id="ToAddress">
-                                <label class="inputLabel inputLabelUnfocused" for="ToAddr">To Address:</label>
-                                <input id="ToAddr" name="ToAddr" type="text" is="emby-input" />
+                                <label class="inputLabel inputLabelUnfocused" for="VisibleToAddr">To Address:</label>
+                                <input id="VisibleToAddr" name="VisibleToAddr" type="text" is="emby-input" />
                                 <div class="fieldDescription">Recipient's email to recieve newsletter. If more than 1, seperate with commas</div>
+                            </div>
+                            <div class="inputContainer" id="BCCAddress">
+                                <label class="inputLabel inputLabelUnfocused" for="ToAddr">BCC Address:</label>
+                                <input id="ToAddr" name="ToAddr" type="text" is="emby-input" />
+                                <div class="fieldDescription">Recipient's email to recieve newsletter(in BCC). If more than 1, seperate with commas</div>
                             </div>
                             <div class="inputContainer" id="FromAddress">
                                 <label class="inputLabel inputLabelUnfocused" for="FromAddr">From Address:</label>
@@ -332,6 +337,7 @@
                     config.DiscordMoviesEmbedColor = document.querySelector('#DiscordMoviesEmbedColor').value;
                     //emailDetails
                     config.ToAddr = document.querySelector('#ToAddr').value;
+                    config.VisibleToAddr = document.querySelector('#VisibleToAddr').value;
                     config.FromAddr = document.querySelector('#FromAddr').value;
                     config.Subject = document.querySelector('#Subject').value;
                     //emailHtmlFormatting
@@ -376,6 +382,7 @@
                     document.querySelector('#DiscordSeriesEmbedColor').value = config.DiscordSeriesEmbedColor;
                     document.querySelector('#DiscordMoviesEmbedColor').value = config.DiscordMoviesEmbedColor;
                     //emailDetails
+                    document.querySelector('#VisibleToAddr').value = config.VisibleToAddr;
                     document.querySelector('#ToAddr').value = config.ToAddr;
                     document.querySelector('#FromAddr').value = config.FromAddr;
                     document.querySelector('#Subject').value = config.Subject;
