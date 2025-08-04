@@ -3,13 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.LOGGER;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Common.Configuration;
 using SQLitePCL;
 using SQLitePCL.pretty;
 
-namespace Jellyfin.Plugin.Newsletters.Shared.DATA;
+namespace Jellyfin.Plugin.Newsletters.Shared.Database;
 
 public class SQLiteDatabase
     {

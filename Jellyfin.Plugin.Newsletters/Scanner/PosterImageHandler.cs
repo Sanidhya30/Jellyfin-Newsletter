@@ -10,13 +10,12 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.LOGGER;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
-using Jellyfin.Plugin.Newsletters.Shared.DATA;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json.Linq;
 // using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Newsletters.Scanner.NLImageHandler;
+namespace Jellyfin.Plugin.Newsletters.Scanner;
 
 public class PosterImageHandler
 {

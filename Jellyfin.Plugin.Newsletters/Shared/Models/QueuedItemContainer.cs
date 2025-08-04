@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Jellyfin.Plugin.Newsletters.Scripts.Models;
+namespace Jellyfin.Plugin.Newsletters.Shared.Models;
 
 /// <summary>
 /// Queued item container.

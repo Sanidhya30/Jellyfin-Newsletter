@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using Jellyfin.Plugin.Newsletters.Configuration;
 
-namespace Jellyfin.Plugin.Newsletters.LOGGER;
+namespace Jellyfin.Plugin.Newsletters;
 
 /// <summary>
 /// Initializes a new instance of the <see cref="Logger"/> class.

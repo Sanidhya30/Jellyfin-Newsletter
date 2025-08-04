@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
+using Jellyfin.Plugin.Newsletters.Clients;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
 using Newtonsoft.Json;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
+namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 
 public class EmbedBuilder : ClientBuilder
 {

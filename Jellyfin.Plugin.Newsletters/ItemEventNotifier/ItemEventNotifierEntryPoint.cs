@@ -1,8 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.ItemEventNotifier.ITEMEVENTMANAGER;
-using Jellyfin.Plugin.Newsletters.LOGGER;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities.Movies;
@@ -10,7 +8,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Hosting;
 
-namespace Jellyfin.Plugin.Newsletters.ItemEventNotifier.ITEMEVENTNOTIFIERENTRYPOINT;
+namespace Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 
 /// <summary>
 /// Notifier when a library item is added.
@@ -25,6 +23,8 @@ public class ItemEventNotifierEntryPoint : IHostedService
     /// <summary>
     /// Initializes a new instance of the <see cref="ItemEventNotifierEntryPoint"/> class.
     /// </summary>
+    /// <param name="itemEventManager">The item event manager.</param>
+    /// <param name="libraryManager">The library manager.</param>
     public ItemEventNotifierEntryPoint(
         ItemEventManager itemEventManager,
         ILibraryManager libraryManager)

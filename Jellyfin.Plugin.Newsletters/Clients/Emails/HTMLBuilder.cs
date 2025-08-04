@@ -3,13 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
+using Jellyfin.Plugin.Newsletters.Clients;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
 using SQLitePCL.pretty;
 // using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Emails.HTMLBuilder;
+namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
 
 public class HtmlBuilder : ClientBuilder
 {

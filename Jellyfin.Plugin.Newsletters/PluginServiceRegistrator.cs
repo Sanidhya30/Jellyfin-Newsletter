@@ -1,7 +1,6 @@
 ﻿using Jellyfin.Data.Events.System;
 using Jellyfin.Data.Events.Users;
-using Jellyfin.Plugin.Newsletters.ItemEventNotifier.ITEMEVENTNOTIFIERENTRYPOINT;
-using Jellyfin.Plugin.Newsletters.ItemEventNotifier.ITEMEVENTMANAGER;
+using Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 using MediaBrowser.Common.Updates;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;

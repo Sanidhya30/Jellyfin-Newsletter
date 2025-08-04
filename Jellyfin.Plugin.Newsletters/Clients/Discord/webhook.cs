@@ -7,14 +7,13 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.Newsletters.Clients.CLIENT;
-using Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
+using Jellyfin.Plugin.Newsletters.Clients;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Discord.WEBHOOK;
+namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 
 [Authorize(Policy = Policies.RequiresElevation)]
 [ApiController]

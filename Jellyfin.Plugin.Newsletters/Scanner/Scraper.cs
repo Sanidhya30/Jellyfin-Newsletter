@@ -10,10 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.LOGGER;
-using Jellyfin.Plugin.Newsletters.Scanner.NLImageHandler;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
-using Jellyfin.Plugin.Newsletters.Shared.DATA;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller;
@@ -27,7 +25,7 @@ using Newtonsoft.Json.Linq;
 
 // using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Newsletters.Scripts.SCRAPER;
+namespace Jellyfin.Plugin.Newsletters.Scanner;
 
 public class Scraper
 {

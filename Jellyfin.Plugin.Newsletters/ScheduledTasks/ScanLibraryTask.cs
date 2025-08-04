@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.Newsletters.ItemEventNotifier.ITEMEVENTMANAGER;
+using Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 using MediaBrowser.Model.Tasks;
 
 namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
@@ -20,6 +20,7 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
         /// <summary>
         /// Initializes a new instance of the <see cref="ScanLibraryTask"/> class.
         /// </summary>
+        /// <param name="itemAddedManager">The item event manager used to process added items.</param>
         public ScanLibraryTask(ItemEventManager itemAddedManager)
         {
             itemManager = itemAddedManager;

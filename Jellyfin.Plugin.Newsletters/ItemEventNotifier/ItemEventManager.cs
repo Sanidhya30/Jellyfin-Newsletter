@@ -2,29 +2,33 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.Newsletters.LOGGER;
-using Jellyfin.Plugin.Newsletters.Scripts.Models;
-using Jellyfin.Plugin.Newsletters.Scripts.SCRAPER;
+using Jellyfin.Plugin.Newsletters.Scanner;
+using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Newsletters.ItemEventNotifier.ITEMEVENTMANAGER;
+namespace Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 
+/// <summary>
+/// Manages item events and notification processing for the Jellyfin Newsletter plugin.
+/// </summary>
 public class ItemEventManager
 {
     private const int MaxRetries = 10;
-    private Logger logger;
     private readonly ILibraryManager libManager;
     private readonly IServerApplicationHost _applicationHost;
     private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemAddedQueue;
     private readonly Scraper myScraper;
+    private Logger logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ItemEventManager"/> class.
     /// </summary>
+    /// <param name="libraryManager">The library manager used to access items in the library.</param>
+    /// <param name="applicationHost">The server application host for dependency injection and service scope.</param>
     public ItemEventManager(
         ILibraryManager libraryManager,
         IServerApplicationHost applicationHost)
@@ -36,6 +40,10 @@ public class ItemEventManager
         myScraper = new Scraper(libManager);
     }
 
+    /// <summary>
+    /// Processes all items in the queue, refreshing metadata and scraping data as needed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task ProcessItemsAsync()
     {
         logger.Debug("Processing Items Async");
@@ -84,7 +92,10 @@ public class ItemEventManager
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Adds an item to the notification queue for processing.
+    /// </summary>
+    /// <param name="item">The item to be added to the queue.</param>
     public void AddItem(BaseItem item)
     {
         itemAddedQueue.TryAdd(item.Id, new QueuedItemContainer(item.Id));
