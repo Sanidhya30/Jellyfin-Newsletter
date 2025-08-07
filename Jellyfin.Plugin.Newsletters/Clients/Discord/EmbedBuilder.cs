@@ -4,18 +4,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Jellyfin.Plugin.Newsletters.Clients;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
 using Newtonsoft.Json;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 
-public class EmbedBuilder : ClientBuilder
+public class EmbedBuilder(Logger loggerInstance,
+    SQLiteDatabase dbInstance)
+    : ClientBuilder(loggerInstance, dbInstance)
 {
     public List<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
     {
-        List<string> completed = new List<string>();
+        var completed = new HashSet<string>();
         var result = new List<(Embed, MemoryStream?, string)>();
 
         try
@@ -28,7 +30,7 @@ public class EmbedBuilder : ClientBuilder
                 {
                     JsonFileObj item = JsonHelper.ConvertToObj(row);
 
-                    if (completed.Contains(item.Title))
+                    if (!completed.Add(item.Title))
                     {
                         continue;
                     }
@@ -47,49 +49,10 @@ public class EmbedBuilder : ClientBuilder
 
                     var fieldsList = new List<EmbedField>();
 
-                    // Check if DiscordRatingEnabled is true
-                    if (Config.DiscordRatingEnabled)
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "Rating",
-                            value = item.CommunityRating.HasValue ? item.CommunityRating.Value.ToString(CultureInfo.InvariantCulture) : "N/A",
-                            inline = true
-                        });
-                    }
-
-                    // Check if DiscordPGRatingEnabled is true
-                    if (Config.DiscordPGRatingEnabled)
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "PG rating",
-                            value = !string.IsNullOrEmpty(item.OfficialRating) ? item.OfficialRating : "N/A",
-                            inline = true
-                        });
-                    }
-
-                    // Check if DiscordDurationEnabled is true
-                    if (Config.DiscordDurationEnabled)
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "Duration",
-                            value = item.RunTime.ToString(CultureInfo.InvariantCulture) + " min",
-                            inline = true
-                        });
-                    }
-
-                    // Check if DiscordEpisodesEnabled is true and seaEps is not null/empty
-                    if (Config.DiscordEpisodesEnabled && !string.IsNullOrWhiteSpace(seaEps))
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "Episodes",
-                            value = seaEps,
-                            inline = false
-                        });
-                    }
+                    AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString(CultureInfo.InvariantCulture) ?? "N/A");
+                    AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
+                    AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
+                    AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
                     var embed = new Embed
                     {
@@ -131,7 +94,6 @@ public class EmbedBuilder : ClientBuilder
                         }
                     }
 
-                    completed.Add(item.Title);
                     result.Add((embed, resizedImageStream, uniqueImageName));
                 }
             }
@@ -160,49 +122,10 @@ public class EmbedBuilder : ClientBuilder
 
             var fieldsList = new List<EmbedField>();
 
-            // Check if DiscordPGRatingEnabled is true
-            if (Config.DiscordPGRatingEnabled)
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "PG rating",
-                    value = "TV-14",
-                    inline = true
-                });
-            }
-
-            // Check if DiscordRatingEnabled is true
-            if (Config.DiscordRatingEnabled)
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "Rating",
-                    value = "8.4",
-                    inline = true
-                });
-            }
-
-            // Check if DiscordDurationEnabled is true
-            if (Config.DiscordDurationEnabled)
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "Duration",
-                    value = "45 min",
-                    inline = true
-                });
-            }
-
-            // Check if DiscordEpisodesEnabled is true and seaEps is not null/empty
-            if (Config.DiscordEpisodesEnabled && !string.IsNullOrWhiteSpace(seaEps))
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "Episodes",
-                    value = seaEps,
-                    inline = false
-                });
-            }
+            AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", "8.4");
+            AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", "TV-14");
+            AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", "45 min");
+            AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
             var embed = new Embed
             {
@@ -248,6 +171,19 @@ public class EmbedBuilder : ClientBuilder
         }
 
         return seaEps;
+    }
+
+    private static void AddFieldIfEnabled(List<EmbedField> fieldsList, bool isEnabled, string name, string value, bool inline = true)
+    {
+        if (isEnabled && !string.IsNullOrWhiteSpace(value))
+        {
+            fieldsList.Add(new EmbedField
+            {
+                name = name,
+                value = value,
+                inline = inline
+            });
+        }
     }
 }
 

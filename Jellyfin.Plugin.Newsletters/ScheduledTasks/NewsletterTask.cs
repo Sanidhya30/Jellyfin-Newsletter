@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 // using ICU4N.Logging;
@@ -17,14 +18,10 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
     /// <summary>
     /// Class RefreshMediaLibraryTask.
     /// </summary>
-    public class NewsletterTask : IScheduledTask
+    public class NewsletterTask(IEnumerable<IClient> clientsInstance, Logger loggerInstance) : IScheduledTask
     {
-        private readonly IServerApplicationHost _applicationHost;
-
-        public NewsletterTask(IServerApplicationHost applicationHost)
-        {
-            _applicationHost = applicationHost;
-        }
+        private readonly IEnumerable<IClient> clients = clientsInstance;
+        private readonly Logger logger = loggerInstance;
 
         /// <inheritdoc />
         public string Name => "Newsletter";
@@ -58,11 +55,34 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
             progress.Report(0);
             
             // Call the Notify/Send for each client
-            Client client = new Client(_applicationHost);
-            client.NotifyAll();
+            NotifyAll();
 
             progress.Report(100);
             return Task.CompletedTask;
+        }
+
+        public void NotifyAll()
+        {
+            bool result = false;
+            foreach (var client in clients)
+            {
+                logger.Debug($"Send triggered for the {client}");
+                result |= client.Send();
+            }
+
+            // If we the result is True i.e. even if any one client was successful
+            // to send the newsletter we'll move the current database
+            if (result)
+            {
+                logger.Debug("Atleast one of the client sent the newsletter. Proceeding forward...");
+                clients.First().CopyNewsletterDataToArchive();
+            }
+            else
+            {
+                // There could be a case when there is no newsletter to be send. So marking this as Info rather an Error
+                // for now.
+                logger.Info("None of the client were able to send the newsletter. Please check the plugin configuration.");
+            }
         }
     }
 }

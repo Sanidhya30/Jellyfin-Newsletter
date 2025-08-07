@@ -15,30 +15,25 @@ namespace Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 /// <summary>
 /// Manages item events and notification processing for the Jellyfin Newsletter plugin.
 /// </summary>
-public class ItemEventManager
+/// <remarks>
+/// Initializes a new instance of the <see cref="ItemEventManager"/> class.
+/// </remarks>
+/// <param name="libraryManager">The library manager used to access items in the library.</param>
+/// <param name="appHost">The server application host for dependency injection and service scope.</param>
+/// <param name="loggerInstance">The logger instance used for logging debug information.</param>
+/// <param name="scraperInstance">The scraper instance used for scraping series data.</param>
+public class ItemEventManager(
+    ILibraryManager libraryManager,
+    IServerApplicationHost appHost,
+    Logger loggerInstance,
+    Scraper scraperInstance)
 {
     private const int MaxRetries = 10;
-    private readonly ILibraryManager libManager;
-    private readonly IServerApplicationHost _applicationHost;
-    private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemAddedQueue;
-    private readonly Scraper myScraper;
-    private Logger logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ItemEventManager"/> class.
-    /// </summary>
-    /// <param name="libraryManager">The library manager used to access items in the library.</param>
-    /// <param name="applicationHost">The server application host for dependency injection and service scope.</param>
-    public ItemEventManager(
-        ILibraryManager libraryManager,
-        IServerApplicationHost applicationHost)
-    {
-        logger = new Logger();
-        libManager = libraryManager;
-        _applicationHost = applicationHost;
-        itemAddedQueue = new ConcurrentDictionary<Guid, QueuedItemContainer>();
-        myScraper = new Scraper(libManager);
-    }
+    private readonly ILibraryManager libManager = libraryManager;
+    private readonly IServerApplicationHost applicationHost = appHost;
+    private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemAddedQueue = new();
+    private readonly Scraper myScraper = scraperInstance;
+    private readonly Logger logger = loggerInstance;
 
     /// <summary>
     /// Processes all items in the queue, refreshing metadata and scraping data as needed.
@@ -52,7 +47,7 @@ public class ItemEventManager
         var currentItems = itemAddedQueue.ToArray();
         if (currentItems.Length != 0)
         {
-            var scope = _applicationHost.ServiceProvider!.CreateAsyncScope();
+            var scope = applicationHost.ServiceProvider!.CreateAsyncScope();
             await using (scope.ConfigureAwait(false))
             {
                 var itemsToProcess = new List<BaseItem>();

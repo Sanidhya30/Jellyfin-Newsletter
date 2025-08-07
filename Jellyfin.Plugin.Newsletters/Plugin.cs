@@ -15,8 +15,6 @@ namespace Jellyfin.Plugin.Newsletters;
 /// </summary>
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
-    private Logger logger;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
     /// </summary>
@@ -26,9 +24,8 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         : base(applicationPaths, xmlSerializer)
     {
         Instance = this;
-        logger = new Logger();
 
-        void SetConfigPaths(IApplicationPaths dataPaths)
+        static void SetConfigPaths(IApplicationPaths dataPaths)
         {
             // custom code
             // IApplication Paths

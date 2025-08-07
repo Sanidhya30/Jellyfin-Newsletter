@@ -11,7 +11,7 @@ namespace Jellyfin.Plugin.Newsletters;
 public class Logger
 {
     private readonly PluginConfiguration config;
-    private readonly string logFile;
+    private readonly string logDirectory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Logger"/> class.
@@ -19,7 +19,7 @@ public class Logger
     public Logger()
     {
         config = Plugin.Instance!.Configuration;
-        logFile = $"{config.LogDirectoryPath}/{GetDate()}_Newsletter.log";
+        logDirectory = config.LogDirectoryPath;
     }
 
     /// <summary>
@@ -67,16 +67,22 @@ public class Logger
     {
         string logMsgPrefix = $"[NLP]: {GetDateTime()} - [{type}] ";
         Console.WriteLine($"{logMsgPrefix}{msg}");
+        var logFile = GetCurrentLogFile();
         File.AppendAllText(logFile, $"{logMsgPrefix}{msg}\n");
     }
 
-    private string GetDateTime()
+    private static string GetDateTime()
     {
         return DateTime.Now.ToString("[yyyy-MM-dd] :: [HH:mm:ss]", System.Globalization.CultureInfo.CurrentCulture);
     }
 
-    private string GetDate()
+    private static string GetDate()
     {
         return DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    private string GetCurrentLogFile()
+    {
+        return $"{logDirectory}/{GetDate()}_Newsletter.log";
     }
 }

@@ -1,7 +1,4 @@
 #pragma warning disable 1591, SYSLIB0014, CA1002, CS0162
-// using SixLabors.ImageSharp;
-// using SixLabors.ImageSharp.Processing;
-// using SixLabors.ImageSharp.Formats.Jpeg;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -9,37 +6,19 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json.Linq;
-// using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Newsletters.Scanner;
 
-public class PosterImageHandler
+public class PosterImageHandler(Logger loggerInstance)
 {
     // Global Vars
     // Readonly
-    private readonly PluginConfiguration config;
-    private Logger logger;
-    private SQLiteDatabase db;
-    private static readonly object RateLimitLock = new object();
+    private readonly Logger logger = loggerInstance;
+    private static readonly object RateLimitLock = new();
     private static readonly TimeSpan MinInterval = TimeSpan.FromMilliseconds(25);
     private static DateTime lastRequestTime = DateTime.MinValue;
-
-    // Non-readonly
-    private List<JsonFileObj> archiveSeriesList;
-    // private List<string> fileList;
-
-    public PosterImageHandler()
-    {
-        logger = new Logger();
-        db = new SQLiteDatabase();
-        config = Plugin.Instance!.Configuration;
-
-        archiveSeriesList = new List<JsonFileObj>();
-    }
 
     public string FetchImagePoster(JsonFileObj item)
     {

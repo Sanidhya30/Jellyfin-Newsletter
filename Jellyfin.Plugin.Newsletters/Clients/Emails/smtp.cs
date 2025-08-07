@@ -27,12 +27,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
 [Authorize(Policy = Policies.RequiresElevation)]
 [ApiController]
 [Route("Smtp")]
-public class Smtp : Client, IClient
+public class Smtp(Logger loggerInstance,
+    SQLiteDatabase dbInstance) : Client(loggerInstance, dbInstance), IClient
 {
-    public Smtp(IServerApplicationHost applicationHost) : base(applicationHost) 
-    {
-    }
-
     [HttpPost("SendTestMail")]
     public void SendTestMail()
     {
@@ -82,49 +79,54 @@ public class Smtp : Client, IClient
                 return;
             }
 
-            HtmlBuilder hb = new HtmlBuilder();
+            HtmlBuilder hb = new(Logger, Db);
 
-            string body = hb.GetDefaultHTMLBody();
+            string body = hb.GetDefaultHTMLBody;
             string builtString = hb.BuildHtmlStringsForTest();
-            builtString = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
+            builtString = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
             string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
             builtString = builtString.Replace("{Date}", currDate, StringComparison.Ordinal);
 
-            MailMessage mail = new MailMessage();
-
-            mail.From = new MailAddress(emailFromAddress, emailFromAddress);
-            mail.To.Clear();
-            mail.Bcc.Clear();
-            mail.Subject = subject;
-            mail.Body = Regex.Replace(builtString, "{[A-za-z]*}", " ");
-            mail.IsBodyHtml = true;
-
-            if (!string.IsNullOrWhiteSpace(emailToAddress))
+            using (var mail = new MailMessage
             {
-                foreach (string email in emailToAddress.Split(','))
+                From = new MailAddress(emailFromAddress, emailFromAddress),
+                Subject = subject,
+                Body = Regex.Replace(builtString, "{[A-za-z]*}", " "),
+                IsBodyHtml = true
+            })
+            {
+                mail.To.Clear();
+                mail.Bcc.Clear();
+
+                if (!string.IsNullOrWhiteSpace(emailToAddress))
                 {
-                    if (!string.IsNullOrWhiteSpace(email))
+                    foreach (string email in emailToAddress.Split(','))
                     {
-                        mail.To.Add(email.Trim());
+                        if (!string.IsNullOrWhiteSpace(email))
+                        {
+                            mail.To.Add(email.Trim());
+                        }
                     }
                 }
-            }
 
-            if (!string.IsNullOrWhiteSpace(emailBccAddress))
-            {
-                foreach (string email in emailBccAddress.Split(','))
+                if (!string.IsNullOrWhiteSpace(emailBccAddress))
                 {
-                    if (!string.IsNullOrWhiteSpace(email))
+                    foreach (string email in emailBccAddress.Split(','))
                     {
-                        mail.Bcc.Add(email.Trim());
+                        if (!string.IsNullOrWhiteSpace(email))
+                        {
+                            mail.Bcc.Add(email.Trim());
+                        }
                     }
                 }
-            }
 
-            SmtpClient smtp = new SmtpClient(smtpAddress, portNumber);
-            smtp.Credentials = new NetworkCredential(username, password);
-            smtp.EnableSsl = enableSSL;
-            smtp.Send(mail);
+                using var smtp = new SmtpClient(smtpAddress, portNumber)
+                {
+                    Credentials = new NetworkCredential(username, password),
+                    EnableSsl = enableSSL
+                };
+                smtp.Send(mail);
+            }
 
             Logger.Debug($"Test email sent successfully sent.");
         }
@@ -142,8 +144,6 @@ public class Smtp : Client, IClient
         bool result = false;
         try
         {
-            Db.CreateConnection();
-
             if (NewsletterDbIsPopulated())
             {
                 Logger.Debug("Sending out mail!");
@@ -191,9 +191,9 @@ public class Smtp : Client, IClient
                     return false;
                 }
 
-                HtmlBuilder hb = new HtmlBuilder();
+                HtmlBuilder hb = new(Logger, Db);
 
-                string body = hb.GetDefaultHTMLBody();
+                string body = hb.GetDefaultHTMLBody;
                 List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData();
                 // string finalBody = hb.ReplaceBodyWithBuiltString(body, builtString);
                 // string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
@@ -205,10 +205,10 @@ public class Smtp : Client, IClient
                 {
                     Logger.Debug($"Email part {partNum} image count: {inlineImages.Count}");
                     // Add template substitutions
-                    string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
+                    string finalBody = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
                                         .Replace("{Date}", currDate, StringComparison.Ordinal);
 
-                    using (MailMessage mail = new MailMessage())
+                    using (MailMessage mail = new())
                     {
                         mail.From = new MailAddress(emailFromAddress, emailFromAddress);
                         mail.IsBodyHtml = true;
@@ -274,14 +274,12 @@ public class Smtp : Client, IClient
                             mail.Body = Regex.Replace(finalBody, "{[A-za-z]*}", " ");
                         }
 
-                        using (SmtpClient smtp = new SmtpClient(smtpAddress, portNumber))
-                        {   
-                            smtp.Credentials = new NetworkCredential(username, password);
-                            smtp.EnableSsl = enableSSL;
-                            smtp.Timeout = smtpTimeout;
-                            Logger.Debug($"Sending email part {partNum} with finalBody: {finalBody}");
-                            smtp.Send(mail);
-                        }
+                        using SmtpClient smtp = new(smtpAddress, portNumber);
+                        smtp.Credentials = new NetworkCredential(username, password);
+                        smtp.EnableSsl = enableSSL;
+                        smtp.Timeout = smtpTimeout;
+                        Logger.Debug($"Sending email part {partNum} with finalBody: {finalBody}");
+                        smtp.Send(mail);
                     }
 
                     Logger.Debug($"Email part {partNum} sent successfully.");
@@ -299,10 +297,6 @@ public class Smtp : Client, IClient
         catch (Exception e)
         {
             Logger.Error("An error has occured: " + e);
-        }
-        finally
-        {
-            Db.CloseConnection();
         }
 
         return result;

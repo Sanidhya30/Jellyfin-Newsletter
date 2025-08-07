@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Jellyfin.Plugin.Newsletters.Clients;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
 using SQLitePCL.pretty;
@@ -14,19 +14,22 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
 public class HtmlBuilder : ClientBuilder
 {
     // Global Vars
+    // Constant fields
+    private const string Append = "Append";
+    private const string Write = "Overwrite";
+
     // Readonly
     private readonly string newslettersDir;
     private readonly string newsletterHTMLFile;
     // private readonly string[] itemJsonKeys = 
 
     private string emailBody;
-
-    // Non-readonly
-    private static string append = "Append";
-    private static string write = "Overwrite";
     // private List<string> fileList;
 
-    public HtmlBuilder()
+    public HtmlBuilder(
+        Logger loggerInstance,
+        SQLiteDatabase dbInstance)
+        : base(loggerInstance, dbInstance)
     {
         DefaultBodyAndEntry(); // set default body and entry HTML from template file if not set in config
 
@@ -50,13 +53,16 @@ public class HtmlBuilder : ClientBuilder
         Logger.Info("Newsletter will be saved to: " + newsletterHTMLFile);
     }
 
-    public string GetDefaultHTMLBody()
+    public string GetDefaultHTMLBody
     {
-        emailBody = Config.Body;
-        return emailBody;
+        get
+        {
+            emailBody = Config.Body;
+            return emailBody;
+        }
     }
 
-    public string TemplateReplace(string htmlObj, string replaceKey, object replaceValue, bool finalPass = false)
+    public string TemplateReplace(string htmlObj, string replaceKey, object replaceValue)
     {
         Logger.Debug("Replacing {} params:\n " + htmlObj);
         if (replaceValue is null)
@@ -99,7 +105,7 @@ public class HtmlBuilder : ClientBuilder
         List<string> completed = new List<string>();
         var chunks = new List<(string, List<(MemoryStream?, string)>)>();
 
-        StringBuilder currentChunkBuilder = new StringBuilder();
+        StringBuilder currentChunkBuilder = new();
         var currentChunkImages = new List<(MemoryStream?, string)>();
         int currentChunkBytes = 0;
         const int overheadPerMail = 50000;
@@ -228,7 +234,7 @@ public class HtmlBuilder : ClientBuilder
         return entryHTML;
     }
 
-    public string ReplaceBodyWithBuiltString(string body, string nlData)
+    public static string ReplaceBodyWithBuiltString(string body, string nlData)
     {
         return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
     }
@@ -250,16 +256,16 @@ public class HtmlBuilder : ClientBuilder
     {
         // save newsletter to file
         Logger.Info("Saving HTML file");
-        WriteFile(write, newsletterHTMLFile, htmlBody);
+        WriteFile(Write, newsletterHTMLFile, htmlBody);
     }
 
-    private void WriteFile(string method, string path, string value)
+    private static void WriteFile(string method, string path, string value)
     {
-        if (method == append)
+        if (method == Append)
         {
             File.AppendAllText(path, value);
         }
-        else if (method == write)
+        else if (method == Write)
         {
             File.WriteAllText(path, value);
         }

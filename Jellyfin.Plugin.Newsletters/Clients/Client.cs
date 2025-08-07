@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Jellyfin.Plugin.Newsletters.Clients.Discord;
-using Jellyfin.Plugin.Newsletters.Clients.Emails;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Controller;
@@ -13,25 +11,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.Newsletters.Clients;
 
-public class Client : ControllerBase
+public class Client(Logger loggerInstance,
+    SQLiteDatabase dbInstance) : ControllerBase
 {
-    public Client(IServerApplicationHost applicationHost)
-    {
-        Db = new SQLiteDatabase();
-        Logger = new Logger();
-        Config = Plugin.Instance!.Configuration;
-        ApplicationHost = applicationHost;
-    }
+    protected PluginConfiguration Config { get; } = Plugin.Instance!.Configuration;
 
-    protected IServerApplicationHost ApplicationHost { get; }
+    protected SQLiteDatabase Db { get; set; } = dbInstance;
 
-    protected PluginConfiguration Config { get; }
+    protected Logger Logger { get; set; } = loggerInstance;
 
-    protected SQLiteDatabase Db { get; set; }
-
-    protected Logger Logger { get; set; }
-
-    private void CopyNewsletterDataToArchive()
+    public void CopyNewsletterDataToArchive()
     {
         Logger.Info("Appending NewsletterData for Current Newsletter Cycle to Archive Database..");
 
@@ -55,55 +44,31 @@ public class Client : ControllerBase
 
     protected bool NewsletterDbIsPopulated()
     {
-        foreach (var row in Db.Query("SELECT COUNT(*) FROM CurrNewsletterData;"))
+        try
         {
-            if (row is not null)
+            Db.CreateConnection();
+
+            foreach (var row in Db.Query("SELECT COUNT(*) FROM CurrNewsletterData;"))
             {
-                if (int.Parse(row[0].ToString(), CultureInfo.CurrentCulture) > 0)
+                if (row is not null)
                 {
-                    Db.CloseConnection();
-                    return true;
+                    if (int.Parse(row[0].ToString(), CultureInfo.CurrentCulture) > 0)
+                    {
+                        return true;
+                    }
                 }
             }
+
+            return false;
         }
-
-        Db.CloseConnection();
-        return false;
-    }
-
-    public void NotifyAll()
-    {
-        var clients = new List<IClient>
+        catch (Exception e)
         {
-            new DiscordWebhook(ApplicationHost),
-            new Smtp(ApplicationHost)
-            // Scope to add other clients in future
-        };
-
-        bool result = false;
-        foreach (var client in clients)
-        {
-            Logger.Debug($"Send triggered for the {client}");
-            result |= client.Send();
+            Logger.Error("An error has occured: " + e);
+            return false;
         }
-
-        // If we the result is True i.e. even if any one client was successful
-        // to send the newsletter we'll move the current database
-        if (result)
+        finally
         {
-            Logger.Debug("Atleast one of the client sent the newsletter. Proceeding forward...");
-            CopyNewsletterDataToArchive();
-        }
-        else
-        {
-            // There could be a case when there is no newsletter to be send. So marking this as Info rather an Error
-            // for now.
-            Logger.Info("None of the client were able to send the newsletter. Please check the plugin configuration.");
+            Db.CloseConnection();
         }
     }
-}
-
-public interface IClient
-{
-    bool Send();
 }

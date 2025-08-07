@@ -28,23 +28,16 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Jellyfin.Plugin.Newsletters.Clients;
 
-public class ClientBuilder
-{
-    public ClientBuilder()
-    {
-        Logger = new Logger();
-        JsonHelper = new JsonFileObj();
-        Db = new SQLiteDatabase();
-        Config = Plugin.Instance!.Configuration;
-    }
+public class ClientBuilder(Logger loggerInstance,
+    SQLiteDatabase dbInstance)
+{    
+    protected PluginConfiguration Config { get; } = Plugin.Instance!.Configuration;
 
-    protected PluginConfiguration Config { get; }
+    protected SQLiteDatabase Db { get; set; } = dbInstance;
 
-    protected SQLiteDatabase Db { get; set; }
+    protected JsonFileObj JsonHelper { get; set; } = new JsonFileObj();
 
-    protected Logger Logger { get; set; }
-
-    protected JsonFileObj JsonHelper { get; set; }
+    protected Logger Logger { get; set; } = loggerInstance;
 
     protected List<NlDetailsJson> ParseSeriesInfo(JsonFileObj currObj)
     {
@@ -55,10 +48,10 @@ public class ClientBuilder
         {
             if (row is not null)
             {
-                JsonFileObj helper = new JsonFileObj();
+                JsonFileObj helper = new();
                 JsonFileObj itemObj = helper.ConvertToObj(row);
 
-                NlDetailsJson tempVar = new NlDetailsJson()
+                NlDetailsJson tempVar = new()
                 {
                     Title = itemObj.Title,
                     Season = itemObj.Season,
@@ -71,7 +64,7 @@ public class ClientBuilder
         }
 
         List<int> tempEpsList = new List<int>();
-        NlDetailsJson currSeriesDetailsObj = new NlDetailsJson();
+        NlDetailsJson currSeriesDetailsObj = new();
 
         int currSeason = -1;
         bool newSeason = true;
@@ -84,9 +77,11 @@ public class ClientBuilder
 
             NlDetailsJson CopyJsonFromExisting(NlDetailsJson obj)
             {
-                NlDetailsJson newJson = new NlDetailsJson();
-                newJson.Season = obj.Season;
-                newJson.EpisodeRange = obj.EpisodeRange;
+                NlDetailsJson newJson = new()
+                {
+                    Season = obj.Season,
+                    EpisodeRange = obj.EpisodeRange
+                };
                 return newJson;
             }
 
@@ -256,7 +251,7 @@ public class ClientBuilder
 
     protected (MemoryStream? ResizedStream, string ContentId, bool Success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 500, int jpegQuality = 80)
     {
-        string contentId = $"image_{Guid.NewGuid().ToString()}.jpg";
+        string contentId = $"image_{Guid.NewGuid()}.jpg";
         int attempt = 0;
         MemoryStream? resizedStream = null;
         
@@ -299,17 +294,17 @@ public class ClientBuilder
         return (null, contentId, false);
     }
 
-    private bool IsIncremental(List<int> values)
+    private static bool IsIncremental(List<int> values)
     {
         return values.Skip(1).Select((v, i) => v == (values[i] + 1)).All(v => v);
     }
 
-    private List<NlDetailsJson> SortListBySeason(List<NlDetailsJson> list)
+    private static List<NlDetailsJson> SortListBySeason(List<NlDetailsJson> list)
     {
         return list.OrderBy(x => x.Season).ToList();
     }
 
-    private List<NlDetailsJson> SortListByEpisode(List<NlDetailsJson> list)
+    private static List<NlDetailsJson> SortListByEpisode(List<NlDetailsJson> list)
     {
         return list.OrderBy(x => x.Episode).ToList();
     }

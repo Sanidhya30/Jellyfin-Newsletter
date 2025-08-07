@@ -13,27 +13,21 @@ namespace Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 /// <summary>
 /// Notifier when a library item is added.
 /// </summary>
-public class ItemEventNotifierEntryPoint : IHostedService
+/// <remarks>
+/// Initializes a new instance of the <see cref="ItemEventNotifierEntryPoint"/> class.
+/// </remarks>
+/// <param name="itemEventManager">The item event manager.</param>
+/// <param name="libraryManager">The library manager.</param>
+/// <param name="loggerInstance">The logger instance.</param>
+public class ItemEventNotifierEntryPoint(
+    ItemEventManager itemEventManager,
+    ILibraryManager libraryManager,
+    Logger loggerInstance) : IHostedService
 {
-    private readonly PluginConfiguration config;
-    private readonly ItemEventManager itemManager;
-    private readonly ILibraryManager libManager;
-    private Logger logger;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ItemEventNotifierEntryPoint"/> class.
-    /// </summary>
-    /// <param name="itemEventManager">The item event manager.</param>
-    /// <param name="libraryManager">The library manager.</param>
-    public ItemEventNotifierEntryPoint(
-        ItemEventManager itemEventManager,
-        ILibraryManager libraryManager)
-    {
-        config = Plugin.Instance!.Configuration;
-        itemManager = itemEventManager;
-        libManager = libraryManager;
-        logger = new Logger();
-    }
+    private readonly PluginConfiguration config = Plugin.Instance!.Configuration;
+    private readonly ItemEventManager itemManager = itemEventManager;
+    private readonly ILibraryManager libManager = libraryManager;
+    private readonly Logger logger = loggerInstance;
 
     private void ItemAddedHandler(object? sender, ItemChangeEventArgs itemChangeEventArgs)
     {

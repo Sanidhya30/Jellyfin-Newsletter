@@ -10,8 +10,6 @@ namespace Jellyfin.Plugin.Newsletters.Shared.Entities;
 
 public class JsonFileObj
 {
-    private Logger? logger;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonFileObj"/> class.
     /// </summary>
@@ -77,7 +75,6 @@ public class JsonFileObj
         // ItemID = string.Empty; 6
         // PosterPath = string.Empty; 7
 
-        logger = new Logger();
         JsonFileObj obj = new JsonFileObj()
         {
             Filename = row[0].ToString(),
@@ -120,17 +117,7 @@ public class JsonFileObj
 
     public JsonFileObj GetTestObj()
     {
-        // Filename = string.Empty; 0
-        // Title = string.Empty; 1
-        // Season = 0; 2
-        // Episode = 0; 3
-        // SeriesOverview = string.Empty; 4
-        // ImageURL = string.Empty; 5
-        // ItemID = string.Empty; 6
-        // PosterPath = string.Empty; 7
-
-        logger = new Logger();
-        JsonFileObj obj = new JsonFileObj()
+        JsonFileObj obj = new()
         {
             Filename = "/data/series/Newsletter/Newsletter-test.mkv",
             Title = "Newsletter-Test",

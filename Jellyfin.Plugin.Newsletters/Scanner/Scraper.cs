@@ -35,28 +35,28 @@ public class Scraper
     // private readonly string currRunScanList;
     // private readonly string archiveFile;
     // private readonly string currNewsletterDataFile;
-    private readonly ILibraryManager libManager;
 
     // Non-readonly
+    private readonly PosterImageHandler imageHandler;
+    private readonly SQLiteDatabase db;
+    private readonly JsonFileObj jsonHelper;
+    private readonly Logger logger;
     private int totalLibCount;
     private int currCount;
-    private PosterImageHandler imageHandler;
-    private SQLiteDatabase db;
-    private JsonFileObj jsonHelper;
-    private Logger logger;
+
     // private List<JsonFileObj> archiveObj;
 
-    public Scraper(ILibraryManager libraryManager)
+    public Scraper(Logger loggerInstance, SQLiteDatabase dbInstance, PosterImageHandler imageHandlerInstance)
     {
-        logger = new Logger();
+        logger = loggerInstance;
+        db = dbInstance;
+        
         jsonHelper = new JsonFileObj();
         config = Plugin.Instance!.Configuration;
-        libManager = libraryManager;
 
         totalLibCount = currCount = 0;
 
-        imageHandler = new PosterImageHandler();
-        db = new SQLiteDatabase();
+        imageHandler = imageHandlerInstance;
 
         logger.Debug("Setting Config Paths: ");
         logger.Debug("\n  DataPath: " + config.DataPath +
