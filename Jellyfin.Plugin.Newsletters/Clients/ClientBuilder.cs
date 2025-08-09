@@ -1,45 +1,46 @@
-#pragma warning disable 1591, SYSLIB0014, CA1002, CS0162, SA1005 // remove SA1005 for cleanup
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.Scanner;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Common.Plugins;
-using MediaBrowser.Controller;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Tasks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
-// using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Newsletters.Clients;
 
+/// <summary>
+/// Provides methods for building newsletter clients and processing newsletter data.
+/// </summary>
 public class ClientBuilder(Logger loggerInstance,
     SQLiteDatabase dbInstance)
 {    
+    /// <summary>
+    /// Gets the plugin configuration instance.
+    /// </summary>
     protected PluginConfiguration Config { get; } = Plugin.Instance!.Configuration;
 
-    protected SQLiteDatabase Db { get; set; } = dbInstance;
+    /// <summary>
+    /// Gets the database instance.
+    /// </summary>
+    protected SQLiteDatabase Db { get; } = dbInstance;
 
-    protected JsonFileObj JsonHelper { get; set; } = new JsonFileObj();
+    /// <summary>
+    /// Gets the logger.
+    /// </summary>
+    protected Logger Logger { get; } = loggerInstance;
 
-    protected Logger Logger { get; set; } = loggerInstance;
-
-    protected List<NlDetailsJson> ParseSeriesInfo(JsonFileObj currObj)
+    /// <summary>
+    /// Parses series information from the given JsonFileObj and returns a collection of NlDetailsJson.
+    /// </summary>
+    /// <param name="currObj">The current JsonFileObj containing series information.</param>
+    /// <returns>A collection of NlDetailsJson representing the parsed series details.</returns>
+    protected ReadOnlyCollection<NlDetailsJson> ParseSeriesInfo(JsonFileObj currObj)
     {
         List<NlDetailsJson> compiledList = new List<NlDetailsJson>();
         List<NlDetailsJson> finalList = new List<NlDetailsJson>();
@@ -48,8 +49,7 @@ public class ClientBuilder(Logger loggerInstance,
         {
             if (row is not null)
             {
-                JsonFileObj helper = new();
-                JsonFileObj itemObj = helper.ConvertToObj(row);
+                JsonFileObj itemObj = JsonFileObj.ConvertToObj(row);
 
                 NlDetailsJson tempVar = new()
                 {
@@ -246,9 +246,20 @@ public class ClientBuilder(Logger loggerInstance,
             Logger.Debug("FinalListObjs: " + JsonConvert.SerializeObject(item));
         }
 
-        return finalList;
+        return finalList.AsReadOnly();
     }
 
+    /// <summary>
+    /// Resizes an image to the specified width and JPEG quality, with retry logic for I/O exceptions.
+    /// </summary>
+    /// <param name="imagePath">The file path of the image to resize.</param>
+    /// <param name="maxRetries">The maximum number of retry attempts for loading the image.</param>
+    /// <param name="delayMilliseconds">The delay in milliseconds between retry attempts.</param>
+    /// <param name="targetWidth">The target width for the resized image.</param>
+    /// <param name="jpegQuality">The JPEG quality for the output image.</param>
+    /// <returns>
+    /// A tuple containing the resized image as a <see cref="MemoryStream"/>, a unique content ID, and a success flag.
+    /// </returns>
     protected (MemoryStream? ResizedStream, string ContentId, bool Success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 500, int jpegQuality = 80)
     {
         string contentId = $"image_{Guid.NewGuid()}.jpg";

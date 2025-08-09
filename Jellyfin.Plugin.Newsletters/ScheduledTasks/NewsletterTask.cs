@@ -1,16 +1,9 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-// using ICU4N.Logging;
-using Jellyfin.Plugin.Newsletters;
 using Jellyfin.Plugin.Newsletters.Clients;
-using MediaBrowser.Controller;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Globalization;
 using MediaBrowser.Model.Tasks;
 
 namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
@@ -61,6 +54,9 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Sends newsletters using all configured clients and archives the data if at least one send is successful.
+        /// </summary>
         public void NotifyAll()
         {
             bool result = false;

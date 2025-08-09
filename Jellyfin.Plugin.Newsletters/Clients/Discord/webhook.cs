@@ -1,12 +1,10 @@
-#pragma warning disable 1591
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
@@ -15,6 +13,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 
+/// <summary>
+/// Represents a Discord webhook client for sending messages and test messages to Discord via webhooks.
+/// </summary>
 [Authorize(Policy = Policies.RequiresElevation)]
 [ApiController]
 [Route("Discord")]
@@ -26,12 +27,19 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
 
+    /// <summary>
+    /// Releases the resources used by the <see cref="DiscordWebhook"/> class.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Releases the unmanaged resources used by the <see cref="DiscordWebhook"/> class.
+    /// </summary>
+    /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
@@ -40,6 +48,9 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         }
     }
 
+    /// <summary>
+    /// Sends a test message to the configured Discord webhook to verify connectivity and configuration.
+    /// </summary>
     [HttpPost("SendDiscordTestMessage")]
     public void SendDiscordTestMessage()
     {
@@ -54,12 +65,12 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         try
         {
             EmbedBuilder builder = new(Logger, Db);
-            List<Embed> embedList = builder.BuildEmbedForTest();
+            var embedList = builder.BuildEmbedForTest();
 
             var payload = new DiscordPayload
             {
-                username = Config.DiscordWebhookName,
-                embeds = embedList
+                Username = Config.DiscordWebhookName,
+                Embeds = embedList
             };
 
             var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
@@ -84,6 +95,10 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         }
     }
 
+    /// <summary>
+    /// Sends a message to the configured Discord webhook using newsletter data.
+    /// </summary>
+    /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     [HttpPost("SendDiscordMessage")]
     public bool SendDiscordMessage()
     {
@@ -136,12 +151,10 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                         index++;
                     }
 
-                    var embeds = chunk.Select(t => t.Item1).ToList();
-
                     var payload = new DiscordPayload
                     {
-                        username = Config.DiscordWebhookName,
-                        embeds = embeds
+                        Username = Config.DiscordWebhookName,
+                        Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly()
                     };
 
                     var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
@@ -193,6 +206,10 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         return result;
     }
 
+    /// <summary>
+    /// Sends a Discord message using the configured webhook and newsletter data.
+    /// </summary>
+    /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     public bool Send()
     {
         return SendDiscordMessage();

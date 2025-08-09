@@ -1,13 +1,12 @@
-#pragma warning disable 1591
-using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using SQLitePCL;
 using SQLitePCL.pretty;
 
 namespace Jellyfin.Plugin.Newsletters.Shared.Entities;
 
+/// <summary>
+/// Represents a JSON file object containing metadata for a newsletter item.
+/// </summary>
 public class JsonFileObj
 {
     /// <summary>
@@ -31,51 +30,84 @@ public class JsonFileObj
         ExternalIds = new Dictionary<string, string>();
     }
 
+    /// <summary>
+    /// Gets or sets the filename of the item.
+    /// </summary>
     public string Filename { get; set; }
 
+    /// <summary>
+    /// Gets or sets the title of the item.
+    /// </summary>
     public string Title { get; set; }
 
-    // public string Season { get; set; }
-
+    /// <summary>
+    /// Gets or sets the season of the item.
+    /// </summary>
     public int Season { get; set; }
 
+    /// <summary>
+    /// Gets or sets the episode of the item.
+    /// </summary>
     public int Episode { get; set; }
 
-    // public string Episode { get; set; }
-
+    /// <summary>
+    /// Gets or sets the description of the item.
+    /// </summary>
     public string SeriesOverview { get; set; }
 
+    /// <summary>
+    /// Gets or sets the poster image url of the item.
+    /// </summary>
     public string ImageURL { get; set; }
 
+    /// <summary>
+    /// Gets or sets the itemId of the item.
+    /// </summary>
     public string ItemID { get; set; }
 
+    /// <summary>
+    /// Gets or sets the poster path of the item.
+    /// </summary>
     public string PosterPath { get; set; }
 
+    /// <summary>
+    /// Gets or sets the type(movie/series) of the item.
+    /// </summary>
     public string Type { get; set; }
 
+    /// <summary>
+    /// Gets or sets the premiere year of the item.
+    /// </summary>
     public string PremiereYear { get; set; }
 
+    /// <summary>
+    /// Gets or sets the run time of the item.
+    /// </summary>
     public int RunTime { get; set; }
 
+    /// <summary>
+    /// Gets or sets the PG rating of the item.
+    /// </summary>
     public string OfficialRating { get; set; }
 
+    /// <summary>
+    /// Gets or sets the rating of the item.
+    /// </summary>
     public float? CommunityRating { get; set; }
 
-    //Dictionary to store external IDs like IMDb, TMDb, etc.
+    /// <summary>
+    /// Gets dictionary for external IDs like IMDb, TMDb, etc.
+    /// </summary>
     public Dictionary<string, string> ExternalIds { get; }
 
-    public JsonFileObj ConvertToObj(IReadOnlyList<ResultSetValue> row)
+    /// <summary>
+    /// Converts a database row to a <see cref="JsonFileObj"/> instance.
+    /// </summary>
+    /// <param name="row">The database row as a list of <see cref="ResultSetValue"/>.</param>
+    /// <returns>A <see cref="JsonFileObj"/> populated with values from the row.</returns>
+    public static JsonFileObj ConvertToObj(IReadOnlyList<ResultSetValue> row)
     {
-        // Filename = string.Empty; 0
-        // Title = string.Empty; 1
-        // Season = 0; 2
-        // Episode = 0; 3
-        // SeriesOverview = string.Empty; 4
-        // ImageURL = string.Empty; 5
-        // ItemID = string.Empty; 6
-        // PosterPath = string.Empty; 7
-
-        JsonFileObj obj = new JsonFileObj()
+        JsonFileObj obj = new()
         {
             Filename = row[0].ToString(),
             Title = row[1].ToString(),
@@ -95,6 +127,10 @@ public class JsonFileObj
         return obj;
     }
 
+    /// <summary>
+    /// Returns a dictionary mapping template keys to the corresponding property values of this object.
+    /// </summary>
+    /// <returns>A dictionary with template keys and their corresponding values from this object.</returns>
     public Dictionary<string, object?> GetReplaceDict()
     {
         Dictionary<string, object?> item_dict = new Dictionary<string, object?>();
@@ -115,7 +151,11 @@ public class JsonFileObj
         return item_dict;        
     }
 
-    public JsonFileObj GetTestObj()
+    /// <summary>
+    /// Returns a test instance of <see cref="JsonFileObj"/> with sample data.
+    /// </summary>
+    /// <returns>A <see cref="JsonFileObj"/> populated with test values.</returns>
+    public static JsonFileObj GetTestObj()
     {
         JsonFileObj obj = new()
         {

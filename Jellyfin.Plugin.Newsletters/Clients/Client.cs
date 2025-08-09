@@ -1,25 +1,37 @@
-#pragma warning disable 1591
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
-using MediaBrowser.Controller;
 using Microsoft.AspNetCore.Mvc;
 
 // using System.Net.NetworkCredential;
 
 namespace Jellyfin.Plugin.Newsletters.Clients;
 
+/// <summary>
+/// Represents a base client for handling newsletter-related operations.
+/// </summary>
 public class Client(Logger loggerInstance,
     SQLiteDatabase dbInstance) : ControllerBase
 {
+    /// <summary>
+    /// Gets the current plugin configuration.
+    /// </summary>
     protected PluginConfiguration Config { get; } = Plugin.Instance!.Configuration;
 
-    protected SQLiteDatabase Db { get; set; } = dbInstance;
+    /// <summary>
+    /// Gets the database instance.
+    /// </summary>
+    protected SQLiteDatabase Db { get; } = dbInstance;
 
-    protected Logger Logger { get; set; } = loggerInstance;
+    /// <summary>
+    /// Gets the logger instance.
+    /// </summary>
+    protected Logger Logger { get; } = loggerInstance;
 
+    /// <summary>
+    /// Copies the current newsletter data to the archive and clears the current data.
+    /// </summary>
     public void CopyNewsletterDataToArchive()
     {
         Logger.Info("Appending NewsletterData for Current Newsletter Cycle to Archive Database..");
@@ -42,6 +54,10 @@ public class Client(Logger loggerInstance,
         }
     }
 
+    /// <summary>
+    /// Checks if the current newsletter database is populated with any data.
+    /// </summary>
+    /// <returns>True if the database contains at least one entry; otherwise, false.</returns>
     protected bool NewsletterDbIsPopulated()
     {
         try

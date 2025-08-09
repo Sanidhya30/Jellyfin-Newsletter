@@ -1,4 +1,3 @@
-#pragma warning disable SA1611, CS0162
 using System;
 using System.IO;
 using Jellyfin.Plugin.Newsletters.Configuration;
@@ -25,6 +24,7 @@ public class Logger
     /// <summary>
     /// Initializes a new instance of the <see cref="Debug"/> class.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Debug(object msg)
     {
         PluginConfiguration config = Plugin.Instance!.Configuration;
@@ -37,6 +37,7 @@ public class Logger
     /// <summary>
     /// Inform info into the logs.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Info(object msg)
     {
         Inform(msg, "INFO");
@@ -45,6 +46,7 @@ public class Logger
     /// <summary>
     /// Inform warn into the logs.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Warn(object msg)
     {
         Inform(msg, "WARN");
@@ -53,6 +55,7 @@ public class Logger
     /// <summary>
     /// Inform error into the logs.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Error(object msg)
     {
         Inform(msg, "ERR");

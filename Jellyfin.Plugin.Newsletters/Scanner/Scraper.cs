@@ -1,32 +1,20 @@
-#pragma warning disable 1591, CA1002, SA1005 // remove SA1005 to clean code
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Common.Plugins;
-using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
-// using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Newsletters.Scanner;
 
+/// <summary>
+/// Provides methods for scanning and scraping media items for the Jellyfin Newsletters plugin.
+/// </summary>
 public class Scraper
 {
     // Global Vars
@@ -46,6 +34,12 @@ public class Scraper
 
     // private List<JsonFileObj> archiveObj;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Scraper"/> class.
+    /// </summary>
+    /// <param name="loggerInstance">The logger instance to use for logging.</param>
+    /// <param name="dbInstance">The SQLite database instance to use for data storage.</param>
+    /// <param name="imageHandlerInstance">The poster image handler instance to use for image processing.</param>
     public Scraper(Logger loggerInstance, SQLiteDatabase dbInstance, PosterImageHandler imageHandlerInstance)
     {
         logger = loggerInstance;
@@ -69,8 +63,12 @@ public class Scraper
                      "\n  LogDirectoryPath: " + config.LogDirectoryPath );
     }
 
-    // This is the main function
-    public Task GetSeriesData(List<BaseItem> items)
+    /// <summary>
+    /// Scans the provided media items and processes them for newsletter data.
+    /// </summary>
+    /// <param name="items">The list of media items to scan.</param>
+    /// <returns>A completed task when the operation is finished.</returns>
+    public Task GetSeriesData(IReadOnlyCollection<BaseItem> items)
     {
         logger.Info("Gathering Data...");
         try
@@ -91,7 +89,7 @@ public class Scraper
         return Task.CompletedTask;
     }
 
-    private void BuildJsonObjsToCurrScanfile(List<BaseItem> items)
+    private void BuildJsonObjsToCurrScanfile(IReadOnlyCollection<BaseItem> items)
     {
         if (!config.SeriesEnabled && !config.MoviesEnabled)
         {
@@ -113,7 +111,12 @@ public class Scraper
         }
     }
 
-    public void BuildObjs(List<BaseItem> items, string type)
+    /// <summary>
+    /// Builds and processes objects from the provided media items and adds them to the current run data.
+    /// </summary>
+    /// <param name="items">The collection of media items to process.</param>
+    /// <param name="type">The type of media items ("Series" or "Movie").</param>
+    public void BuildObjs(IReadOnlyCollection<BaseItem> items, string type)
     {
         logger.Info($"Parsing {type}..");
         BaseItem episode, season, series;
@@ -331,37 +334,19 @@ public class Scraper
         }
     }
 
-    private JsonFileObj NoNull(JsonFileObj currFileObj)
+    private static JsonFileObj NoNull(JsonFileObj currFileObj)
     {
-        if (currFileObj.Filename == null)
-        {
-            currFileObj.Filename = string.Empty;
-        }
+        currFileObj.Filename ??= string.Empty;
 
-        if (currFileObj.Title == null)
-        {
-            currFileObj.Title = string.Empty;
-        }
+        currFileObj.Title ??= string.Empty;
 
-        if (currFileObj.SeriesOverview == null)
-        {
-            currFileObj.SeriesOverview = string.Empty;
-        }
+        currFileObj.SeriesOverview ??= string.Empty;
 
-        if (currFileObj.ImageURL == null)
-        {
-            currFileObj.ImageURL = string.Empty;
-        }
+        currFileObj.ImageURL ??= string.Empty;
 
-        if (currFileObj.ItemID == null)
-        {
-            currFileObj.Filename = string.Empty;
-        }
+        currFileObj.ItemID ??= string.Empty;
 
-        if (currFileObj.PosterPath == null)
-        {
-            currFileObj.PosterPath = string.Empty;
-        }
+        currFileObj.PosterPath ??= string.Empty;
 
         return currFileObj;
     }
@@ -403,7 +388,7 @@ public class Scraper
         {
             if (row is not null)
             {
-                fileObj = jsonHelper.ConvertToObj(row);
+                fileObj = JsonFileObj.ConvertToObj(row);
                 if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
                 {
                     logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
@@ -418,7 +403,7 @@ public class Scraper
         {
             if (row is not null)
             {
-                fileObj = jsonHelper.ConvertToObj(row);
+                fileObj = JsonFileObj.ConvertToObj(row);
                 if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
                 {
                     logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
@@ -432,7 +417,7 @@ public class Scraper
         {
             if (row is not null)
             {
-                fileObj = jsonHelper.ConvertToObj(row);
+                fileObj = JsonFileObj.ConvertToObj(row);
                 if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
                 {
                     logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
@@ -456,7 +441,7 @@ public class Scraper
         db.ExecuteSQL("DELETE FROM CurrRunData;");
     }
 
-    private string SanitizeDbItem(string unsanitized_string)
+    private static string SanitizeDbItem(string unsanitized_string)
     {
         // string sanitize_string = string.Empty;
         if (unsanitized_string is null)

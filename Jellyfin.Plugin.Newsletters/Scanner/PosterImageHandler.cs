@@ -1,16 +1,16 @@
-#pragma warning disable 1591, SYSLIB0014, CA1002, CS0162
 using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json.Linq;
 
 namespace Jellyfin.Plugin.Newsletters.Scanner;
 
+/// <summary>
+/// Handles fetching and processing of poster images from external sources such as TMDB.
+/// </summary>
 public class PosterImageHandler(Logger loggerInstance)
 {
     // Global Vars
@@ -20,6 +20,11 @@ public class PosterImageHandler(Logger loggerInstance)
     private static readonly TimeSpan MinInterval = TimeSpan.FromMilliseconds(25);
     private static DateTime lastRequestTime = DateTime.MinValue;
 
+    /// <summary>
+    /// Fetches the poster image URL for the given item using external IDs (e.g., TMDB).
+    /// </summary>
+    /// <param name="item">The item containing external IDs and type information.</param>
+    /// <returns>The URL of the poster image if found; otherwise, an empty string.</returns>
     public string FetchImagePoster(JsonFileObj item)
     {
         string apiKey = "d63d13c187e20a4d436a9fd842e7e39c";
@@ -33,7 +38,7 @@ public class PosterImageHandler(Logger loggerInstance)
 
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                WebClient wc = new();
+                using var httpClient = new HttpClient();
 
                 // We can add proxy support here if needed, as tmdb is blocked in some regions.
                 // Currently we have the retry logic in place to handle rate-limiting and other issues.
@@ -82,7 +87,7 @@ public class PosterImageHandler(Logger loggerInstance)
                         lastRequestTime = DateTime.UtcNow;
                     }
 
-                    string response = wc.DownloadString(url);
+                    string response = httpClient.GetStringAsync(url).GetAwaiter().GetResult();
                     logger.Debug("TMDB Response: " + response);
 
                     JObject json = JObject.Parse(response);

@@ -1,6 +1,8 @@
-#pragma warning disable 1591
 namespace Jellyfin.Plugin.Newsletters.Shared.Entities;
 
+/// <summary>
+/// Represents the details of a newsletter item.
+/// </summary>
 public class NlDetailsJson
 {
     /// <summary>
@@ -14,11 +16,23 @@ public class NlDetailsJson
         EpisodeRange = string.Empty;
     }
 
+    /// <summary>
+    /// Gets or sets the title of the item.
+    /// </summary>
     public string Title { get; set; }
 
+    /// <summary>
+    /// Gets or sets the season of the item.
+    /// </summary>
     public int Season { get; set; }
 
+    /// <summary>
+    /// Gets or sets the episode of the item.
+    /// </summary>
     public int Episode { get; set; }
 
+    /// <summary>
+    /// Gets or sets the episodes range of the item.
+    /// </summary>
     public string EpisodeRange { get; set; }
 }

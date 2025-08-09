@@ -1,9 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.Shared.Entities;
-using MediaBrowser.Common.Configuration;
 using SQLitePCL;
 using SQLitePCL.pretty;
 

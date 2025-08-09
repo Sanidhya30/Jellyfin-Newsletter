@@ -1,18 +1,13 @@
-#pragma warning disable 1591
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
 using System.Net.Mail;
 using System.Net.Mime;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Jellyfin.Plugin.Newsletters.Clients;
-using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
-using MediaBrowser.Controller;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,6 +25,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
 public class Smtp(Logger loggerInstance,
     SQLiteDatabase dbInstance) : Client(loggerInstance, dbInstance), IClient
 {
+    /// <summary>
+    /// Sends a test email using the current SMTP configuration.
+    /// </summary>
     [HttpPost("SendTestMail")]
     public void SendTestMail()
     {
@@ -136,6 +134,12 @@ public class Smtp(Logger loggerInstance,
         }
     }
 
+    /// <summary>
+    /// Generates and sends the email newsletter.
+    /// </summary>
+    /// <returns>
+    /// True if the email was sent successfully; otherwise, false.
+    /// </returns>
     [HttpPost("SendSmtp")]
     // [ProducesResponseType(StatusCodes.Status201Created)]
     // [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -194,7 +198,7 @@ public class Smtp(Logger loggerInstance,
                 HtmlBuilder hb = new(Logger, Db);
 
                 string body = hb.GetDefaultHTMLBody;
-                List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData();
+                ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData();
                 // string finalBody = hb.ReplaceBodyWithBuiltString(body, builtString);
                 // string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
 
@@ -302,6 +306,12 @@ public class Smtp(Logger loggerInstance,
         return result;
     }
 
+    /// <summary>
+    /// Sends the email newsletter.
+    /// </summary>
+    /// <returns>
+    /// True if the email was sent successfully; otherwise, false.
+    /// </returns>
     public bool Send()
     {
         return SendEmail();
