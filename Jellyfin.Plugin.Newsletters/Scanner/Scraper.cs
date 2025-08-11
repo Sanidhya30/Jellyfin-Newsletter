@@ -320,7 +320,7 @@ public class Scraper
                     logger.Debug("Parsing Season Number");
                     try
                     {
-                        currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
+                        currFileObj.Season = int.Parse(season.Number, CultureInfo.CurrentCulture);
                     }
                     catch (Exception e)
                     {
