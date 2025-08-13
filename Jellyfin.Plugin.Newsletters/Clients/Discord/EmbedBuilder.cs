@@ -54,8 +54,6 @@ public class EmbedBuilder(Logger loggerInstance,
                         embedColor = Convert.ToInt32(Config.DiscordSeriesEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
                     }
 
-                    // string communityRating = item.CommunityRating.HasValue ? item.CommunityRating.Value.ToString(CultureInfo.InvariantCulture) : "N/A";
-
                     var fieldsList = new Collection<EmbedField>();
 
                     AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString(CultureInfo.InvariantCulture) ?? "N/A");

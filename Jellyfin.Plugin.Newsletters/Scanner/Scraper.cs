@@ -27,10 +27,8 @@ public class Scraper
     // Non-readonly
     private readonly PosterImageHandler imageHandler;
     private readonly SQLiteDatabase db;
-    private readonly JsonFileObj jsonHelper;
     private readonly Logger logger;
     private int totalLibCount;
-    private int currCount;
 
     // private List<JsonFileObj> archiveObj;
 
@@ -45,10 +43,9 @@ public class Scraper
         logger = loggerInstance;
         db = dbInstance;
         
-        jsonHelper = new JsonFileObj();
         config = Plugin.Instance!.Configuration;
 
-        totalLibCount = currCount = 0;
+        totalLibCount = 0;
 
         imageHandler = imageHandlerInstance;
 
@@ -134,7 +131,6 @@ public class Scraper
         foreach (BaseItem item in items)
         {
             logger.Debug("---------------");
-            currCount++;
             if (item is not null)
             {
                 try
