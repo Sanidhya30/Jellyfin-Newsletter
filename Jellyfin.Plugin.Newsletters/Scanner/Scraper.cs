@@ -233,17 +233,25 @@ public class Scraper
 
                 if (type == "Series")
                 {
-                    logger.Debug("Parsing Season Number");
-                    try
+                    if (season.IndexNumber.HasValue)
                     {
-                        currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
+                        logger.Debug("Parsing Season Number from IndexNumber");
+                        currFileObj.Season = season.IndexNumber.Value;
                     }
-                    catch (Exception e)
+                    else
                     {
-                        logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
-                        logger.Debug(e);
-                        logger.Warn("Setting Season number to 0 (SPECIALS)");
-                        currFileObj.Season = 0;
+                        try
+                        {
+                            logger.Debug("Parsing Season Number from name");
+                            currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
+                            logger.Debug(e);
+                            logger.Warn("Setting Season number to 0 (SPECIALS)");
+                            currFileObj.Season = 0;
+                        }
                     }
                 }
                 else if (type == "Movie")
