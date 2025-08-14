@@ -319,13 +319,14 @@ public class Scraper
                 {
                     if (season.IndexNumber.HasValue)
                     {
-                        currFileObj.Season = season.IndexNumber;
+                        logger.Debug("Parsing Season Number from IndexNumber");
+                        currFileObj.Season = season.IndexNumber.Value;
                     }
                     else
                     {
                         try
                         {
-                            logger.Debug("Parsing Season Number");
+                            logger.Debug("Parsing Season Number from name");
                             currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
                         }
                         catch (Exception e)
