@@ -1,32 +1,20 @@
-#pragma warning disable 1591, CA1002, SA1005 // remove SA1005 to clean code
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.LOGGER;
-using Jellyfin.Plugin.Newsletters.Scanner.NLImageHandler;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
-using Jellyfin.Plugin.Newsletters.Shared.DATA;
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Common.Plugins;
-using MediaBrowser.Controller;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 
-// using Microsoft.Extensions.Logging;
+namespace Jellyfin.Plugin.Newsletters.Scanner;
 
-namespace Jellyfin.Plugin.Newsletters.Scripts.SCRAPER;
-
+/// <summary>
+/// Provides methods for scanning and scraping media items for the Jellyfin Newsletters plugin.
+/// </summary>
 public class Scraper
 {
     // Global Vars
@@ -35,32 +23,31 @@ public class Scraper
     // private readonly string currRunScanList;
     // private readonly string archiveFile;
     // private readonly string currNewsletterDataFile;
-    private readonly ILibraryManager libManager;
 
     // Non-readonly
+    private readonly PosterImageHandler imageHandler;
+    private readonly SQLiteDatabase db;
+    private readonly Logger logger;
     private int totalLibCount;
-    private int currCount;
-    private PosterImageHandler imageHandler;
-    private SQLiteDatabase db;
-    private JsonFileObj jsonHelper;
-    private Logger logger;
-    private IProgress<double> progress;
-    private CancellationToken cancelToken;
+
     // private List<JsonFileObj> archiveObj;
 
-    public Scraper(ILibraryManager libraryManager, IProgress<double> passedProgress, CancellationToken cancellationToken)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Scraper"/> class.
+    /// </summary>
+    /// <param name="loggerInstance">The logger instance to use for logging.</param>
+    /// <param name="dbInstance">The SQLite database instance to use for data storage.</param>
+    /// <param name="imageHandlerInstance">The poster image handler instance to use for image processing.</param>
+    public Scraper(Logger loggerInstance, SQLiteDatabase dbInstance, PosterImageHandler imageHandlerInstance)
     {
-        logger = new Logger();
-        jsonHelper = new JsonFileObj();
-        progress = passedProgress;
-        cancelToken = cancellationToken;
+        logger = loggerInstance;
+        db = dbInstance;
+        
         config = Plugin.Instance!.Configuration;
-        libManager = libraryManager;
 
-        totalLibCount = currCount = 0;
+        totalLibCount = 0;
 
-        imageHandler = new PosterImageHandler();
-        db = new SQLiteDatabase();
+        imageHandler = imageHandlerInstance;
 
         logger.Debug("Setting Config Paths: ");
         logger.Debug("\n  DataPath: " + config.DataPath +
@@ -73,14 +60,18 @@ public class Scraper
                      "\n  LogDirectoryPath: " + config.LogDirectoryPath );
     }
 
-    // This is the main function
-    public Task GetSeriesData()
+    /// <summary>
+    /// Scans the provided media items and processes them for newsletter data.
+    /// </summary>
+    /// <param name="items">The list of media items to scan.</param>
+    /// <returns>A completed task when the operation is finished.</returns>
+    public Task GetSeriesData(IReadOnlyCollection<BaseItem> items)
     {
         logger.Info("Gathering Data...");
         try
         {
             db.CreateConnection();
-            BuildJsonObjsToCurrScanfile();
+            BuildJsonObjsToCurrScanfile(items);
             CopyCurrRunDataToNewsletterData();
         }
         catch (Exception e)
@@ -95,107 +86,34 @@ public class Scraper
         return Task.CompletedTask;
     }
 
-    // public void CheckPreviousPosterType()
-    // {
-    //     logger.Info("Checking Previous Run Poster Type...");
-        
-    //     try
-    //     {
-    //         db.CreateConnection();
-
-    //         tables = new List<string>
-    //         {
-    //             "CurrRunData",
-    //             "CurrNewsletterData",
-    //             "ArchiveData"
-    //         };
-
-    //         var previousPosterType = string.Empty;
-
-    //         foreach (var table in tables) {
-    //             previousPosterType = db.Query($"SELECT ImageURL FROM CurrNewsletterData ORDER BY ROWID ASC LIMIT 1;");
-    //             if (!string.IsNullOrEmpty(previousPosterType))
-    //             {
-    //                 if (IsValidUrl(previousPosterType))
-    //                 {
-    //                     logger.Info($"Previous Poster Type found is URL.");
-    //                     previousPosterType = "tmdb";
-    //                 }
-    //                 else
-    //                 {
-    //                     logger.Info($"Previous Poster Type is not a valid URL.");
-    //                     previousPosterType = "attachment";
-    //                 }
-    //                 break;
-    //             }
-    //         }
-
-    //         if (string.IsNullOrEmpty(previousPosterType))
-    //         {
-    //             logger.Info("No previous poster type found.");
-    //             return;
-    //         }
-
-    //         if (config.PosterType == previousPosterType)
-    //         {
-    //             logger.Info($"Current Poster Type is the same as previous: {config.PosterType}. No need to update Database.");
-    //             return;
-    //         }
-    //         else {
-    //             logger.Info($"Current Poster Type is different from previous: {config.PosterType}. Updating Database.");
-    //             UpdatePosterTypeInDatabase();
-    //         }
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         logger.Error("An error has occured: " + e);
-    //     }
-    //     finally
-    //     {
-    //         db.CloseConnection();
-    //     }
-    // }
-
-    // private bool IsValidUrl(string url)
-    // {
-    //     if (string.IsNullOrWhiteSpace(url))
-    //     {
-    //         return false;
-    //     }
-
-    //     return Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
-    //         && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
-    // }
-
-    // private void UpdatePosterTypeInDatabase()
-    // {
-    //     logger.Debug("Updating Poster Type in Database...");
-
-    // }
-
-    private void BuildJsonObjsToCurrScanfile()
+    private void BuildJsonObjsToCurrScanfile(IReadOnlyCollection<BaseItem> items)
     {
         if (!config.SeriesEnabled && !config.MoviesEnabled)
         {
             logger.Info("No Libraries Enabled In Config!");
         }
 
-        if (config.SeriesEnabled)
+        // Filter items by type and process accordingly
+        var episodeItems = items.Where(item => item is Episode).ToList();
+        var movieItems = items.Where(item => item is Movie).ToList();
+
+        if (episodeItems.Count != 0)
         {
-            InternalItemsQuery series = new InternalItemsQuery();
-            series.IncludeItemTypes = new[] { BaseItemKind.Episode };
-            BuildObjs(libManager.GetItemList(series), "Series"); // populate series
+            BuildObjs(episodeItems, "Series"); // populate series
         }
 
-        if (config.MoviesEnabled)
+        if (movieItems.Count != 0)
         {
-            InternalItemsQuery movie = new InternalItemsQuery();
-            movie.IncludeItemTypes = new[] { BaseItemKind.Movie };
-            BuildObjs(libManager.GetItemList(movie), "Movie"); // populate movies
+            BuildObjs(movieItems, "Movie"); // populate movies
         }
     }
 
-    public void BuildObjs(List<BaseItem> items, string type)
+    /// <summary>
+    /// Builds and processes objects from the provided media items and adds them to the current run data.
+    /// </summary>
+    /// <param name="items">The collection of media items to process.</param>
+    /// <param name="type">The type of media items ("Series" or "Movie").</param>
+    public void BuildObjs(IReadOnlyCollection<BaseItem> items, string type)
     {
         logger.Info($"Parsing {type}..");
         BaseItem episode, season, series;
@@ -213,8 +131,6 @@ public class Scraper
         foreach (BaseItem item in items)
         {
             logger.Debug("---------------");
-            currCount++;
-            progress.Report((double)currCount / (double)totalLibCount * 100);
             if (item is not null)
             {
                 try
@@ -317,17 +233,25 @@ public class Scraper
 
                 if (type == "Series")
                 {
-                    logger.Debug("Parsing Season Number");
-                    try
+                    if (season.IndexNumber.HasValue)
                     {
-                        currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
+                        logger.Debug("Parsing Season Number from IndexNumber");
+                        currFileObj.Season = season.IndexNumber.Value;
                     }
-                    catch (Exception e)
+                    else
                     {
-                        logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
-                        logger.Debug(e);
-                        logger.Warn("Setting Season number to 0 (SPECIALS)");
-                        currFileObj.Season = 0;
+                        try
+                        {
+                            logger.Debug("Parsing Season Number from name");
+                            currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
+                            logger.Debug(e);
+                            logger.Warn("Setting Season number to 0 (SPECIALS)");
+                            currFileObj.Season = 0;
+                        }
                     }
                 }
                 else if (type == "Movie")
@@ -414,37 +338,19 @@ public class Scraper
         }
     }
 
-    private JsonFileObj NoNull(JsonFileObj currFileObj)
+    private static JsonFileObj NoNull(JsonFileObj currFileObj)
     {
-        if (currFileObj.Filename == null)
-        {
-            currFileObj.Filename = string.Empty;
-        }
+        currFileObj.Filename ??= string.Empty;
 
-        if (currFileObj.Title == null)
-        {
-            currFileObj.Title = string.Empty;
-        }
+        currFileObj.Title ??= string.Empty;
 
-        if (currFileObj.SeriesOverview == null)
-        {
-            currFileObj.SeriesOverview = string.Empty;
-        }
+        currFileObj.SeriesOverview ??= string.Empty;
 
-        if (currFileObj.ImageURL == null)
-        {
-            currFileObj.ImageURL = string.Empty;
-        }
+        currFileObj.ImageURL ??= string.Empty;
 
-        if (currFileObj.ItemID == null)
-        {
-            currFileObj.Filename = string.Empty;
-        }
+        currFileObj.ItemID ??= string.Empty;
 
-        if (currFileObj.PosterPath == null)
-        {
-            currFileObj.PosterPath = string.Empty;
-        }
+        currFileObj.PosterPath ??= string.Empty;
 
         return currFileObj;
     }
@@ -486,7 +392,7 @@ public class Scraper
         {
             if (row is not null)
             {
-                fileObj = jsonHelper.ConvertToObj(row);
+                fileObj = JsonFileObj.ConvertToObj(row);
                 if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
                 {
                     logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
@@ -501,7 +407,7 @@ public class Scraper
         {
             if (row is not null)
             {
-                fileObj = jsonHelper.ConvertToObj(row);
+                fileObj = JsonFileObj.ConvertToObj(row);
                 if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
                 {
                     logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
@@ -515,7 +421,7 @@ public class Scraper
         {
             if (row is not null)
             {
-                fileObj = jsonHelper.ConvertToObj(row);
+                fileObj = JsonFileObj.ConvertToObj(row);
                 if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
                 {
                     logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
@@ -539,7 +445,7 @@ public class Scraper
         db.ExecuteSQL("DELETE FROM CurrRunData;");
     }
 
-    private string SanitizeDbItem(string unsanitized_string)
+    private static string SanitizeDbItem(string unsanitized_string)
     {
         // string sanitize_string = string.Empty;
         if (unsanitized_string is null)

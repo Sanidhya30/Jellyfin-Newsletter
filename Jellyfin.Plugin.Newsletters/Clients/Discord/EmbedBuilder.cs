@@ -1,21 +1,32 @@
-#pragma warning disable 1591, SYSLIB0014, CA1002, CA2227, CS0162, SA1005, SA1300 // remove SA1005 for cleanup
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
-using MediaBrowser.Controller.Library;
+using System.Text.Json.Serialization;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
+namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 
-public class EmbedBuilder : ClientBuilder
+/// <summary>
+/// Provides functionality to build Discord embeds from newsletter data for sending via Discord webhooks.
+/// </summary>
+/// <param name="loggerInstance">The logger instance for logging operations.</param>
+/// <param name="dbInstance">The database instance for data access.</param>
+public class EmbedBuilder(Logger loggerInstance,
+    SQLiteDatabase dbInstance)
+    : ClientBuilder(loggerInstance, dbInstance)
 {
-    public List<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
+     /// <summary>
+    /// Builds Discord embeds from newsletter data stored in the database.
+    /// </summary>
+    /// <param name="serverId">The Jellyfin server ID to include in embed URLs.</param>
+    /// <returns>A read-only collection of tuples containing Discord embeds, image streams, and unique image names.</returns>
+    public ReadOnlyCollection<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
     {
-        List<string> completed = new List<string>();
+        var completed = new HashSet<string>();
         var result = new List<(Embed, MemoryStream?, string)>();
 
         try
@@ -26,9 +37,9 @@ public class EmbedBuilder : ClientBuilder
             {
                 if (row is not null)
                 {
-                    JsonFileObj item = JsonHelper.ConvertToObj(row);
+                    JsonFileObj item = JsonFileObj.ConvertToObj(row);
 
-                    if (completed.Contains(item.Title))
+                    if (!completed.Add(item.Title))
                     {
                         continue;
                     }
@@ -38,72 +49,31 @@ public class EmbedBuilder : ClientBuilder
                     if (item.Type == "Series")
                     {
                         // for series only
-                        List<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
+                        ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
                         seaEps += GetSeasonEpisode(parsedInfoList);
                         embedColor = Convert.ToInt32(Config.DiscordSeriesEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
                     }
 
-                    // string communityRating = item.CommunityRating.HasValue ? item.CommunityRating.Value.ToString(CultureInfo.InvariantCulture) : "N/A";
+                    var fieldsList = new Collection<EmbedField>();
 
-                    var fieldsList = new List<EmbedField>();
-
-                    // Check if DiscordRatingEnabled is true
-                    if (Config.DiscordRatingEnabled)
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "Rating",
-                            value = item.CommunityRating.HasValue ? item.CommunityRating.Value.ToString(CultureInfo.InvariantCulture) : "N/A",
-                            inline = true
-                        });
-                    }
-
-                    // Check if DiscordPGRatingEnabled is true
-                    if (Config.DiscordPGRatingEnabled)
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "PG rating",
-                            value = !string.IsNullOrEmpty(item.OfficialRating) ? item.OfficialRating : "N/A",
-                            inline = true
-                        });
-                    }
-
-                    // Check if DiscordDurationEnabled is true
-                    if (Config.DiscordDurationEnabled)
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "Duration",
-                            value = item.RunTime.ToString(CultureInfo.InvariantCulture) + " min",
-                            inline = true
-                        });
-                    }
-
-                    // Check if DiscordEpisodesEnabled is true and seaEps is not null/empty
-                    if (Config.DiscordEpisodesEnabled && !string.IsNullOrWhiteSpace(seaEps))
-                    {
-                        fieldsList.Add(new EmbedField
-                        {
-                            name = "Episodes",
-                            value = seaEps,
-                            inline = false
-                        });
-                    }
+                    AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString(CultureInfo.InvariantCulture) ?? "N/A");
+                    AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
+                    AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
+                    AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
                     var embed = new Embed
                     {
-                        title = item.Title,
-                        url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}",
-                        color = embedColor,
-                        timestamp = DateTime.UtcNow.ToString("o"),
-                        fields = fieldsList,
+                        Title = item.Title,
+                        Url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}",
+                        Color = embedColor,
+                        Timestamp = DateTime.UtcNow.ToString("o"),
+                        Fields = fieldsList.AsReadOnly(),
                     };
 
                     // Check if DiscordDescriptionEnabled is true
                     if (Config.DiscordDescriptionEnabled)
                     {
-                        embed.description = item.SeriesOverview;
+                        embed.Description = item.SeriesOverview;
                     }
 
                     MemoryStream? resizedImageStream = null;
@@ -116,22 +86,21 @@ public class EmbedBuilder : ClientBuilder
                         {
                             (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
 
-                            embed.thumbnail = new Thumbnail
+                            embed.Thumbnail = new Thumbnail
                             {
-                                url = $"attachment://{uniqueImageName}"
+                                Url = $"attachment://{uniqueImageName}"
                             };
                         }
                         else 
                         {
                             // If PosterType is not "attachment", use the image URL
-                            embed.thumbnail = new Thumbnail
+                            embed.Thumbnail = new Thumbnail
                             {
-                                url = item.ImageURL
+                                Url = item.ImageURL
                             };
                         }
                     }
 
-                    completed.Add(item.Title);
                     result.Add((embed, resizedImageStream, uniqueImageName));
                 }
             }
@@ -145,12 +114,16 @@ public class EmbedBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
-        return result;
+        return result.AsReadOnly();
     }
 
-    public List<Embed> BuildEmbedForTest()
+    /// <summary>
+    /// Builds a test Discord embed with sample data for testing webhook connectivity.
+    /// </summary>
+    /// <returns>A read-only collection containing a single test embed.</returns>
+    public ReadOnlyCollection<Embed> BuildEmbedForTest()
     {
-        List<Embed> embeds = new List<Embed>();
+        Collection<Embed> embeds = new Collection<Embed>();
 
         try
         {
@@ -158,73 +131,34 @@ public class EmbedBuilder : ClientBuilder
             int embedColor = Convert.ToInt32(Config.DiscordSeriesEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
             string seaEps = "Season: 1 - Eps. 1 - 10\nSeason: 2 - Eps. 1 - 10\nSeason: 3 - Eps. 1 - 10";
 
-            var fieldsList = new List<EmbedField>();
+            var fieldsList = new Collection<EmbedField>();
 
-            // Check if DiscordPGRatingEnabled is true
-            if (Config.DiscordPGRatingEnabled)
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "PG rating",
-                    value = "TV-14",
-                    inline = true
-                });
-            }
-
-            // Check if DiscordRatingEnabled is true
-            if (Config.DiscordRatingEnabled)
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "Rating",
-                    value = "8.4",
-                    inline = true
-                });
-            }
-
-            // Check if DiscordDurationEnabled is true
-            if (Config.DiscordDurationEnabled)
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "Duration",
-                    value = "45 min",
-                    inline = true
-                });
-            }
-
-            // Check if DiscordEpisodesEnabled is true and seaEps is not null/empty
-            if (Config.DiscordEpisodesEnabled && !string.IsNullOrWhiteSpace(seaEps))
-            {
-                fieldsList.Add(new EmbedField
-                {
-                    name = "Episodes",
-                    value = seaEps,
-                    inline = false
-                });
-            }
+            AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", "8.4");
+            AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", "TV-14");
+            AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", "45 min");
+            AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
             var embed = new Embed
             {
-                title = "Newsletter-Test",
-                url = Config.Hostname,
-                color = embedColor,
-                timestamp = DateTime.UtcNow.ToString("o"),
-                fields = fieldsList,
+                Title = "Newsletter-Test",
+                Url = Config.Hostname,
+                Color = embedColor,
+                Timestamp = DateTime.UtcNow.ToString("o"),
+                Fields = fieldsList.AsReadOnly(),
             };
 
             // Check if DiscordDescriptionEnabled is true
             if (Config.DiscordDescriptionEnabled)
             {
-                embed.description = "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
+                embed.Description = "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
             }
 
             // Check if DiscordThumbnailEnabled is true
             if (Config.DiscordThumbnailEnabled)
             {
-                embed.thumbnail = new Thumbnail
+                embed.Thumbnail = new Thumbnail
                 {
-                    url = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/logo.png"
+                    Url = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/logo.png"
                 };
             }
 
@@ -235,10 +169,10 @@ public class EmbedBuilder : ClientBuilder
             Logger.Error("An error has occured: " + e);
         }
 
-        return embeds;
+        return embeds.AsReadOnly();
     }
 
-    private string GetSeasonEpisode(List<NlDetailsJson> list)
+    private string GetSeasonEpisode(IReadOnlyCollection<NlDetailsJson> list)
     {
         string seaEps = string.Empty;
         foreach (NlDetailsJson obj in list)
@@ -249,42 +183,119 @@ public class EmbedBuilder : ClientBuilder
 
         return seaEps;
     }
+
+    private static void AddFieldIfEnabled(Collection<EmbedField> fieldsList, bool isEnabled, string name, string value, bool inline = true)
+    {
+        if (isEnabled && !string.IsNullOrWhiteSpace(value))
+        {
+            fieldsList.Add(new EmbedField
+            {
+                Name = name,
+                Value = value,
+                Inline = inline
+            });
+        }
+    }
 }
 
+/// <summary>
+/// Represents a field within a Discord embed with name, value, and inline properties.
+/// </summary>
 public class EmbedField
 {
-    public string? name { get; set; }
+    /// <summary>
+    /// Gets or sets the name of the embed field.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
 
-    public string? value { get; set; }
+    /// <summary>
+    /// Gets or sets the value of the embed field.
+    /// </summary>
+    [JsonPropertyName("value")]
+    public string? Value { get; set; }
 
-    public bool inline { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating whether the field should be displayed inline.
+    /// </summary>
+    [JsonPropertyName("inline")]
+    public bool Inline { get; set; }
 }
 
+/// <summary>
+/// Represents a Discord embed message with title, description, fields, and other formatting options.
+/// </summary>
 public class Embed
 {
-    public string? title { get; set; }
+    /// <summary>
+    /// Gets or sets the title of the embed.
+    /// </summary>
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
 
-    public string? url { get; set; }
+    /// <summary>
+    /// Gets or sets the URL that the embed title links to.
+    /// </summary>
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
 
-    public int color { get; set; }
+    /// <summary>
+    /// Gets or sets the color of the embed as an integer value.
+    /// </summary>
+    [JsonPropertyName("color")]
+    public int Color { get; set; }
 
-    public string? timestamp { get; set; }
+    /// <summary>
+    /// Gets or sets the timestamp of the embed in ISO 8601 format.
+    /// </summary>
+    [JsonPropertyName("timestamp")]
+    public string? Timestamp { get; set; }
 
-    public string? description { get; set; }
+    /// <summary>
+    /// Gets or sets the description text of the embed.
+    /// </summary>
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 
-    public List<EmbedField>? fields { get; set; }
+    /// <summary>
+    /// Gets or sets the collection of fields to display in the embed.
+    /// </summary>
+    [JsonPropertyName("fields")]
+    public ReadOnlyCollection<EmbedField>? Fields { get; set; }
 
-    public Thumbnail? thumbnail { get; set; }
+    /// <summary>
+    /// Gets or sets the thumbnail image for the embed.
+    /// </summary>
+    [JsonPropertyName("thumbnail")]
+    public Thumbnail? Thumbnail { get; set; }
 }
 
+/// <summary>
+/// Represents the payload structure for sending messages to Discord webhooks.
+/// </summary>
 public class DiscordPayload
 {
-    public string? username { get; set; }
+    /// <summary>
+    /// Gets or sets the username to display for the webhook message.
+    /// </summary>
+    [JsonPropertyName("username")]
+    public string? Username { get; set; }
 
-    public List<Embed>? embeds { get; set; }
+    /// <summary>
+    /// Gets or sets the collection of embeds to include in the webhook message.
+    /// </summary>
+    [JsonPropertyName("embeds")]
+    public ReadOnlyCollection<Embed>? Embeds { get; set; }
 }
 
+/// <summary>
+/// Represents a thumbnail image for a Discord embed.
+/// </summary>
 public class Thumbnail
 {
-    public string? url { get; set; }
+    /// <summary>
+    /// Gets or sets the URL of the thumbnail image.
+    /// </summary>
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
 }

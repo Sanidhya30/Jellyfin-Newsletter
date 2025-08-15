@@ -1,32 +1,41 @@
-#pragma warning disable 1591, SYSLIB0014, CA1002, CS0162, SA1005 // remove SA1005 for cleanup
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
-using Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
-using SQLitePCL.pretty;
-// using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Emails.HTMLBuilder;
+namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
 
+/// <summary>
+/// Builds HTML content for newsletters, including templating and chunking logic.
+/// </summary>
 public class HtmlBuilder : ClientBuilder
 {
     // Global Vars
+    // Constant fields
+    private const string Append = "Append";
+    private const string Write = "Overwrite";
+
     // Readonly
     private readonly string newslettersDir;
     private readonly string newsletterHTMLFile;
     // private readonly string[] itemJsonKeys = 
 
     private string emailBody;
-
-    // Non-readonly
-    private static string append = "Append";
-    private static string write = "Overwrite";
     // private List<string> fileList;
 
-    public HtmlBuilder()
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HtmlBuilder"/> class.
+    /// </summary>
+    /// <param name="loggerInstance">The logger instance to use for logging.</param>
+    /// <param name="dbInstance">The SQLite database instance to use for data access.</param>
+    public HtmlBuilder(
+        Logger loggerInstance,
+        SQLiteDatabase dbInstance)
+        : base(loggerInstance, dbInstance)
     {
         DefaultBodyAndEntry(); // set default body and entry HTML from template file if not set in config
 
@@ -50,13 +59,26 @@ public class HtmlBuilder : ClientBuilder
         Logger.Info("Newsletter will be saved to: " + newsletterHTMLFile);
     }
 
-    public string GetDefaultHTMLBody()
+    /// <summary>
+    /// Gets the default HTML body for the newsletter from the configuration.
+    /// </summary>
+    public string GetDefaultHTMLBody
     {
-        emailBody = Config.Body;
-        return emailBody;
+        get
+        {
+            emailBody = Config.Body;
+            return emailBody;
+        }
     }
 
-    public string TemplateReplace(string htmlObj, string replaceKey, object replaceValue, bool finalPass = false)
+    /// <summary>
+    /// Replaces a specified key in the HTML template with the provided value.
+    /// </summary>
+    /// <param name="htmlObj">The HTML template string.</param>
+    /// <param name="replaceKey">The key to be replaced in the template.</param>
+    /// <param name="replaceValue">The value to replace the key with.</param>
+    /// <returns>The HTML string with the key replaced by the value.</returns>
+    public string TemplateReplace(string htmlObj, string replaceKey, object replaceValue)
     {
         Logger.Debug("Replacing {} params:\n " + htmlObj);
         if (replaceValue is null)
@@ -94,12 +116,16 @@ public class HtmlBuilder : ClientBuilder
         return htmlObj;
     }
 
-    public List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData()
+    /// <summary>
+    /// Builds chunked HTML strings from newsletter data, splitting entries into chunks based on configured email size.
+    /// </summary>
+    /// <returns>A collection of tuples containing HTML strings and associated image streams with content IDs.</returns>
+    public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData()
     {
         List<string> completed = new List<string>();
         var chunks = new List<(string, List<(MemoryStream?, string)>)>();
 
-        StringBuilder currentChunkBuilder = new StringBuilder();
+        StringBuilder currentChunkBuilder = new();
         var currentChunkImages = new List<(MemoryStream?, string)>();
         int currentChunkBytes = 0;
         const int overheadPerMail = 50000;
@@ -114,7 +140,7 @@ public class HtmlBuilder : ClientBuilder
             {
                 if (row is not null)
                 {
-                    JsonFileObj item = JsonHelper.ConvertToObj(row);
+                    JsonFileObj item = JsonFileObj.ConvertToObj(row);
                     if (completed.Contains(item.Title))
                     {
                         continue;
@@ -191,16 +217,20 @@ public class HtmlBuilder : ClientBuilder
             chunks.Add((currentChunkBuilder.ToString(), currentChunkImages));
         }
 
-        return chunks;
+        return chunks.AsReadOnly();
     }
 
+    /// <summary>
+    /// Builds a sample HTML string for testing newsletter entry rendering.
+    /// </summary>
+    /// <returns>A string containing the HTML for a test newsletter entry.</returns>
     public string BuildHtmlStringsForTest()
     {
         string entryHTML = string.Empty;
 
         try
         {
-            JsonFileObj item = JsonHelper.GetTestObj();
+            JsonFileObj item = JsonFileObj.GetTestObj();
             Logger.Debug("Test Entry ITEM: " + JsonConvert.SerializeObject(item));
 
             string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10";
@@ -228,12 +258,18 @@ public class HtmlBuilder : ClientBuilder
         return entryHTML;
     }
 
-    public string ReplaceBodyWithBuiltString(string body, string nlData)
+    /// <summary>
+    /// Replaces the {EntryData} placeholder in the newsletter body with the provided newsletter data string.
+    /// </summary>
+    /// <param name="body">The HTML body template containing the {EntryData} placeholder.</param>
+    /// <param name="nlData">The newsletter data to insert into the body.</param>
+    /// <returns>The HTML body with the {EntryData} placeholder replaced by the newsletter data.</returns>
+    public static string ReplaceBodyWithBuiltString(string body, string nlData)
     {
         return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
     }
 
-    private string GetSeasonEpisodeHTML(List<NlDetailsJson> list)
+    private string GetSeasonEpisodeHTML(IReadOnlyCollection<NlDetailsJson> list)
     {
         string html = string.Empty;
         foreach (NlDetailsJson obj in list)
@@ -246,20 +282,24 @@ public class HtmlBuilder : ClientBuilder
         return html;
     }
 
+    /// <summary>
+    /// Saves the provided HTML body to the newsletter file.
+    /// </summary>
+    /// <param name="htmlBody">The HTML content to save to the file.</param>
     public void CleanUp(string htmlBody)
     {
         // save newsletter to file
         Logger.Info("Saving HTML file");
-        WriteFile(write, newsletterHTMLFile, htmlBody);
+        WriteFile(Write, newsletterHTMLFile, htmlBody);
     }
 
-    private void WriteFile(string method, string path, string value)
+    private static void WriteFile(string method, string path, string value)
     {
-        if (method == append)
+        if (method == Append)
         {
             File.AppendAllText(path, value);
         }
-        else if (method == write)
+        else if (method == Write)
         {
             File.WriteAllText(path, value);
         }

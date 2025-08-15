@@ -1,9 +1,8 @@
-#pragma warning disable SA1611, CS0162
 using System;
 using System.IO;
 using Jellyfin.Plugin.Newsletters.Configuration;
 
-namespace Jellyfin.Plugin.Newsletters.LOGGER;
+namespace Jellyfin.Plugin.Newsletters;
 
 /// <summary>
 /// Initializes a new instance of the <see cref="Logger"/> class.
@@ -11,7 +10,7 @@ namespace Jellyfin.Plugin.Newsletters.LOGGER;
 public class Logger
 {
     private readonly PluginConfiguration config;
-    private readonly string logFile;
+    private readonly string logDirectory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Logger"/> class.
@@ -19,12 +18,13 @@ public class Logger
     public Logger()
     {
         config = Plugin.Instance!.Configuration;
-        logFile = $"{config.LogDirectoryPath}/{GetDate()}_Newsletter.log";
+        logDirectory = config.LogDirectoryPath;
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Debug"/> class.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Debug(object msg)
     {
         PluginConfiguration config = Plugin.Instance!.Configuration;
@@ -37,6 +37,7 @@ public class Logger
     /// <summary>
     /// Inform info into the logs.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Info(object msg)
     {
         Inform(msg, "INFO");
@@ -45,6 +46,7 @@ public class Logger
     /// <summary>
     /// Inform warn into the logs.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Warn(object msg)
     {
         Inform(msg, "WARN");
@@ -53,6 +55,7 @@ public class Logger
     /// <summary>
     /// Inform error into the logs.
     /// </summary>
+    /// <param name="msg">The message to log as info.</param>
     public void Error(object msg)
     {
         Inform(msg, "ERR");
@@ -67,16 +70,22 @@ public class Logger
     {
         string logMsgPrefix = $"[NLP]: {GetDateTime()} - [{type}] ";
         Console.WriteLine($"{logMsgPrefix}{msg}");
+        var logFile = GetCurrentLogFile();
         File.AppendAllText(logFile, $"{logMsgPrefix}{msg}\n");
     }
 
-    private string GetDateTime()
+    private static string GetDateTime()
     {
         return DateTime.Now.ToString("[yyyy-MM-dd] :: [HH:mm:ss]", System.Globalization.CultureInfo.CurrentCulture);
     }
 
-    private string GetDate()
+    private static string GetDate()
     {
         return DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    private string GetCurrentLogFile()
+    {
+        return $"{logDirectory}/{GetDate()}_Newsletter.log";
     }
 }

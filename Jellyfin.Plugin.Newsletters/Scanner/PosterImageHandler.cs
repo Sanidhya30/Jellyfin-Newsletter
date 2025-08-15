@@ -1,47 +1,30 @@
-#pragma warning disable 1591, SYSLIB0014, CA1002, CS0162
-// using SixLabors.ImageSharp;
-// using SixLabors.ImageSharp.Processing;
-// using SixLabors.ImageSharp.Formats.Jpeg;
 using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
-using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.LOGGER;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
-using Jellyfin.Plugin.Newsletters.Shared.DATA;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json.Linq;
-// using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Newsletters.Scanner.NLImageHandler;
+namespace Jellyfin.Plugin.Newsletters.Scanner;
 
-public class PosterImageHandler
+/// <summary>
+/// Handles fetching and processing of poster images from external sources such as TMDB.
+/// </summary>
+public class PosterImageHandler(Logger loggerInstance)
 {
     // Global Vars
     // Readonly
-    private readonly PluginConfiguration config;
-    private Logger logger;
-    private SQLiteDatabase db;
-    private static readonly object RateLimitLock = new object();
+    private readonly Logger logger = loggerInstance;
+    private static readonly object RateLimitLock = new();
     private static readonly TimeSpan MinInterval = TimeSpan.FromMilliseconds(25);
     private static DateTime lastRequestTime = DateTime.MinValue;
 
-    // Non-readonly
-    private List<JsonFileObj> archiveSeriesList;
-    // private List<string> fileList;
-
-    public PosterImageHandler()
-    {
-        logger = new Logger();
-        db = new SQLiteDatabase();
-        config = Plugin.Instance!.Configuration;
-
-        archiveSeriesList = new List<JsonFileObj>();
-    }
-
+    /// <summary>
+    /// Fetches the poster image URL for the given item using external IDs (e.g., TMDB).
+    /// </summary>
+    /// <param name="item">The item containing external IDs and type information.</param>
+    /// <returns>The URL of the poster image if found; otherwise, an empty string.</returns>
     public string FetchImagePoster(JsonFileObj item)
     {
         string apiKey = "d63d13c187e20a4d436a9fd842e7e39c";
@@ -55,7 +38,7 @@ public class PosterImageHandler
 
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                WebClient wc = new();
+                using var httpClient = new HttpClient();
 
                 // We can add proxy support here if needed, as tmdb is blocked in some regions.
                 // Currently we have the retry logic in place to handle rate-limiting and other issues.
@@ -104,7 +87,7 @@ public class PosterImageHandler
                         lastRequestTime = DateTime.UtcNow;
                     }
 
-                    string response = wc.DownloadString(url);
+                    string response = httpClient.GetStringAsync(url).GetAwaiter().GetResult();
                     logger.Debug("TMDB Response: " + response);
 
                     JObject json = JObject.Parse(response);

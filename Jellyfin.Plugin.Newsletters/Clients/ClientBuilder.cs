@@ -1,53 +1,46 @@
-#pragma warning disable 1591, SYSLIB0014, CA1002, CS0162, SA1005 // remove SA1005 for cleanup
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
-using Jellyfin.Plugin.Newsletters.LOGGER;
-using Jellyfin.Plugin.Newsletters.Scripts.ENTITIES;
-using Jellyfin.Plugin.Newsletters.Scripts.SCRAPER;
-using Jellyfin.Plugin.Newsletters.Shared.DATA;
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Common.Plugins;
-using MediaBrowser.Controller;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Tasks;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
-// using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.CLIENTBuilder;
+namespace Jellyfin.Plugin.Newsletters.Clients;
 
-public class ClientBuilder
-{
-    public ClientBuilder()
-    {
-        Logger = new Logger();
-        JsonHelper = new JsonFileObj();
-        Db = new SQLiteDatabase();
-        Config = Plugin.Instance!.Configuration;
-    }
+/// <summary>
+/// Provides methods for building newsletter clients and processing newsletter data.
+/// </summary>
+public class ClientBuilder(Logger loggerInstance,
+    SQLiteDatabase dbInstance)
+{    
+    /// <summary>
+    /// Gets the plugin configuration instance.
+    /// </summary>
+    protected PluginConfiguration Config { get; } = Plugin.Instance!.Configuration;
 
-    protected PluginConfiguration Config { get; }
+    /// <summary>
+    /// Gets the database instance.
+    /// </summary>
+    protected SQLiteDatabase Db { get; } = dbInstance;
 
-    protected SQLiteDatabase Db { get; set; }
+    /// <summary>
+    /// Gets the logger.
+    /// </summary>
+    protected Logger Logger { get; } = loggerInstance;
 
-    protected Logger Logger { get; set; }
-
-    protected JsonFileObj JsonHelper { get; set; }
-
-    protected List<NlDetailsJson> ParseSeriesInfo(JsonFileObj currObj)
+    /// <summary>
+    /// Parses series information from the given JsonFileObj and returns a collection of NlDetailsJson.
+    /// </summary>
+    /// <param name="currObj">The current JsonFileObj containing series information.</param>
+    /// <returns>A collection of NlDetailsJson representing the parsed series details.</returns>
+    protected ReadOnlyCollection<NlDetailsJson> ParseSeriesInfo(JsonFileObj currObj)
     {
         List<NlDetailsJson> compiledList = new List<NlDetailsJson>();
         List<NlDetailsJson> finalList = new List<NlDetailsJson>();
@@ -56,10 +49,9 @@ public class ClientBuilder
         {
             if (row is not null)
             {
-                JsonFileObj helper = new JsonFileObj();
-                JsonFileObj itemObj = helper.ConvertToObj(row);
+                JsonFileObj itemObj = JsonFileObj.ConvertToObj(row);
 
-                NlDetailsJson tempVar = new NlDetailsJson()
+                NlDetailsJson tempVar = new()
                 {
                     Title = itemObj.Title,
                     Season = itemObj.Season,
@@ -72,7 +64,7 @@ public class ClientBuilder
         }
 
         List<int> tempEpsList = new List<int>();
-        NlDetailsJson currSeriesDetailsObj = new NlDetailsJson();
+        NlDetailsJson currSeriesDetailsObj = new();
 
         int currSeason = -1;
         bool newSeason = true;
@@ -85,9 +77,11 @@ public class ClientBuilder
 
             NlDetailsJson CopyJsonFromExisting(NlDetailsJson obj)
             {
-                NlDetailsJson newJson = new NlDetailsJson();
-                newJson.Season = obj.Season;
-                newJson.EpisodeRange = obj.EpisodeRange;
+                NlDetailsJson newJson = new()
+                {
+                    Season = obj.Season,
+                    EpisodeRange = obj.EpisodeRange
+                };
                 return newJson;
             }
 
@@ -252,12 +246,23 @@ public class ClientBuilder
             Logger.Debug("FinalListObjs: " + JsonConvert.SerializeObject(item));
         }
 
-        return finalList;
+        return finalList.AsReadOnly();
     }
 
+    /// <summary>
+    /// Resizes an image to the specified width and JPEG quality, with retry logic for I/O exceptions.
+    /// </summary>
+    /// <param name="imagePath">The file path of the image to resize.</param>
+    /// <param name="maxRetries">The maximum number of retry attempts for loading the image.</param>
+    /// <param name="delayMilliseconds">The delay in milliseconds between retry attempts.</param>
+    /// <param name="targetWidth">The target width for the resized image.</param>
+    /// <param name="jpegQuality">The JPEG quality for the output image.</param>
+    /// <returns>
+    /// A tuple containing the resized image as a <see cref="MemoryStream"/>, a unique content ID, and a success flag.
+    /// </returns>
     protected (MemoryStream? ResizedStream, string ContentId, bool Success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 500, int jpegQuality = 80)
     {
-        string contentId = $"image_{Guid.NewGuid().ToString()}.jpg";
+        string contentId = $"image_{Guid.NewGuid()}.jpg";
         int attempt = 0;
         MemoryStream? resizedStream = null;
         
@@ -300,17 +305,17 @@ public class ClientBuilder
         return (null, contentId, false);
     }
 
-    private bool IsIncremental(List<int> values)
+    private static bool IsIncremental(List<int> values)
     {
         return values.Skip(1).Select((v, i) => v == (values[i] + 1)).All(v => v);
     }
 
-    private List<NlDetailsJson> SortListBySeason(List<NlDetailsJson> list)
+    private static List<NlDetailsJson> SortListBySeason(List<NlDetailsJson> list)
     {
         return list.OrderBy(x => x.Season).ToList();
     }
 
-    private List<NlDetailsJson> SortListByEpisode(List<NlDetailsJson> list)
+    private static List<NlDetailsJson> SortListByEpisode(List<NlDetailsJson> list)
     {
         return list.OrderBy(x => x.Episode).ToList();
     }

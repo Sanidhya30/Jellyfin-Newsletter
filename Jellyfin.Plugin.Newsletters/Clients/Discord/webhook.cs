@@ -1,39 +1,45 @@
-#pragma warning disable 1591
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
-using Jellyfin.Plugin.Newsletters.Clients.CLIENT;
-using Jellyfin.Plugin.Newsletters.Clients.Discord.EMBEDBuilder;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Discord.WEBHOOK;
+namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 
+/// <summary>
+/// Represents a Discord webhook client for sending messages and test messages to Discord via webhooks.
+/// </summary>
 [Authorize(Policy = Policies.RequiresElevation)]
 [ApiController]
 [Route("Discord")]
-public class DiscordWebhook : Client, IClient, IDisposable
+public class DiscordWebhook(IServerApplicationHost appHost,
+    Logger loggerInstance,
+    SQLiteDatabase dbInstance)
+    : Client(loggerInstance, dbInstance), IClient, IDisposable
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _httpClient = new();
+    private readonly IServerApplicationHost applicationHost = appHost;
 
-    public DiscordWebhook(IServerApplicationHost applicationHost) : base(applicationHost)
-    {
-        _httpClient = new HttpClient();
-    }
-
+    /// <summary>
+    /// Releases the resources used by the <see cref="DiscordWebhook"/> class.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Releases the unmanaged resources used by the <see cref="DiscordWebhook"/> class.
+    /// </summary>
+    /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
@@ -42,6 +48,9 @@ public class DiscordWebhook : Client, IClient, IDisposable
         }
     }
 
+    /// <summary>
+    /// Sends a test message to the configured Discord webhook to verify connectivity and configuration.
+    /// </summary>
     [HttpPost("SendDiscordTestMessage")]
     public void SendDiscordTestMessage()
     {
@@ -55,20 +64,19 @@ public class DiscordWebhook : Client, IClient, IDisposable
 
         try
         {
-            EmbedBuilder builder = new EmbedBuilder();
-            List<Embed> embedList = builder.BuildEmbedForTest();
+            EmbedBuilder builder = new(Logger, Db);
+            var embedList = builder.BuildEmbedForTest();
 
             var payload = new DiscordPayload
             {
-                username = Config.DiscordWebhookName,
-                embeds = embedList
+                Username = Config.DiscordWebhookName,
+                Embeds = embedList
             };
 
             var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
             Logger.Debug("Sending Discord test message: " + jsonPayload);
 
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
+            using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
             var response = _httpClient.PostAsync(webhookUrl, content).GetAwaiter().GetResult();
 
             if (response.IsSuccessStatusCode)
@@ -87,6 +95,10 @@ public class DiscordWebhook : Client, IClient, IDisposable
         }
     }
 
+    /// <summary>
+    /// Sends a message to the configured Discord webhook using newsletter data.
+    /// </summary>
+    /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     [HttpPost("SendDiscordMessage")]
     public bool SendDiscordMessage()
     {
@@ -101,14 +113,12 @@ public class DiscordWebhook : Client, IClient, IDisposable
 
         try
         {
-            Db.CreateConnection();
-
             if (NewsletterDbIsPopulated())
             {
                 Logger.Debug("Sending out Discord message!");
 
-                EmbedBuilder builder = new EmbedBuilder();
-                var embedTuples = builder.BuildEmbedsFromNewsletterData(ApplicationHost.SystemId);
+                EmbedBuilder builder = new(Logger, Db);
+                var embedTuples = builder.BuildEmbedsFromNewsletterData(applicationHost.SystemId);
 
                 // Discord webhook does not support more than 10 embeds per message
                 // Therefore, we're sending in chunks with atmost 10 embed in a payload.
@@ -141,21 +151,20 @@ public class DiscordWebhook : Client, IClient, IDisposable
                         index++;
                     }
 
-                    var embeds = chunk.Select(t => t.Item1).ToList();
-
                     var payload = new DiscordPayload
                     {
-                        username = Config.DiscordWebhookName,
-                        embeds = embeds
+                        Username = Config.DiscordWebhookName,
+                        Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly()
                     };
 
                     var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
                     Logger.Debug("Sending discord message with payload: " + jsonPayload);
 
-                    var multipartContent = new MultipartFormDataContent();
-                    multipartContent.Add(new StringContent(jsonPayload, Encoding.UTF8, "application/json"), "payload_json");
+                    using var multipartContent = new MultipartFormDataContent();
+                    using var payloadContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                    multipartContent.Add(payloadContent, "payload_json");
 
-                    if (Config.PosterType == "attachment") 
+                    if (Config.PosterType == "attachment")
                     {
                         foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
                         {
@@ -193,14 +202,14 @@ public class DiscordWebhook : Client, IClient, IDisposable
         {
             Logger.Error("An error has occured: " + e);
         }
-        finally
-        {
-            Db.CloseConnection();
-        }
 
         return result;
     }
 
+    /// <summary>
+    /// Sends a Discord message using the configured webhook and newsletter data.
+    /// </summary>
+    /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     public bool Send()
     {
         return SendDiscordMessage();
