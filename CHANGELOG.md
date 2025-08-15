@@ -1,7 +1,8 @@
 # 0.9.0.0
 
 - Event based scanning: Now the plugin is configured to scan the library only when a media item is added or removed, instead of every 4 hours.
-- Code refactoring.
+- Removal of ScanLibraryTask.
+- Bug fix and Code refactoring.
 
 # 0.8.1.1
 

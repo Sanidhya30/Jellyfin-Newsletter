@@ -15,5 +15,6 @@ artifacts:
   - "SixLabors.ImageSharp.dll"
 changelog: >
   - Event based scanning: Now the plugin is configured to scan the library only when a media item is added or removed, instead of every 4 hours.
-  - Code refactoring.
+  - Removal of ScanLibraryTask.
+  - Bug Fix and Code refactoring.
   FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md
