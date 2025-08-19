@@ -121,7 +121,7 @@ public class JsonFileObj
             PremiereYear = row[9].ToString(),
             RunTime = string.IsNullOrEmpty(row[10].ToString()) ? 0 : int.Parse(row[10].ToString(), CultureInfo.CurrentCulture),
             OfficialRating = row[11].ToString(),
-            CommunityRating = string.IsNullOrEmpty(row[12].ToString()) ? 0.0f : float.Parse(row[12].ToString(), CultureInfo.CurrentCulture)
+            CommunityRating = string.IsNullOrEmpty(row[12].ToString()) ? 0.0f : float.Parse(row[12].ToString(), CultureInfo.InvariantCulture)
         };
 
         return obj;
