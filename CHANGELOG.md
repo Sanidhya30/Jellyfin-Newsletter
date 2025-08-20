@@ -1,3 +1,7 @@
+# 0.9.0.1
+- Bug fix for community rating parsing.
+- Bug fix for parsing runtime.
+
 # 0.9.0.0
 
 - Event based scanning: Now the plugin is configured to scan the library only when a media item is added or removed, instead of every 4 hours.

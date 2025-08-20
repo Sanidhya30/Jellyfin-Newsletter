@@ -139,7 +139,18 @@ public class Scraper
                     {
                         episode = item;
                         season = item.GetParent();
-                        series = item.GetParent().GetParent();
+                        if (season is null) 
+                        { 
+                            logger.Debug("No season parent; skipping"); 
+                            continue; 
+                        }
+                        
+                        series = season.GetParent();
+                        if (series is null) 
+                        { 
+                            logger.Debug("No series parent; skipping");
+                            continue; 
+                        }
                     }
                     else if (type == "Movie")
                     {
@@ -172,8 +183,11 @@ public class Scraper
                     logger.Debug($"OfficialRating: " + series.OfficialRating); // TV-14, TV-PG, etc
                     // logger.Info($"CriticRating: " + series.CriticRating);
                     // logger.Info($"CustomRating: " + series.CustomRating);
-                    logger.Debug($"CommunityRating: " + series.CommunityRating); // 8.5, 9.2, etc
-                    logger.Debug($"RunTime: " + (int)((float)episode.RunTimeTicks! / 10000 / 60000) + " minutes");
+
+                    var runtimeMinutes = episode.RunTimeTicks.HasValue ? (int)(episode.RunTimeTicks.Value / 10000 / 60000) : 0;
+                    var communityRating = (series.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture);
+                    logger.Debug($"CommunityRating: " + communityRating); // 8.5, 9.2, etc
+                    logger.Debug($"RunTime: " + runtimeMinutes + " minutes");
 
                     foreach (var kvp in series.ProviderIds)
                     {
@@ -221,7 +235,7 @@ public class Scraper
                     }
                 }
 
-                currFileObj.RunTime = (int)((float)episode.RunTimeTicks / 10000 / 60000);
+                currFileObj.RunTime = episode.RunTimeTicks.HasValue ? (int)(episode.RunTimeTicks.Value / 10000 / 60000) : 0;
                 currFileObj.OfficialRating = series.OfficialRating;
                 currFileObj.CommunityRating = series.CommunityRating;
                 currFileObj.ItemID = series.Id.ToString("N");
@@ -325,7 +339,7 @@ public class Scraper
                                     "," + SanitizeDbItem(currFileObj!.PremiereYear) + 
                                     "," + ((currFileObj?.RunTime is null) ? -1 : currFileObj.RunTime) +
                                     "," + SanitizeDbItem(currFileObj!.OfficialRating) +
-                                    "," + ((currFileObj?.CommunityRating is null) ? -1 : currFileObj.CommunityRating) +
+                                    "," + (currFileObj.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
                                 ");");
                         logger.Debug("Complete!");
                     }
