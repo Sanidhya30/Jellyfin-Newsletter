@@ -2,11 +2,11 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/logo.png"
-version: "0.9.0.0"
+version: "0.9.0.1"
 targetAbi: "10.10.0.0"
 framework: "net8.0"
 overview: "Send newsletters for recently added media"
-description: "This plugin automacially scans a users library (default every 4 hours), populates a list of recently added (not previously scanned) media, sends out the messages to configured clients(email, discord webhook)."
+description: "This plugin populates a list of recently added media, sends out the messages to configured clients(email, discord webhook)."
 category: "General"
 owner: "jellyfin"
 artifacts:
@@ -14,7 +14,6 @@ artifacts:
   - "SQLitePCL.pretty.dll"
   - "SixLabors.ImageSharp.dll"
 changelog: >
-  - Event based scanning: Now the plugin is configured to scan the library only when a media item is added or removed, instead of every 4 hours.
-  - Removal of ScanLibraryTask.
-  - Bug Fix and Code refactoring.
+  - Bug fix for community rating parsing.
+  - Bug fix for parsing runtime.
   FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md
