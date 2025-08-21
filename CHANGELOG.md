@@ -1,3 +1,6 @@
+# 0.9.0.2
+- Bug fix for querying title in the newsletter.db.
+
 # 0.9.0.1
 - Bug fix for community rating parsing.
 - Bug fix for parsing runtime.

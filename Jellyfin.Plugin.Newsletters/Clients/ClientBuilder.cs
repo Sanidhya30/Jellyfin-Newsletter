@@ -45,7 +45,7 @@ public class ClientBuilder(Logger loggerInstance,
         List<NlDetailsJson> compiledList = new List<NlDetailsJson>();
         List<NlDetailsJson> finalList = new List<NlDetailsJson>();
 
-        foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title + "';"))
+        foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "';"))
         {
             if (row is not null)
             {
