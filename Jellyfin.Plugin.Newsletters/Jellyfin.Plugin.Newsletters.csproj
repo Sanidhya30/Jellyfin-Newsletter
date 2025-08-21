@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.9.0" />
-    <PackageReference Include="Jellyfin.Model" Version="10.9.0" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.10.0" />
+    <PackageReference Include="Jellyfin.Model" Version="10.10.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageReference Include="SQLitePCL.pretty.netstandard" Version="3.1.0" />
