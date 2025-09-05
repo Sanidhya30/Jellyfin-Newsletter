@@ -2,6 +2,12 @@
 
 namespace Jellyfin.Plugin.Newsletters.Shared.Models;
 
+public enum EventType
+{
+    Add,
+    Delete
+}
+
 /// <summary>
 /// Queued item container.
 /// </summary>
@@ -11,10 +17,13 @@ public class QueuedItemContainer
     /// Initializes a new instance of the <see cref="QueuedItemContainer"/> class.
     /// </summary>
     /// <param name="id">The item id.</param>
-    public QueuedItemContainer(Guid id)
+    /// <param name="eventType">The event type.</param>
+    public QueuedItemContainer(Guid id, EventType eventType)
     {
         ItemId = id;
         RetryCount = 0;
+        Timestamp = DateTime.UtcNow;
+        EventType = eventType;
     }
 
     /// <summary>
@@ -23,7 +32,17 @@ public class QueuedItemContainer
     public int RetryCount { get; set; }
 
     /// <summary>
-    /// Gets or sets the current item id.
+    /// Gets the current item id.
     /// </summary>
-    public Guid ItemId { get; set; }
+    public Guid ItemId { get; }
+
+    /// <summary>
+    /// Gets the timestamp of when the item was queued.
+    /// </summary>
+    public DateTime Timestamp { get; }
+
+    /// <summary>
+    /// Gets the event type.
+    /// </summary>
+    public EventType EventType { get; }
 }

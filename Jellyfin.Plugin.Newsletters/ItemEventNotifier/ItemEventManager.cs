@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Scanner;
 using Jellyfin.Plugin.Newsletters.Shared.Models;
@@ -31,6 +32,7 @@ public class ItemEventManager(
     private readonly ILibraryManager libManager = libraryManager;
     private readonly IServerApplicationHost applicationHost = appHost;
     private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemAddedQueue = new();
+    private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemDeletedQueue = new();
     private readonly Scraper myScraper = scraperInstance;
     private readonly Logger logger = loggerInstance;
 
@@ -42,46 +44,64 @@ public class ItemEventManager(
     {
         logger.Debug("Processing Items Async");
 
-        // Attempt to process all items in queue.
-        var currentItems = itemAddedQueue.ToArray();
-        if (currentItems.Length != 0)
+        var addedItems = itemAddedQueue.ToArray();
+        var deletedItems = itemDeletedQueue.ToArray();
+
+        if (addedItems.Length == 0 && deletedItems.Length == 0)
+        {
+            return;
+        }
+
+        var combinedList = new List<QueuedItemContainer>();
+
+        foreach (var (_, container) in addedItems)
+        {
+            combinedList.Add(container);
+            itemAddedQueue.TryRemove(container.ItemId, out _);
+        }
+
+        foreach (var (_, container) in deletedItems)
+        {
+            combinedList.Add(container);
+            itemDeletedQueue.TryRemove(container.ItemId, out _);
+        }
+
+        var sortedList = combinedList.OrderBy(i => i.Timestamp).ToList();
+
+        if (sortedList.Count > 0)
         {
             var scope = applicationHost.ServiceProvider!.CreateAsyncScope();
             await using (scope.ConfigureAwait(false))
             {
                 var itemsToProcess = new List<BaseItem>();
-                foreach (var (key, container) in currentItems)
+                foreach (var queueItem in sortedList)
                 {
-                    var item = libManager.GetItemById(key);
-                    if (item is null)
+                    if (queueItem.EventType == EventType.Add)
                     {
-                        // Remove item from queue.
-                        itemAddedQueue.TryRemove(key, out _);
-                        break;
-                    }
+                        var item = libManager.GetItemById(queueItem.ItemId);
+                        if (item is null)
+                        {
+                            continue;
+                        }
 
-                    logger.Debug($"Item {item.Name}");
-
-                    // Metadata not refreshed yet and under retry limit.
-                    if (item.ProviderIds.Keys.Count == 0 && container.RetryCount < MaxRetries)
-                    {
-                        logger.Debug($"Requeue {item.Name}, no provider ids");
-                        container.RetryCount++;
-                        itemAddedQueue.AddOrUpdate(key, container, (_, _) => container);
-                        continue;
+                        // Metadata not refreshed yet and under retry limit.
+                        if (item.ProviderIds.Keys.Count == 0 && queueItem.RetryCount < MaxRetries)
+                        {
+                            logger.Debug($"Requeue {item.Name}, no provider ids");
+                            queueItem.RetryCount++;
+                            itemAddedQueue.AddOrUpdate(queueItem.ItemId, queueItem, (_, _) => queueItem);
+                            continue;
+                        }
+                        else if (item.ProviderIds.Keys.Count != 0)
+                        {
+                            // Item has provider ids, add to process list.
+                            logger.Debug($"Adding {item.Name} to process list");
+                            itemsToProcess.Add(item);
+                        }
                     }
-                    else if (item.ProviderIds.Keys.Count != 0)
-                    {
-                        // Item has provider ids, add to process list.
-                        logger.Debug($"Adding {item.Name} to process list");
-                        itemsToProcess.Add(item);
-                    }
-
-                    // Remove item from queue.
-                    itemAddedQueue.TryRemove(key, out _);
                 }
 
-                await myScraper.GetSeriesData(itemsToProcess).ConfigureAwait(false);
+                await myScraper.GetSeriesData(itemsToProcess, sortedList).ConfigureAwait(false);
             }
         }
     }
@@ -92,7 +112,17 @@ public class ItemEventManager(
     /// <param name="item">The item to be added to the queue.</param>
     public void AddItem(BaseItem item)
     {
-        itemAddedQueue.TryAdd(item.Id, new QueuedItemContainer(item.Id));
-        logger.Debug($"Queued {item.Name} for notification");
+        itemAddedQueue.TryAdd(item.Id, new QueuedItemContainer(item.Id, EventType.Add));
+        logger.Debug($"Queued {item.Name} for add notification");
+    }
+
+    /// <summary>
+    /// Delete an item from the notification queue.
+    /// </summary>
+    /// <param name="item">The item to be deleted from the queue.</param>
+    public void DeleteItem(BaseItem item)
+    {
+        itemDeletedQueue.TryAdd(item.Id, new QueuedItemContainer(item.Id, EventType.Delete));
+        logger.Debug($"Queued {item.Name} for deletion notification");
     }
 }
