@@ -14,5 +14,5 @@ artifacts:
   - "SQLitePCL.pretty.dll"
   - "SixLabors.ImageSharp.dll"
 changelog: >
-  - Support for Jellyfin 10.11.0.
+  - Support for Jellyfin 10.11.x.
   FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md
