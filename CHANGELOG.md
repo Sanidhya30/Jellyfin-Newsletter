@@ -1,3 +1,6 @@
+# 0.9.1.0
+- Support for Jellyfin 10.11.x.
+
 # 0.9.0.2
 - Bug fix for querying title in the newsletter.db.
 

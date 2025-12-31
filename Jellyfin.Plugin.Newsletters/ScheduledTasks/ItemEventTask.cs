@@ -55,7 +55,7 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
             {
                 new TaskTriggerInfo
                 {
-                    Type = TaskTriggerInfo.TriggerInterval,
+                    Type = TaskTriggerInfoType.IntervalTrigger,
                     IntervalTicks = TimeSpan.FromSeconds(RecheckIntervalSec).Ticks
                 }
             };
