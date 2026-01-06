@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
@@ -65,7 +66,7 @@ public class Scraper
     /// </summary>
     /// <param name="items">The list of media items to scan.</param>
     /// <returns>A completed task when the operation is finished.</returns>
-    public Task GetSeriesData(IReadOnlyCollection<BaseItem> items)
+    public Task GetSeriesData(IReadOnlyCollection<(BaseItem Item, EventType EventType)> items)
     {
         logger.Info("Gathering Data...");
         try
@@ -86,7 +87,7 @@ public class Scraper
         return Task.CompletedTask;
     }
 
-    private void BuildJsonObjsToCurrScanfile(IReadOnlyCollection<BaseItem> items)
+    private void BuildJsonObjsToCurrScanfile(IReadOnlyCollection<(BaseItem Item, EventType EventType)> items)
     {
         if (!config.SeriesEnabled && !config.MoviesEnabled)
         {
@@ -94,8 +95,8 @@ public class Scraper
         }
 
         // Filter items by type and process accordingly
-        var episodeItems = items.Where(item => item is Episode).ToList();
-        var movieItems = items.Where(item => item is Movie).ToList();
+        var episodeItems = items.Where(item => item.Item is Episode).ToList();
+        var movieItems = items.Where(item => item.Item is Movie).ToList();
 
         if (episodeItems.Count != 0)
         {
@@ -108,12 +109,68 @@ public class Scraper
         }
     }
 
+    private void PrintItemProperties(BaseItem item, string label = "Item")
+    {
+        logger.Debug($"========== {label} Properties ==========");
+        
+        if (item == null)
+        {
+            logger.Debug("Item is NULL");
+            return;
+        }
+        
+        var type = item.GetType();
+        logger.Debug($"Type: {type.Name}");
+        
+        // Get all public properties
+        var properties = type.GetProperties(System.Reflection.BindingFlags.Public | 
+                                        System.Reflection.BindingFlags.Instance);
+        
+        foreach (var prop in properties)
+        {
+            try
+            {
+                var value = prop.GetValue(item);
+                
+                // Handle different types of values
+                if (value == null)
+                {
+                    logger.Debug($"{prop.Name}: NULL");
+                }
+                else if (value is System.Collections.IEnumerable && !(value is string))
+                {
+                    // Handle collections
+                    var collection = ((System.Collections.IEnumerable)value).Cast<object>().ToList();
+                    logger.Debug($"{prop.Name}: [{collection.Count} items]");
+                    if (collection.Count > 0 && collection.Count <= 5)
+                    {
+                        foreach (var item2 in collection)
+                        {
+                            logger.Debug($"  - {item2}");
+                        }
+                    }
+                }
+                else
+                {
+                    logger.Debug($"{prop.Name}: {value}");
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Debug($"{prop.Name}: [Error reading - {e.Message}]");
+            }
+        }
+        
+        logger.Debug($"========== End {label} Properties ==========");
+    }
+
+
     /// <summary>
     /// Builds and processes objects from the provided media items and adds them to the current run data.
     /// </summary>
     /// <param name="items">The collection of media items to process.</param>
     /// <param name="type">The type of media items ("Series" or "Movie").</param>
-    public void BuildObjs(IReadOnlyCollection<BaseItem> items, string type)
+    public void BuildObjs(IReadOnlyCollection<(BaseItem Item, EventType EventType)> items, string type)
     {
         logger.Info($"Parsing {type}..");
         BaseItem episode, season, series;
@@ -128,13 +185,27 @@ public class Scraper
             { "Tvdb", "tvdb_id" },
         };
 
-        foreach (BaseItem item in items)
+        foreach (var (item, eventType) in items)
         {
             logger.Debug("---------------");
             if (item is not null)
             {
                 try
                 {
+                    // Print all properties to see what's available
+                    if (eventType == EventType.Delete)
+                    {
+                        PrintItemProperties(item, "Deleted Episode");
+                        if (item.ParentId.Equals(Guid.Empty))
+                        {
+                            item.ParentId = ((Episode)item).SeasonId;
+                        }
+                    }
+                    else
+                    {
+                        PrintItemProperties(item, "Added Episode");
+                    }
+
                     if (type == "Series")
                     {
                         episode = item;
@@ -162,6 +233,7 @@ public class Scraper
                         continue;
                     }
 
+                    logger.Debug("EventType: " + eventType.ToString());
                     logger.Debug($"ItemId: " + series.Id.ToString("N")); // series ItemId
                     logger.Debug($"{type}: {series.Name}"); // Title
                     logger.Debug($"LocationType: " + episode.LocationType.ToString());
@@ -273,76 +345,94 @@ public class Scraper
                     currFileObj.Season = 0;
                 }
 
-                if (!InDatabase("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
-                    !InDatabase("CurrNewsletterData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) && 
+                currFileObj.SeriesOverview = series.Overview;
+
+                logger.Debug("Checking if Primary Image Exists for series");
+                if (series.PrimaryImagePath != null)
+                {
+                    logger.Debug("Primary Image series found!");
+                    currFileObj.PosterPath = series.PrimaryImagePath;
+                }
+                else if (episode.PrimaryImagePath != null)
+                {
+                    logger.Debug("Primary Image series not found. Pulling from Episode");
+                    currFileObj.PosterPath = episode.PrimaryImagePath;
+                }
+                else
+                {
+                    logger.Warn("Primary Poster not found..");
+                    logger.Warn("This may be due to filesystem not being formatted properly.");
+                    logger.Warn($"Make sure {currFileObj.Filename} follows the correct formatting below:");
+                    logger.Warn(".../MyLibraryName/Series_Name/Season#_or_Specials/Episode.{ext}");
+                }
+
+                logger.Debug("Checking if PosterPath Exists");
+                if ((currFileObj.PosterPath != null) && (currFileObj.PosterPath.Length > 0))
+                {
+                    string url = SetImageURL(currFileObj);
+
+                    if ((url == "429") || (url == "ERR") || string.IsNullOrEmpty(url))
+                    {
+                        logger.Warn("URL is not attainable at this time. Stopping scan.. Will resume during next scan.");
+                        logger.Warn("Setting empty image url: " + currFileObj.Filename);
+                        currFileObj.ImageURL = "";
+                    }
+                    else
+                    {
+                        currFileObj.ImageURL = url;
+                    }
+
+                }
+
+                // Handle deletion events
+                if (eventType == EventType.Delete)
+                {
+                    logger.Debug("Handling deletion event");
+                    HandleDeletion(currFileObj);
+                    continue; // Skip the rest of processing for deletions
+                }
+                
+                // For additions, check if this is actually an update (item was recently deleted)
+                if (eventType == EventType.Add)
+                {
+                    // Check if item was recently in any database (could be an update scenario)
+                    bool wasRecentlyDeleted = InDatabaseWithEventType("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode, "Delete") ||
+                                               InDatabaseWithEventType("CurrNewsletterData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode, "Delete");
+
+                    if (wasRecentlyDeleted)
+                    {
+                        logger.Debug($"Item {currFileObj.Title} was recently deleted - treating as update, updating EventType to Update");
+                        UpdateEventTypeInDatabase("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode, "Update");
+                        // Skip adding this as a new Add entry since we're treating it as an Update
+                        continue;
+                    }
+                }
+                
+                if (!InDatabase("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) &&
+                    !InDatabase("CurrNewsletterData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) &&
                     !InDatabase("ArchiveData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
                 {
-                    try
-                    {
-                        currFileObj.SeriesOverview = series.Overview;
-
-                        logger.Debug("Checking if Primary Image Exists for series");
-                        if (series.PrimaryImagePath != null)
-                        {
-                            logger.Debug("Primary Image series found!");
-                            currFileObj.PosterPath = series.PrimaryImagePath;
-                        }
-                        else if (episode.PrimaryImagePath != null)
-                        {
-                            logger.Debug("Primary Image series not found. Pulling from Episode");
-                            currFileObj.PosterPath = episode.PrimaryImagePath;
-                        }
-                        else
-                        {
-                            logger.Warn("Primary Poster not found..");
-                            logger.Warn("This may be due to filesystem not being formatted properly.");
-                            logger.Warn($"Make sure {currFileObj.Filename} follows the correct formatting below:");
-                            logger.Warn(".../MyLibraryName/Series_Name/Season#_or_Specials/Episode.{ext}");
-                        }
-
-                        logger.Debug("Checking if PosterPath Exists");
-                        if ((currFileObj.PosterPath != null) && (currFileObj.PosterPath.Length > 0))
-                        {
-                            string url = SetImageURL(currFileObj);
-
-                            if ((url == "429") || (url == "ERR") || string.IsNullOrEmpty(url))
-                            {
-                                logger.Debug("URL is not attainable at this time. Stopping scan.. Will resume during next scan.");
-                                logger.Debug("Not processing current file: " + currFileObj.Filename);
-                                break;
-                            }
-
-                            currFileObj.ImageURL = url;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        logger.Error($"Encountered an error parsing: {currFileObj.Filename}");
-                        logger.Error(e);
-                    }
-                    finally
-                    {
-                        // save to "database" : Table currRunScanList
-                        logger.Debug("Adding to CurrRunData DB...");
-                        currFileObj = NoNull(currFileObj);
-                        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating) " +
-                                "VALUES (" +
-                                    SanitizeDbItem(currFileObj.Filename) +
-                                    "," + SanitizeDbItem(currFileObj!.Title) +
-                                    "," + ((currFileObj?.Season is null) ? -1 : currFileObj.Season) +
-                                    "," + ((currFileObj?.Episode is null) ? -1 : currFileObj.Episode) +
-                                    "," + SanitizeDbItem(currFileObj!.SeriesOverview) +
-                                    "," + SanitizeDbItem(currFileObj!.ImageURL) +
-                                    "," + SanitizeDbItem(currFileObj.ItemID) +
-                                    "," + SanitizeDbItem(currFileObj!.PosterPath) +
-                                    "," + SanitizeDbItem(currFileObj.Type) +
-                                    "," + SanitizeDbItem(currFileObj!.PremiereYear) + 
-                                    "," + ((currFileObj?.RunTime is null) ? -1 : currFileObj.RunTime) +
-                                    "," + SanitizeDbItem(currFileObj!.OfficialRating) +
-                                    "," + (currFileObj.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
-                                ");");
-                        logger.Debug("Complete!");
-                    }
+                    // save to "database" : Table currRunScanList
+                    logger.Debug("Adding to CurrRunData DB...");
+                    currFileObj = NoNull(currFileObj);
+                    db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType) " +
+                            "VALUES (" +
+                                SanitizeDbItem(currFileObj.Filename) +
+                                "," + SanitizeDbItem(currFileObj!.Title) +
+                                "," + ((currFileObj?.Season is null) ? -1 : currFileObj.Season) +
+                                "," + ((currFileObj?.Episode is null) ? -1 : currFileObj.Episode) +
+                                "," + SanitizeDbItem(currFileObj!.SeriesOverview) +
+                                "," + SanitizeDbItem(currFileObj!.ImageURL) +
+                                "," + SanitizeDbItem(currFileObj.ItemID) +
+                                "," + SanitizeDbItem(currFileObj!.PosterPath) +
+                                "," + SanitizeDbItem(currFileObj.Type) +
+                                "," + SanitizeDbItem(currFileObj!.PremiereYear) +
+                                "," + ((currFileObj?.RunTime is null) ? -1 : currFileObj.RunTime) +
+                                "," + SanitizeDbItem(currFileObj!.OfficialRating) +
+                                "," + (currFileObj.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
+                                "," + SanitizeDbItem("Add") +
+                            ");");
+                    logger.Debug("Complete!");
                 }
                 else
                 {
@@ -455,7 +545,7 @@ public class Scraper
     {
         // -> copy CurrData Table to NewsletterDataTable
         // -> clear CurrData table
-        db.ExecuteSQL("INSERT INTO CurrNewsletterData SELECT * FROM CurrRunData;");
+        db.ExecuteSQL("INSERT OR REPLACE INTO CurrNewsletterData SELECT * FROM CurrRunData;");
         db.ExecuteSQL("DELETE FROM CurrRunData;");
     }
 
@@ -468,5 +558,156 @@ public class Scraper
         }
 
         return "'" + unsanitized_string.Replace("'", "''", StringComparison.Ordinal) + "'";
+    }
+
+    /// <summary>
+    /// Handles deletion events by adding the item to the database with EventType marked as 'Delete'.
+    /// </summary>
+    /// <param name="currFileObj">The file object representing the deleted item.</param>
+    private void HandleDeletion(JsonFileObj currFileObj)
+    {
+        logger.Info($"Processing deletion for {currFileObj.Type}: {currFileObj.Title} (S{currFileObj.Season}E{currFileObj.Episode})");
+
+        string filename = currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal);
+        string title = currFileObj.Title.Replace("'", "''", StringComparison.Ordinal);
+        int season = currFileObj.Season;
+        int episode = currFileObj.Episode;
+
+        // Check if this deletion was already processed
+        if (InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Delete") ||
+            InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Delete"))
+        {
+            logger.Debug("Deletion already processed, skipping");
+            return;
+        }
+
+        // Check if there's already an Add or Update event for this item in either CurrRunData or CurrNewsletterData
+        // (newsletter hasn't been sent yet, so CurrNewsletterData items are still pending)
+        bool hasExistingAddRunData = InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Add");
+        bool hasExistingAddNewsletterData = InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Add");
+        bool hasExistingUpdateRunData = InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Update");
+        bool hasExistingUpdateNewsletterData = InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Update");
+
+        if (hasExistingAddRunData || hasExistingAddNewsletterData)
+        {
+            logger.Debug("Found existing Add event for deleted item - removing it since item was never really added");
+            if (hasExistingAddRunData)
+            {
+                RemoveFromDatabase("CurrRunData", filename, title, season, episode);
+            }
+            if (hasExistingAddNewsletterData)
+            {
+                RemoveFromDatabase("CurrNewsletterData", filename, title, season, episode);
+            }
+            return; // Don't add delete notification for items that were never actually added
+        }
+        else if (hasExistingUpdateRunData || hasExistingUpdateNewsletterData)
+        {
+            logger.Debug("Found existing Update event for deleted item - changing to Delete since item is now deleted");
+            if (hasExistingUpdateRunData)
+            {
+                UpdateEventTypeInDatabase("CurrRunData", filename, title, season, episode, "Delete");
+            }
+            if (hasExistingUpdateNewsletterData)
+            {
+                UpdateEventTypeInDatabase("CurrNewsletterData", filename, title, season, episode, "Delete");
+            }
+            return; // Event already exists, just updated the type
+        }
+
+        // Always add deletion entry (even if not previously in archive)
+        logger.Info($"Adding deletion notice for {currFileObj.Title}");
+
+        // Add deletion entry to CurrRunData
+        currFileObj = NoNull(currFileObj);
+        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType) " +
+                "VALUES (" +
+                    SanitizeDbItem(currFileObj.Filename) +
+                    "," + SanitizeDbItem(currFileObj!.Title) +
+                    "," + ((currFileObj?.Season is null) ? -1 : currFileObj.Season) +
+                    "," + ((currFileObj?.Episode is null) ? -1 : currFileObj.Episode) +
+                    "," + SanitizeDbItem(currFileObj!.SeriesOverview) +
+                    "," + SanitizeDbItem(currFileObj!.ImageURL) +
+                    "," + SanitizeDbItem(currFileObj.ItemID) +
+                    "," + SanitizeDbItem(currFileObj!.PosterPath) +
+                    "," + SanitizeDbItem(currFileObj.Type) +
+                    "," + SanitizeDbItem(currFileObj!.PremiereYear) +
+                    "," + ((currFileObj?.RunTime is null) ? -1 : currFileObj.RunTime) +
+                    "," + SanitizeDbItem(currFileObj!.OfficialRating) +
+                    "," + (currFileObj.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
+                    "," + SanitizeDbItem("Delete") +
+                ");");
+        logger.Debug("Deletion entry added to CurrRunData");
+    }
+
+    /// <summary>
+    /// Checks if an item exists in the specified database table with a specific EventType.
+    /// </summary>
+    /// <param name="tableName">The name of the table to check.</param>
+    /// <param name="fileName">The filename of the item.</param>
+    /// <param name="title">The title of the item.</param>
+    /// <param name="season">The season number.</param>
+    /// <param name="episode">The episode number.</param>
+    /// <param name="eventType">The event type to check for.</param>
+    /// <returns>True if the item exists with the specified event type; otherwise, false.</returns>
+    private bool InDatabaseWithEventType(string tableName, string fileName, string title, int season, int episode, string eventType)
+    {
+        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(title) || string.IsNullOrEmpty(tableName))
+        {
+            return false;
+        }
+
+        foreach (var row in db.Query("SELECT COUNT(*) FROM " + tableName + " WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + " AND EventType='" + eventType + "';"))
+        {
+            if (row is not null)
+            {
+                if (int.Parse(row[0].ToString(), CultureInfo.CurrentCulture) > 0)
+                {
+                    logger.Debug($"Found {eventType} event for item in {tableName}");
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Removes an item from the specified database table.
+    /// </summary>
+    /// <param name="tableName">The name of the table to remove from.</param>
+    /// <param name="fileName">The filename of the item.</param>
+    /// <param name="title">The title of the item.</param>
+    /// <param name="season">The season number.</param>
+    /// <param name="episode">The episode number.</param>
+    private void RemoveFromDatabase(string tableName, string fileName, string title, int season, int episode)
+    {
+        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(title) || string.IsNullOrEmpty(tableName))
+        {
+            return;
+        }
+
+        db.ExecuteSQL("DELETE FROM " + tableName + " WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + ";");
+        logger.Debug($"Removed item from {tableName}");
+    }
+
+    /// <summary>
+    /// Updates the EventType of an item in the specified database table.
+    /// </summary>
+    /// <param name="tableName">The name of the table to update.</param>
+    /// <param name="fileName">The filename of the item.</param>
+    /// <param name="title">The title of the item.</param>
+    /// <param name="season">The season number.</param>
+    /// <param name="episode">The episode number.</param>
+    /// <param name="newEventType">The new event type to set.</param>
+    private void UpdateEventTypeInDatabase(string tableName, string fileName, string title, int season, int episode, string newEventType)
+    {
+        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(title) || string.IsNullOrEmpty(tableName))
+        {
+            return;
+        }
+
+        db.ExecuteSQL("UPDATE " + tableName + " SET EventType='" + newEventType + "' WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + ";");
+        logger.Debug($"Updated EventType to {newEventType} for item in {tableName}");
     }
 }

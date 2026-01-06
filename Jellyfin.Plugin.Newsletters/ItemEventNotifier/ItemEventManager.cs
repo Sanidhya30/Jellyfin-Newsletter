@@ -73,7 +73,7 @@ public class ItemEventManager(
             var scope = applicationHost.ServiceProvider!.CreateAsyncScope();
             await using (scope.ConfigureAwait(false))
             {
-                var itemsToProcess = new List<BaseItem>();
+                var itemsToProcess = new List<(BaseItem Item, EventType EventType)>();
                 foreach (var queueItem in sortedList)
                 {
                     if (queueItem.EventType == EventType.Add)
@@ -95,13 +95,18 @@ public class ItemEventManager(
                         else if (item.ProviderIds.Keys.Count != 0)
                         {
                             // Item has provider ids, add to process list.
-                            logger.Debug($"Adding {item.Name} to process list");
-                            itemsToProcess.Add(item);
+                            logger.Debug($"Adding {item.Name} to process list for addition");
+                            itemsToProcess.Add((item, queueItem.EventType));
                         }
+                    }
+                    else if (queueItem.EventType == EventType.Delete)
+                    {
+                        logger.Debug($"Adding {queueItem.Item.Name} to process list for deletion");
+                        itemsToProcess.Add((queueItem.Item, queueItem.EventType));
                     }
                 }
 
-                await myScraper.GetSeriesData(itemsToProcess, sortedList).ConfigureAwait(false);
+                await myScraper.GetSeriesData(itemsToProcess).ConfigureAwait(false);
             }
         }
     }
@@ -112,7 +117,7 @@ public class ItemEventManager(
     /// <param name="item">The item to be added to the queue.</param>
     public void AddItem(BaseItem item)
     {
-        itemAddedQueue.TryAdd(item.Id, new QueuedItemContainer(item.Id, EventType.Add));
+        itemAddedQueue.TryAdd(item.Id, new QueuedItemContainer(item, EventType.Add));
         logger.Debug($"Queued {item.Name} for add notification");
     }
 
@@ -122,7 +127,7 @@ public class ItemEventManager(
     /// <param name="item">The item to be deleted from the queue.</param>
     public void DeleteItem(BaseItem item)
     {
-        itemDeletedQueue.TryAdd(item.Id, new QueuedItemContainer(item.Id, EventType.Delete));
+        itemDeletedQueue.TryAdd(item.Id, new QueuedItemContainer(item, EventType.Delete));
         logger.Debug($"Queued {item.Name} for deletion notification");
     }
 }

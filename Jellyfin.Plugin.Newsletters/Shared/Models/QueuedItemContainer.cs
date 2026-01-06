@@ -1,11 +1,13 @@
 ﻿using System;
+using MediaBrowser.Controller.Entities;
 
 namespace Jellyfin.Plugin.Newsletters.Shared.Models;
 
 public enum EventType
 {
     Add,
-    Delete
+    Delete,
+    Update
 }
 
 /// <summary>
@@ -18,9 +20,10 @@ public class QueuedItemContainer
     /// </summary>
     /// <param name="id">The item id.</param>
     /// <param name="eventType">The event type.</param>
-    public QueuedItemContainer(Guid id, EventType eventType)
+    public QueuedItemContainer(BaseItem item, EventType eventType)
     {
-        ItemId = id;
+        Item = item;
+        ItemId = item.Id;
         RetryCount = 0;
         Timestamp = DateTime.UtcNow;
         EventType = eventType;
@@ -30,6 +33,11 @@ public class QueuedItemContainer
     /// Gets or sets the current retry count.
     /// </summary>
     public int RetryCount { get; set; }
+
+    /// <summary>
+    /// Gets the current item.
+    /// </summary>
+    public BaseItem Item { get; }
 
     /// <summary>
     /// Gets the current item id.

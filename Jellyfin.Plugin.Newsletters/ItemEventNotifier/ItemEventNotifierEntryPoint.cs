@@ -39,31 +39,6 @@ public class ItemEventNotifierEntryPoint(
         HandleItemChange(itemChangeEventArgs, "delete", itemManager.DeleteItem);
     }
 
-    private void HandleItemChange(ItemChangeEventArgs e, string eventName, System.Action<MediaBrowser.Controller.Entities.BaseItem> action)
-    {
-        var item = e.Item;
-        if (item.IsVirtualItem)
-        {
-            return;
-        }
-
-        string? itemTypeName = null;
-        if (config.MoviesEnabled && item is Movie)
-        {
-            itemTypeName = "movie";
-        }
-        else if (config.SeriesEnabled && item is Episode)
-        {
-            itemTypeName = "episode";
-        }
-
-        if (itemTypeName is not null)
-        {
-            logger.Debug($"Item {eventName} event detected for {itemTypeName}: {item.Name}");
-            action(item);
-        }
-    }
-
     private void HandleItemChange(ItemChangeEventArgs e, string eventName, Action<BaseItem> action)
     {
         var item = e.Item;
@@ -93,7 +68,7 @@ public class ItemEventNotifierEntryPoint(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         libManager.ItemAdded += ItemAddedHandler;
-        libManager.ItemDeleted += ItemDeletedHandler;
+        libManager.ItemRemoved += ItemDeletedHandler;
         return Task.CompletedTask;
     }
 
@@ -101,7 +76,7 @@ public class ItemEventNotifierEntryPoint(
     public Task StopAsync(CancellationToken cancellationToken)
     {
         libManager.ItemAdded -= ItemAddedHandler;
-        libManager.ItemDeleted -= ItemDeletedHandler;
+        libManager.ItemRemoved -= ItemDeletedHandler;
         return Task.CompletedTask;
     }
 }
