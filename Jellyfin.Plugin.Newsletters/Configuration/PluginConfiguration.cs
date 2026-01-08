@@ -11,7 +11,7 @@ public class PluginConfiguration : BasePluginConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PluginConfiguration"/> class.
-    /// </summary>
+    /// </summary>    
     public PluginConfiguration()
     {
         Console.WriteLine("[NLP] :: Newsletter Plugin Starting..");
@@ -110,9 +110,15 @@ public class PluginConfiguration : BasePluginConfiguration
         DiscordDurationEnabled = true;
         DiscordEpisodesEnabled = true;
 
-        // default discord embed color
-        DiscordSeriesEmbedColor = "#00ffff";
-        DiscordMoviesEmbedColor = "#00ff99";
+        // default discord event embed colors for series
+        DiscordSeriesAddEmbedColor = "#00ff00";
+        DiscordSeriesDeleteEmbedColor = "#ff0000";
+        DiscordSeriesUpdateEmbedColor = "#0000ff";
+        
+        // default discord event embed colors for movies
+        DiscordMoviesAddEmbedColor = "#00ff00";
+        DiscordMoviesDeleteEmbedColor = "#ff0000";
+        DiscordMoviesUpdateEmbedColor = "#0000ff";
     }
 
     /// <summary>
@@ -221,14 +227,34 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool DiscordEpisodesEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets a string setting.
+    /// Gets or sets the discord series add event embed color.
     /// </summary>
-    public string DiscordMoviesEmbedColor { get; set; }
+    public string DiscordSeriesAddEmbedColor { get; set; }
 
     /// <summary>
-    /// Gets or sets a string setting.
+    /// Gets or sets the discord series delete event embed color.
     /// </summary>
-    public string DiscordSeriesEmbedColor { get; set; }
+    public string DiscordSeriesDeleteEmbedColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the discord series update event embed color.
+    /// </summary>
+    public string DiscordSeriesUpdateEmbedColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the discord movies add event embed color.
+    /// </summary>
+    public string DiscordMoviesAddEmbedColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the discord movies delete event embed color.
+    /// </summary>
+    public string DiscordMoviesDeleteEmbedColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the discord movies update event embed color.
+    /// </summary>
+    public string DiscordMoviesUpdateEmbedColor { get; set; }
 
     // -----------------------------------
 
