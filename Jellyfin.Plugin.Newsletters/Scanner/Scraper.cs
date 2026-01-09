@@ -384,62 +384,172 @@ public class Scraper
 
                 }
 
-                // Handle deletion events
-                if (eventType == EventType.Delete)
-                {
-                    logger.Debug("Handling deletion event");
-                    HandleDeletion(currFileObj);
-                    continue; // Skip the rest of processing for deletions
-                }
-                
-                // For additions, check if this is actually an update (item was recently deleted)
-                if (eventType == EventType.Add)
-                {
-                    // Check if item was recently in any database (could be an update scenario)
-                    bool wasRecentlyDeleted = InDatabaseWithEventType("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode, "Delete") ||
-                                               InDatabaseWithEventType("CurrNewsletterData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode, "Delete");
-
-                    if (wasRecentlyDeleted)
-                    {
-                        logger.Debug($"Item {currFileObj.Title} was recently deleted - treating as update, updating EventType to Update");
-                        UpdateEventTypeInDatabase("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode, "Update");
-                        // Skip adding this as a new Add entry since we're treating it as an Update
-                        continue;
-                    }
-                }
-                
-                if (!InDatabase("CurrRunData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) &&
-                    !InDatabase("CurrNewsletterData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode) &&
-                    !InDatabase("ArchiveData", currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal), currFileObj.Title.Replace("'", "''", StringComparison.Ordinal), currFileObj.Season, currFileObj.Episode))
-                {
-                    // save to "database" : Table currRunScanList
-                    logger.Debug("Adding to CurrRunData DB...");
-                    currFileObj = NoNull(currFileObj);
-                    db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType) " +
-                            "VALUES (" +
-                                SanitizeDbItem(currFileObj.Filename) +
-                                "," + SanitizeDbItem(currFileObj!.Title) +
-                                "," + ((currFileObj?.Season is null) ? -1 : currFileObj.Season) +
-                                "," + ((currFileObj?.Episode is null) ? -1 : currFileObj.Episode) +
-                                "," + SanitizeDbItem(currFileObj!.SeriesOverview) +
-                                "," + SanitizeDbItem(currFileObj!.ImageURL) +
-                                "," + SanitizeDbItem(currFileObj.ItemID) +
-                                "," + SanitizeDbItem(currFileObj!.PosterPath) +
-                                "," + SanitizeDbItem(currFileObj.Type) +
-                                "," + SanitizeDbItem(currFileObj!.PremiereYear) +
-                                "," + ((currFileObj?.RunTime is null) ? -1 : currFileObj.RunTime) +
-                                "," + SanitizeDbItem(currFileObj!.OfficialRating) +
-                                "," + (currFileObj.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
-                                "," + SanitizeDbItem("Add") +
-                            ");");
-                    logger.Debug("Complete!");
-                }
-                else
-                {
-                    logger.Debug("\"" + currFileObj.Filename + "\" has already been processed either by Previous or Current Newsletter!");
-                }
+                // Process the item based on the event type
+                ProcessItemByEventType(currFileObj, eventType);
             }
         }
+    }
+
+    /// <summary>
+    /// Processes the item based on its event type (Add, Delete).
+    /// </summary>
+    /// <param name="item">The item to process.</param>
+    /// <param name="eventType">The type of event to process.</param>
+    private void ProcessItemByEventType(JsonFileObj item, EventType eventType)
+    {
+        switch (eventType)
+        {
+            case EventType.Add:
+                ProcessAddEvent(item);
+                break;
+            case EventType.Delete:
+                ProcessDeleteEvent(item);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Processes an Add event for the given item.
+    /// </summary>
+    /// <param name="item">The item being added.</param>
+    private void ProcessAddEvent(JsonFileObj item)
+    {
+        logger.Debug($"Processing Add event for {item.Title}");
+        
+        // Check if item was recently deleted (which would make this an update)
+        string filename = item.Filename.Replace("'", "''", StringComparison.Ordinal);
+        string title = item.Title.Replace("'", "''", StringComparison.Ordinal);
+        int season = item.Season;
+        int episode = item.Episode;
+
+        bool wasDeletedInCurrRunData = InDatabaseWithEventType("CurrRunData", item.Filename.Replace("'", "''", StringComparison.Ordinal), item.Title.Replace("'", "''", StringComparison.Ordinal), item.Season, item.Episode, "Delete");
+        bool wasDeletedInNewsletterData = InDatabaseWithEventType("CurrNewsletterData", item.Filename.Replace("'", "''", StringComparison.Ordinal), item.Title.Replace("'", "''", StringComparison.Ordinal), item.Season, item.Episode, "Delete");
+        
+        if (wasDeletedInCurrRunData || wasDeletedInNewsletterData)
+        {
+            logger.Debug($"Item {item.Title} was recently deleted - treating as update");
+            ProcessUpdateEvent(item, wasDeletedInCurrRunData, wasDeletedInNewsletterData);
+            return;
+        }
+
+        AddItemToDatabase(item, "Add");
+        logger.Debug("Addition entry added to CurrRunData");
+        
+    }
+
+    /// <summary>
+    /// Processes an Update event for the given item.
+    /// </summary>
+    /// <param name="item">The item being updated.</param>
+    /// <param name="wasDeletedInCurrRunData">Whether the item was previously deleted in CurrRunData.</param>
+    /// <param name="wasDeletedInNewsletterData">Whether the item was previously deleted in CurrNewsletterData.</param>
+    private void ProcessUpdateEvent(JsonFileObj item, bool wasDeletedInCurrRunData = false, bool wasDeletedInNewsletterData = false)
+    {
+        logger.Debug($"Processing Update event for {item.Title}");
+
+        // If we already know it was deleted in CurrRunData/CurrNewsletterData, update it
+        // Everytime we're going to send newsletter for update even if it's already in ArchiveData
+        // therefore no need to check if it's already in ArchiveData
+        if (wasDeletedInCurrRunData)
+        {
+            UpdateEventTypeInDatabase("CurrRunData", item.Filename.Replace("'", "''", StringComparison.Ordinal), 
+                                      item.Title.Replace("'", "''", StringComparison.Ordinal), 
+                                      item.Season, item.Episode, "Update");
+            logger.Debug("Updated entry in CurrRunData");
+        }
+        else if (wasDeletedInNewsletterData)
+        {
+            UpdateEventTypeInDatabase("CurrNewsletterData", item.Filename.Replace("'", "''", StringComparison.Ordinal), 
+                                      item.Title.Replace("'", "''", StringComparison.Ordinal), 
+                                      item.Season, item.Episode, "Update");
+            logger.Debug("Updated entry in CurrNewsletterData");
+        }
+    }
+
+    /// <summary>
+    /// Processes a Delete event for the given item.
+    /// </summary>
+    /// <param name="item">The item being deleted.</param>
+    private void ProcessDeleteEvent(JsonFileObj item)
+    {        
+        // Handle the deletion logic
+        logger.Info($"Processing deletion for {item.Type}: {item.Title} (S{item.Season}E{item.Episode})");
+
+        string filename = item.Filename.Replace("'", "''", StringComparison.Ordinal);
+        string title = item.Title.Replace("'", "''", StringComparison.Ordinal);
+        int season = item.Season;
+        int episode = item.Episode;
+
+        // Check if there's already event(Add/Update) for this item in either CurrRunData or CurrNewsletterData
+        // if there are any remove them from the table as we don't want to send the newsletter for that event
+        // (newsletter hasn't been sent yet, so CurrNewsletterData items are still pending)
+        bool hasExistingRunData = InDatabase("CurrRunData", filename, title, season, episode);
+        bool hasExistingNewsletterData = InDatabase("CurrNewsletterData", filename, title, season, episode);
+
+        if (hasExistingRunData || hasExistingNewsletterData)
+        {
+            logger.Debug("Found existing Add/Update event for deleted item - removing it since item was never really added");
+            if (hasExistingRunData)
+            {
+                RemoveFromDatabase("CurrRunData", filename, title, season, episode);
+            }
+            if (hasExistingNewsletterData)
+            {
+                RemoveFromDatabase("CurrNewsletterData", filename, title, season, episode);
+            }
+        }
+
+        // Always add deletion entry (even if not previously in archive)
+        logger.Info($"Adding deletion notice for {item.Title}");
+
+        // Add deletion entry to CurrRunData
+        item = NoNull(item);
+        AddItemToDatabase(item, "Delete");
+        logger.Debug("Deletion entry added to CurrRunData");
+    }
+
+    /// <summary>
+    /// Checks if the item exists in any of the databases.
+    /// </summary>
+    /// <param name="item">The item to check.</param>
+    /// <returns>True if the item exists in any database, false otherwise.</returns>
+    private bool ItemExistsInAnyDatabase(JsonFileObj item)
+    {
+        string filename = item.Filename.Replace("'", "''", StringComparison.Ordinal);
+        string title = item.Title.Replace("'", "''", StringComparison.Ordinal);
+        int season = item.Season;
+        int episode = item.Episode;
+
+        return InDatabase("CurrRunData", filename, title, season, episode) ||
+               InDatabase("CurrNewsletterData", filename, title, season, episode) ||
+               InDatabase("ArchiveData", filename, title, season, episode);
+    }
+
+    /// <summary>
+    /// Adds an item to the database with the specified event type.
+    /// </summary>
+    /// <param name="item">The item to add.</param>
+    /// <param name="eventType">The event type to set.</param>
+    private void AddItemToDatabase(JsonFileObj item, string eventType)
+    {
+        item = NoNull(item);
+        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType) " +
+                "VALUES (" +
+                    SanitizeDbItem(item.Filename) +
+                    "," + SanitizeDbItem(item.Title) +
+                    "," + ((item?.Season is null) ? -1 : item.Season) +
+                    "," + ((item?.Episode is null) ? -1 : item.Episode) +
+                    "," + SanitizeDbItem(item!.SeriesOverview) +
+                    "," + SanitizeDbItem(item!.ImageURL) +
+                    "," + SanitizeDbItem(item.ItemID) +
+                    "," + SanitizeDbItem(item!.PosterPath) +
+                    "," + SanitizeDbItem(item.Type) +
+                    "," + SanitizeDbItem(item!.PremiereYear) +
+                    "," + ((item?.RunTime is null) ? -1 : item.RunTime) +
+                    "," + SanitizeDbItem(item!.OfficialRating) +
+                    "," + (item.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
+                    "," + SanitizeDbItem(eventType) +
+                ");");
     }
 
     private static JsonFileObj NoNull(JsonFileObj currFileObj)
@@ -558,86 +668,6 @@ public class Scraper
         }
 
         return "'" + unsanitized_string.Replace("'", "''", StringComparison.Ordinal) + "'";
-    }
-
-    /// <summary>
-    /// Handles deletion events by adding the item to the database with EventType marked as 'Delete'.
-    /// </summary>
-    /// <param name="currFileObj">The file object representing the deleted item.</param>
-    private void HandleDeletion(JsonFileObj currFileObj)
-    {
-        logger.Info($"Processing deletion for {currFileObj.Type}: {currFileObj.Title} (S{currFileObj.Season}E{currFileObj.Episode})");
-
-        string filename = currFileObj.Filename.Replace("'", "''", StringComparison.Ordinal);
-        string title = currFileObj.Title.Replace("'", "''", StringComparison.Ordinal);
-        int season = currFileObj.Season;
-        int episode = currFileObj.Episode;
-
-        // Check if this deletion was already processed
-        if (InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Delete") ||
-            InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Delete"))
-        {
-            logger.Debug("Deletion already processed, skipping");
-            return;
-        }
-
-        // Check if there's already an Add or Update event for this item in either CurrRunData or CurrNewsletterData
-        // (newsletter hasn't been sent yet, so CurrNewsletterData items are still pending)
-        bool hasExistingAddRunData = InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Add");
-        bool hasExistingAddNewsletterData = InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Add");
-        bool hasExistingUpdateRunData = InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Update");
-        bool hasExistingUpdateNewsletterData = InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Update");
-
-        if (hasExistingAddRunData || hasExistingAddNewsletterData)
-        {
-            logger.Debug("Found existing Add event for deleted item - removing it since item was never really added");
-            if (hasExistingAddRunData)
-            {
-                RemoveFromDatabase("CurrRunData", filename, title, season, episode);
-            }
-            if (hasExistingAddNewsletterData)
-            {
-                RemoveFromDatabase("CurrNewsletterData", filename, title, season, episode);
-            }
-            return; // Don't add delete notification for items that were never actually added
-        }
-        else if (hasExistingUpdateRunData || hasExistingUpdateNewsletterData)
-        {
-            logger.Debug("Found existing Update event for deleted item - changing to Delete since item is now deleted");
-            if (hasExistingUpdateRunData)
-            {
-                UpdateEventTypeInDatabase("CurrRunData", filename, title, season, episode, "Delete");
-            }
-            if (hasExistingUpdateNewsletterData)
-            {
-                UpdateEventTypeInDatabase("CurrNewsletterData", filename, title, season, episode, "Delete");
-            }
-            return; // Event already exists, just updated the type
-        }
-
-        // Always add deletion entry (even if not previously in archive)
-        logger.Info($"Adding deletion notice for {currFileObj.Title}");
-
-        // Add deletion entry to CurrRunData
-        currFileObj = NoNull(currFileObj);
-        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType) " +
-                "VALUES (" +
-                    SanitizeDbItem(currFileObj.Filename) +
-                    "," + SanitizeDbItem(currFileObj!.Title) +
-                    "," + ((currFileObj?.Season is null) ? -1 : currFileObj.Season) +
-                    "," + ((currFileObj?.Episode is null) ? -1 : currFileObj.Episode) +
-                    "," + SanitizeDbItem(currFileObj!.SeriesOverview) +
-                    "," + SanitizeDbItem(currFileObj!.ImageURL) +
-                    "," + SanitizeDbItem(currFileObj.ItemID) +
-                    "," + SanitizeDbItem(currFileObj!.PosterPath) +
-                    "," + SanitizeDbItem(currFileObj.Type) +
-                    "," + SanitizeDbItem(currFileObj!.PremiereYear) +
-                    "," + ((currFileObj?.RunTime is null) ? -1 : currFileObj.RunTime) +
-                    "," + SanitizeDbItem(currFileObj!.OfficialRating) +
-                    "," + (currFileObj.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
-                    "," + SanitizeDbItem("Delete") +
-                ");");
-        logger.Debug("Deletion entry added to CurrRunData");
     }
 
     /// <summary>

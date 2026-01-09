@@ -62,7 +62,7 @@ public class EmbedBuilder(Logger loggerInstance,
 
                     var embed = new Embed
                     {
-                        Title = GetEventEmoji(item.EventType) + " " + item.Title,
+                        Title = item.Title,
                         Url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}",
                         Color = embedColor,
                         Timestamp = DateTime.UtcNow.ToString("o"),
@@ -144,7 +144,7 @@ public class EmbedBuilder(Logger loggerInstance,
 
             var embed = new Embed
             {
-                Title = GetEventEmoji("add") + " Newsletter-Test", // Add emoji for consistency
+                Title = "Newsletter-Test",
                 Url = Config.Hostname,
                 Color = embedColor,
                 Timestamp = DateTime.UtcNow.ToString("o"),
@@ -243,27 +243,6 @@ public class EmbedBuilder(Logger loggerInstance,
                 _ => Convert.ToInt32(Config.DiscordMoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
             };
         }
-    }
-
-    /// <summary>
-    /// Gets the emoji prefix for the embed title based on the event type.
-    /// </summary>
-    /// <param name="eventType">The event type (Add, Delete, Update).</param>
-    /// <returns>The emoji string.</returns>
-    private static string GetEventEmoji(string eventType)
-    {
-        if (string.IsNullOrEmpty(eventType))
-        {
-            return "🎬";
-        }
-
-        return eventType.ToLowerInvariant() switch
-        {
-            "add" => "➕",
-            "delete" => "❌",
-            "update" => "🔄",
-            _ => "🎬"
-        };
     }
 
     /// <summary>
