@@ -196,10 +196,6 @@ public class Scraper
                     if (eventType == EventType.Delete)
                     {
                         PrintItemProperties(item, "Deleted Episode");
-                        if (item.ParentId.Equals(Guid.Empty))
-                        {
-                            item.ParentId = ((Episode)item).SeasonId;
-                        }
                     }
                     else
                     {
@@ -209,6 +205,12 @@ public class Scraper
                     if (type == "Series")
                     {
                         episode = item;
+
+                        if (eventType == EventType.Delete && item.ParentId.Equals(Guid.Empty))
+                        {
+                            item.ParentId = ((Episode)item).SeasonId;
+                        }
+
                         season = item.GetParent();
                         if (season is null) 
                         { 

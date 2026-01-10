@@ -119,6 +119,11 @@ public class PluginConfiguration : BasePluginConfiguration
         DiscordMoviesAddEmbedColor = "#00ff00";
         DiscordMoviesDeleteEmbedColor = "#ff0000";
         DiscordMoviesUpdateEmbedColor = "#0000ff";
+        
+        // default newsletter event settings
+        NewsletterOnItemAddedEnabled = true;
+        NewsletterOnItemUpdatedEnabled = false;
+        NewsletterOnItemDeletedEnabled = true;
     }
 
     /// <summary>
@@ -343,4 +348,19 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether Movies should be scanned.
     /// </summary>
     public bool MoviesEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether newsletter should be sent when items are added.
+    /// </summary>
+    public bool NewsletterOnItemAddedEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether newsletter should be sent when items are updated.
+    /// </summary>
+    public bool NewsletterOnItemUpdatedEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether newsletter should be sent when items are deleted.
+    /// </summary>
+    public bool NewsletterOnItemDeletedEnabled { get; set; }
 }

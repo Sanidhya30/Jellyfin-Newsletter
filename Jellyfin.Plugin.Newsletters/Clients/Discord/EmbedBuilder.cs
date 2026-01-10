@@ -72,7 +72,7 @@ public class EmbedBuilder(Logger loggerInstance,
                     // Check if DiscordDescriptionEnabled is true
                     if (Config.DiscordDescriptionEnabled)
                     {
-                        embed.Description = GetEventDescriptionPrefix(item.EventType) + "\n\n" + item.SeriesOverview;
+                        embed.Description = GetEventDescriptionPrefix(item.EventType) + "\n" + item.SeriesOverview;
                     }
                     else
                     {
@@ -90,9 +90,10 @@ public class EmbedBuilder(Logger loggerInstance,
                         {
                             (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
 
+                            string thumbnailUrl = success ? $"attachment://{uniqueImageName}" : item.ImageURL;
                             embed.Thumbnail = new Thumbnail
                             {
-                                Url = $"attachment://{uniqueImageName}"
+                                Url = thumbnailUrl
                             };
                         }
                         else 
@@ -154,7 +155,7 @@ public class EmbedBuilder(Logger loggerInstance,
             // Check if DiscordDescriptionEnabled is true
             if (Config.DiscordDescriptionEnabled)
             {
-                embed.Description = GetEventDescriptionPrefix("add") + "\n\n" + "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
+                embed.Description = GetEventDescriptionPrefix("add") + "\n" + "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
             }
             else
             {

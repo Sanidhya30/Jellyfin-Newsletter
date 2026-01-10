@@ -118,19 +118,17 @@ public class HtmlBuilder : ClientBuilder
 
     /// <summary>
     /// Builds chunked HTML strings from newsletter data, splitting entries into chunks based on configured email size.
+    /// Groups entries by event type (Add, Update, Delete).
     /// </summary>
     /// <returns>A collection of tuples containing HTML strings and associated image streams with content IDs.</returns>
     public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData()
     {
+        // Group items by event type
+        var addItems = new List<JsonFileObj>();
+        var updateItems = new List<JsonFileObj>();
+        var deleteItems = new List<JsonFileObj>();
+        
         List<string> completed = new List<string>();
-        var chunks = new List<(string, List<(MemoryStream?, string)>)>();
-
-        StringBuilder currentChunkBuilder = new();
-        var currentChunkImages = new List<(MemoryStream?, string)>();
-        int currentChunkBytes = 0;
-        const int overheadPerMail = 50000;
-        int maxChunkSizeBytes = Config.EmailSize * 1024 * 1024; // Convert MB to bytes
-        Logger.Debug($"Max email size set to {maxChunkSizeBytes} bytes");
 
         try
         {
@@ -146,56 +144,23 @@ public class HtmlBuilder : ClientBuilder
                         continue;
                     }
 
-                    string seaEpsHtml = string.Empty;
-                    if (item.Type == "Series")
+                    // Group by event type
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    switch (eventType)
                     {
-                        var parsedInfoList = ParseSeriesInfo(item);
-                        seaEpsHtml += GetSeasonEpisodeHTML(parsedInfoList);
+                        case "add":
+                            addItems.Add(item);
+                            break;
+                        case "update":
+                            updateItems.Add(item);
+                            break;
+                        case "delete":
+                            deleteItems.Add(item);
+                            break;
+                        default:
+                            addItems.Add(item); // Default to add if event type is unknown
+                            break;
                     }
-
-                    var tmp_entry = Config.Entry;
-
-                    // Track image size if needed
-                    int entryImageBytes = 0;
-                    (MemoryStream?, string) imgToAdd = default;
-                    if (Config.PosterType == "attachment") 
-                    {
-                        var (resizedStream, contentId, success) = ResizeImage(item.PosterPath);
-
-                        item.ImageURL = $"cid:{contentId}";
-                        entryImageBytes = (resizedStream != null) ? (int)Math.Ceiling(resizedStream.Length * 4.0 / 3.0) : 0; // Base64 encoding overhead;
-                        imgToAdd = (resizedStream, contentId);
-                    }
-
-                    foreach (var ele in item.GetReplaceDict())
-                    {
-                        if (ele.Value is not null)
-                        {
-                            tmp_entry = this.TemplateReplace(tmp_entry, ele.Key, ele.Value);
-                        }
-                    }
-
-                    // Compose the entry's HTML now (for accurate size)
-                    string entryHTML = tmp_entry
-                        .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                        .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
-
-                    int entryBytes = Encoding.UTF8.GetByteCount(entryHTML) + entryImageBytes;
-
-                    Logger.Debug($"Processing item: {item.Title}, Size: {entryBytes} bytes, Current Chunk Size: {currentChunkBytes} bytes");
-                    if (currentChunkBuilder.Length > 0 && (currentChunkBytes + entryBytes + overheadPerMail) > maxChunkSizeBytes)
-                    {
-                        // finalize current chunk as one part (HTML fragment)
-                        Logger.Debug($"Email size exceeded, finalizing current chunk. Size : {currentChunkBytes} bytes");
-                        chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
-                        currentChunkBuilder.Clear();
-                        currentChunkImages.Clear();
-                        currentChunkBytes = 0;
-                    }
-
-                    currentChunkBuilder.Append(entryHTML);
-                    currentChunkImages.Add(imgToAdd);
-                    currentChunkBytes += entryBytes;
 
                     completed.Add(item.Title);
                 }
@@ -210,6 +175,72 @@ public class HtmlBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
+        // Build HTML for each category
+        var chunks = new List<(string, List<(MemoryStream?, string)>)>();
+        StringBuilder currentChunkBuilder = new();
+        var currentChunkImages = new List<(MemoryStream?, string)>();
+        int currentChunkBytes = 0;
+        const int overheadPerMail = 50000;
+        int maxChunkSizeBytes = Config.EmailSize * 1024 * 1024; // Convert MB to bytes
+        Logger.Debug($"Max email size set to {maxChunkSizeBytes} bytes");
+
+        // Process Add items
+        if (addItems.Count > 0)
+        {
+            string sectionHeader = GetEventSectionHeader("add");
+            currentChunkBuilder.Append(sectionHeader);
+            currentChunkBytes += Encoding.UTF8.GetByteCount(sectionHeader);
+            
+            ProcessItemsForChunks(addItems, "add", currentChunkBuilder, currentChunkImages, 
+                ref currentChunkBytes, maxChunkSizeBytes, overheadPerMail, chunks);
+        }
+
+        // Process Update items
+        if (updateItems.Count > 0)
+        {
+            string sectionHeader = GetEventSectionHeader("update");
+            int headerBytes = Encoding.UTF8.GetByteCount(sectionHeader);
+            
+            // Check if we need a new chunk for the update section
+            if (currentChunkBuilder.Length > 0 && (currentChunkBytes + headerBytes + overheadPerMail) > maxChunkSizeBytes)
+            {
+                Logger.Debug($"Email size exceeded before update section, finalizing current chunk. Size : {currentChunkBytes} bytes");
+                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
+                currentChunkBuilder.Clear();
+                currentChunkImages.Clear();
+                currentChunkBytes = 0;
+            }
+            
+            currentChunkBuilder.Append(sectionHeader);
+            currentChunkBytes += headerBytes;
+            
+            ProcessItemsForChunks(updateItems, "update", currentChunkBuilder, currentChunkImages, 
+                ref currentChunkBytes, maxChunkSizeBytes, overheadPerMail, chunks);
+        }
+
+        // Process Delete items
+        if (deleteItems.Count > 0)
+        {
+            string sectionHeader = GetEventSectionHeader("delete");
+            int headerBytes = Encoding.UTF8.GetByteCount(sectionHeader);
+            
+            // Check if we need a new chunk for the delete section
+            if (currentChunkBuilder.Length > 0 && (currentChunkBytes + headerBytes + overheadPerMail) > maxChunkSizeBytes)
+            {
+                Logger.Debug($"Email size exceeded before delete section, finalizing current chunk. Size : {currentChunkBytes} bytes");
+                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
+                currentChunkBuilder.Clear();
+                currentChunkImages.Clear();
+                currentChunkBytes = 0;
+            }
+            
+            currentChunkBuilder.Append(sectionHeader);
+            currentChunkBytes += headerBytes;
+            
+            ProcessItemsForChunks(deleteItems, "delete", currentChunkBuilder, currentChunkImages, 
+                ref currentChunkBytes, maxChunkSizeBytes, overheadPerMail, chunks);
+        }
+
         // Add final chunk if any
         if (currentChunkBuilder.Length > 0)
         {
@@ -221,23 +252,45 @@ public class HtmlBuilder : ClientBuilder
     }
 
     /// <summary>
-    /// Builds a sample HTML string for testing newsletter entry rendering.
+    /// Processes a list of items and adds them to chunks, managing size limits.
     /// </summary>
-    /// <returns>A string containing the HTML for a test newsletter entry.</returns>
-    public string BuildHtmlStringsForTest()
+    private void ProcessItemsForChunks(
+        List<JsonFileObj> items, 
+        string eventType,
+        StringBuilder currentChunkBuilder,
+        List<(MemoryStream?, string)> currentChunkImages,
+        ref int currentChunkBytes,
+        int maxChunkSizeBytes,
+        int overheadPerMail,
+        List<(string, List<(MemoryStream?, string)>)> chunks)
     {
-        string entryHTML = string.Empty;
-
-        try
+        foreach (var item in items)
         {
-            JsonFileObj item = JsonFileObj.GetTestObj();
-            Logger.Debug("Test Entry ITEM: " + JsonConvert.SerializeObject(item));
+            string seaEpsHtml = string.Empty;
+            if (item.Type == "Series")
+            {
+                var parsedInfoList = ParseSeriesInfo(item);
+                seaEpsHtml += GetSeasonEpisodeHTML(parsedInfoList);
+            }
 
-            string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10";
+            var tmp_entry = Config.Entry;
 
-            string tmp_entry = Config.Entry;
+            // Track image size if needed
+            int entryImageBytes = 0;
+            (MemoryStream?, string) imgToAdd = default;
+            if (Config.PosterType == "attachment") 
+            {
+                var (resizedStream, contentId, success) = ResizeImage(item.PosterPath);
 
-            foreach (KeyValuePair<string, object?> ele in item.GetReplaceDict())
+                if (success)
+                {
+                    item.ImageURL = $"cid:{contentId}";
+                    entryImageBytes = (resizedStream != null) ? (int)Math.Ceiling(resizedStream.Length * 4.0 / 3.0) : 0; // Base64 encoding overhead;
+                    imgToAdd = (resizedStream, contentId);
+                }
+            }
+
+            foreach (var ele in item.GetReplaceDict())
             {
                 if (ele.Value is not null)
                 {
@@ -245,17 +298,136 @@ public class HtmlBuilder : ClientBuilder
                 }
             }
 
-            // Compose the entry's HTML now
-            entryHTML = tmp_entry
+            // Add event badge to the entry
+            string eventBadge = GetEventBadge(eventType);
+            tmp_entry = tmp_entry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
+
+            // Compose the entry's HTML now (for accurate size)
+            string entryHTML = tmp_entry
                 .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
                 .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+
+            int entryBytes = Encoding.UTF8.GetByteCount(entryHTML) + entryImageBytes;
+
+            Logger.Debug($"Processing item: {item.Title}, Event: {eventType}, Size: {entryBytes} bytes, Current Chunk Size: {currentChunkBytes} bytes");
+            if (currentChunkBuilder.Length > 0 && (currentChunkBytes + entryBytes + overheadPerMail) > maxChunkSizeBytes)
+            {
+                // finalize current chunk as one part (HTML fragment)
+                Logger.Debug($"Email size exceeded, finalizing current chunk. Size : {currentChunkBytes} bytes");
+                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
+                currentChunkBuilder.Clear();
+                currentChunkImages.Clear();
+                currentChunkBytes = 0;
+                
+                // Add section header again in new chunk if we're continuing this category
+                string sectionHeader = GetEventSectionHeader(eventType);
+                currentChunkBuilder.Append(sectionHeader);
+                currentChunkBytes += Encoding.UTF8.GetByteCount(sectionHeader);
+            }
+
+            currentChunkBuilder.Append(entryHTML);
+            currentChunkImages.Add(imgToAdd);
+            currentChunkBytes += entryBytes;
+        }
+    }
+
+    /// <summary>
+    /// Gets the HTML section header for an event type.
+    /// </summary>
+    private string GetEventSectionHeader(string eventType)
+    {
+        var (title, emoji, color) = eventType.ToLowerInvariant() switch
+        {
+            "add" => ("Added to Library", "🎬", "#4CAF50"),
+            "update" => ("Updated in Library", "🔄", "#2196F3"),
+            "delete" => ("Removed from Library", "🗑️", "#F44336"),
+            _ => ("Added to Library", "🎬", "#4CAF50")
+        };
+
+        return $@"
+        <tr>
+            <td colspan='2' style='padding: 20px 10px 10px 10px;'>
+                <h2 style='color: {color}; margin: 0; font-size: 1.8em; border-bottom: 2px solid {color}; padding-bottom: 10px;'>
+                    {emoji} {title}
+                </h2>
+            </td>
+        </tr>";
+    }
+
+    /// <summary>
+    /// Gets the HTML badge for an event type to be displayed on individual entries.
+    /// </summary>
+    private string GetEventBadge(string eventType)
+    {
+        var (label, emoji, bgColor) = eventType.ToLowerInvariant() switch
+        {
+            "add" => ("NEW", "🎬", "#4CAF50"),
+            "update" => ("UPDATED", "🔄", "#2196F3"),
+            "delete" => ("REMOVED", "🗑️", "#F44336"),
+            _ => ("NEW", "🎬", "#4CAF50")
+        };
+
+        return $@"<span style='display: inline-block; background-color: {bgColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold; margin-left: 8px;'>{emoji} {label}</span>";
+    }
+
+    /// <summary>
+    /// Builds a sample HTML string for testing newsletter entry rendering.
+    /// Shows all three event types (Add, Update, Delete).
+    /// </summary>
+    /// <returns>A string containing the HTML for test newsletter entries with all event types.</returns>
+    public string BuildHtmlStringsForTest()
+    {
+        StringBuilder testHTML = new StringBuilder();
+
+        try
+        {
+            // Create test entries for each event type
+            string[] eventTypes = { "add", "update", "delete" };
+            string[] titles = { "Test Series - Added", "Test Movie - Updated", "Test Series - Removed" };
+
+            foreach (var eventType in eventTypes)
+            {
+                // Add section header
+                testHTML.Append(GetEventSectionHeader(eventType));
+
+                JsonFileObj item = JsonFileObj.GetTestObj();
+                
+                // Customize the title based on event type
+                int eventIndex = Array.IndexOf(eventTypes, eventType);
+                item.Title = titles[eventIndex];
+                
+                Logger.Debug($"Test Entry ITEM ({eventType}): " + JsonConvert.SerializeObject(item));
+
+                string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10";
+
+                string tmp_entry = Config.Entry;
+
+                foreach (KeyValuePair<string, object?> ele in item.GetReplaceDict())
+                {
+                    if (ele.Value is not null)
+                    {
+                        tmp_entry = this.TemplateReplace(tmp_entry, ele.Key, ele.Value);
+                    }
+                }
+
+                // Add event badge for current event type
+                string eventBadge = GetEventBadge(eventType);
+                tmp_entry = tmp_entry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
+
+                // Compose the entry's HTML now
+                string entryHTML = tmp_entry
+                    .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
+                    .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+
+                testHTML.Append(entryHTML);
+            }
         }
         catch (Exception e)
         {
             Logger.Error("An error has occured: " + e);
         }
 
-        return entryHTML;
+        return testHTML.ToString();
     }
 
     /// <summary>

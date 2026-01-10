@@ -21,14 +21,14 @@
                             <input id="Hostname" name="Hostname" type="text" is="emby-input" />
                             <div class="fieldDescription">
                                 Hostname for your JF server that is accessible from outside your network. Ensure to include http[s]:// and port number (if applicable). <b>DO NOT include a trailing slash '/'</b>. 
-                                <br><br>
-                                I.e: https://myServerDNSName.com:8096
+                                <br>
+                                i.e: https://myServerDNSName.com:8096
                             </div>
                         </div>
                     </div>
                     <div id="LibrarySelection">
+                        <b style="margin-bottom: 5px;">Types of items to scan:</b> 
                         <table>
-                            <th>Types of items to scan:</th>
                             <tr>
                                 <td>
                                     <div class="checkboxContainer checkboxContainer-withDescription">
@@ -43,6 +43,37 @@
                                         <label class="emby-checkbox-label">
                                             <input id="MoviesEnabled" name="MoviesEnabled" type="checkbox" is="emby-checkbox" />
                                             <span>Movies</span>
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div id="NewsletterEventSettings">
+                        <b style="margin-bottom: 5px;">Newsletter Event Settings:</b>
+                        <table>
+                            <tr>
+                                <td>
+                                    <div class="checkboxContainer checkboxContainer-withDescription">
+                                        <label class="emby-checkbox-label">
+                                            <input id="NewsletterOnItemAddedEnabled" name="NewsletterOnItemAddedEnabled" type="checkbox" is="emby-checkbox" />
+                                            <span>Send newsletter when items are added</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="checkboxContainer checkboxContainer-withDescription">
+                                        <label class="emby-checkbox-label">
+                                            <input id="NewsletterOnItemUpdatedEnabled" name="NewsletterOnItemUpdatedEnabled" type="checkbox" is="emby-checkbox" />
+                                            <span>Send newsletter when items are updated</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="checkboxContainer checkboxContainer-withDescription">
+                                        <label class="emby-checkbox-label">
+                                            <input id="NewsletterOnItemDeletedEnabled" name="NewsletterOnItemDeletedEnabled" type="checkbox" is="emby-checkbox" />
+                                            <span>Send newsletter when items are deleted</span>
                                         </label>
                                     </div>
                                 </td>
@@ -385,6 +416,11 @@
                     //config.ApiKey = document.querySelector('#ApiKey').value;
                     //hosting options
                     config.Hostname = document.querySelector('#Hostname').value;
+                    
+                    // newsletter event settings
+                    config.NewsletterOnItemAddedEnabled = document.querySelector('#NewsletterOnItemAddedEnabled').checked;
+                    config.NewsletterOnItemUpdatedEnabled = document.querySelector('#NewsletterOnItemUpdatedEnabled').checked;
+                    config.NewsletterOnItemDeletedEnabled = document.querySelector('#NewsletterOnItemDeletedEnabled').checked;
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -437,6 +473,11 @@
                     //document.querySelector('#ApiKey').value = config.ApiKey;
                     //hosting options
                     document.querySelector('#Hostname').value = config.Hostname;
+                    
+                    // newsletter event settings
+                    document.querySelector('#NewsletterOnItemAddedEnabled').checked = config.NewsletterOnItemAddedEnabled;
+                    document.querySelector('#NewsletterOnItemUpdatedEnabled').checked = config.NewsletterOnItemUpdatedEnabled;
+                    document.querySelector('#NewsletterOnItemDeletedEnabled').checked = config.NewsletterOnItemDeletedEnabled;
 
                     updateMaxEmailSizeVisibility();
 
