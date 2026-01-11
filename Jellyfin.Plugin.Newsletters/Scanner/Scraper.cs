@@ -419,6 +419,9 @@ public class Scraper
         logger.Debug($"Processing Add event for {item.Title}");
         
         // Check if item was recently deleted (which would make this an update)
+        // The logic of update is based on how radarr/sonarr upgrades the media
+        // whenever a file is upgraded it delete the old file and add the new one.
+        // This is different then the jellyfin in-built update event which is triggered when there is a metadata change.
         string filename = item.Filename.Replace("'", "''", StringComparison.Ordinal);
         string title = item.Title.Replace("'", "''", StringComparison.Ordinal);
         int season = item.Season;

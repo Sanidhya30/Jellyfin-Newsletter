@@ -128,7 +128,7 @@ public class HtmlBuilder : ClientBuilder
         var updateItems = new List<JsonFileObj>();
         var deleteItems = new List<JsonFileObj>();
         
-        List<string> completed = new List<string>();
+        var completed = new HashSet<string>(); // Store "Title_EventType"
 
         try
         {
@@ -139,13 +139,31 @@ public class HtmlBuilder : ClientBuilder
                 if (row is not null)
                 {
                     JsonFileObj item = JsonFileObj.ConvertToObj(row);
-                    if (completed.Contains(item.Title))
+                    
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    
+                    // Check if the event type should be included based on configuration
+                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled)
+                    {
+                        continue;
+                    }
+
+                    // Create a unique key combining title and event type
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (completed.Contains(uniqueKey))
                     {
                         continue;
                     }
 
                     // Group by event type
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
                     switch (eventType)
                     {
                         case "add":
@@ -162,7 +180,7 @@ public class HtmlBuilder : ClientBuilder
                             break;
                     }
 
-                    completed.Add(item.Title);
+                    completed.Add(uniqueKey);
                 }
             }
         }
@@ -383,7 +401,7 @@ public class HtmlBuilder : ClientBuilder
         {
             // Create test entries for each event type
             string[] eventTypes = { "add", "update", "delete" };
-            string[] titles = { "Test Series - Added", "Test Movie - Updated", "Test Series - Removed" };
+            string[] titles = { "Test Series", "Test Movie", "Test Series" };
 
             foreach (var eventType in eventTypes)
             {

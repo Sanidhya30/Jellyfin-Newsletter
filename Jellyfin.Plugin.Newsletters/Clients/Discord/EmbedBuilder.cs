@@ -26,7 +26,7 @@ public class EmbedBuilder(Logger loggerInstance,
     /// <returns>A read-only collection of tuples containing Discord embeds, image streams, and unique image names.</returns>
     public ReadOnlyCollection<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
     {
-        var completed = new HashSet<string>();
+        var completed = new HashSet<string>(); // Store "Title_EventType"
         var result = new List<(Embed, MemoryStream?, string)>();
 
         try
@@ -39,7 +39,24 @@ public class EmbedBuilder(Logger loggerInstance,
                 {
                     JsonFileObj item = JsonFileObj.ConvertToObj(row);
 
-                    if (!completed.Add(item.Title))
+                    // Check if the event type should be included based on configuration
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled)
+                    {
+                        continue;
+                    }
+
+                    // Create a unique key combining title and event type
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (completed.Contains(uniqueKey))
                     {
                         continue;
                     }
@@ -107,6 +124,7 @@ public class EmbedBuilder(Logger loggerInstance,
                     }
 
                     result.Add((embed, resizedImageStream, uniqueImageName));
+                    completed.Add(uniqueKey);
                 }
             }
         }

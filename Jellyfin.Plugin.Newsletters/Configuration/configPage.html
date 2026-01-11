@@ -53,7 +53,7 @@
                         <b style="margin-bottom: 5px;">Newsletter Event Settings:</b>
                         <table>
                             <tr>
-                                <td>
+                                <td style="vertical-align: top;">
                                     <div class="checkboxContainer checkboxContainer-withDescription">
                                         <label class="emby-checkbox-label">
                                             <input id="NewsletterOnItemAddedEnabled" name="NewsletterOnItemAddedEnabled" type="checkbox" is="emby-checkbox" />
@@ -61,20 +61,26 @@
                                         </label>
                                     </div>
                                 </td>
-                                <td>
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="NewsletterOnItemUpdatedEnabled" name="NewsletterOnItemUpdatedEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Send newsletter when items are updated</span>
-                                        </label>
-                                    </div>
-                                </td>
-                                <td>
+                                <td style="vertical-align: top;">
                                     <div class="checkboxContainer checkboxContainer-withDescription">
                                         <label class="emby-checkbox-label">
                                             <input id="NewsletterOnItemDeletedEnabled" name="NewsletterOnItemDeletedEnabled" type="checkbox" is="emby-checkbox" />
                                             <span>Send newsletter when items are deleted</span>
                                         </label>
+                                    </div>
+                                </td>
+                                <td style="vertical-align: top;">
+                                    <div class="checkboxContainer checkboxContainer-withDescription">
+                                        <label class="emby-checkbox-label">
+                                            <input id="NewsletterOnItemUpdatedEnabled" name="NewsletterOnItemUpdatedEnabled" type="checkbox" is="emby-checkbox" />
+                                            <span>Send newsletter when items are updated</span>
+                                        </label>
+                                        <details style="margin-top: 5px; font-size: 0.85rem; cursor: pointer;">
+                                            <summary style="opacity: 0.7;">How does detection work?</summary>
+                                            <p style="padding: 10px; background: rgba(0,0,0,0.15); border-radius: 4px; margin-top: 5px; line-height: 1.4;">
+                                                Enable this to receive newsletters when items are updated. The update detection works differently than Jellyfin's built-in update event. This plugin detects updates based on how Radarr/Sonarr handle media upgrades - when a file is upgraded, the old file is deleted and a new one is added. This means an update is detected when a file deletion is immediately followed by a file addition with the same title/season/episode information.
+                                            </p>
+                                        </details>
                                     </div>
                                 </td>
                             </tr>
