@@ -6,6 +6,7 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 * Removal of Imgur and Local Hosted Image Dependencies
 * TMDB Integration
 * Local Poster images support as attachments
+* Event-Based item detection and notifications (Add/Update/Delete)
 * Multiple Bug Fixes and Enhancements
 
 # Jellyfin Newsletter Plugin
@@ -17,7 +18,7 @@ This is my first end-to-end C# project, but I hope you enjoy!
 
 # Description
 
-This plugin automacially scans a users library (default every 4 hours), populates a list of *recently added (not previously scanned)* media, converts that data into HTML format, and sends out newsletter to every client(currently email and discord webhook is supported).
+This plugin automatically scans a user's library (default every 4 hours), populates a list of *recently added (not previously scanned)* media, converts that data into HTML format, and sends out newsletters to every configured client (currently email and Discord webhook are supported). Additionally, it supports real-time event-based notifications for library changes (additions, updates, and deletions).
 
 <h2 align="center">Email Screenshot</h2>
 <p align="center">
@@ -108,6 +109,22 @@ Manifest is up an running! You can now import the manifest in Jellyfin and this 
 - Select the item types you want to scan
   - NOTE: this is Item types, not libraries
 
+## Newsletter Event Settings
+
+Configure which library events should trigger newsletter notifications:
+
+### Send newsletter when items are added
+
+- Enable real-time notifications when new items are added to your library (default: enabled).
+
+### Send newsletter when items are updated
+
+- Enable notifications when items are updated. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
+
+### Send newsletter when items are deleted
+
+- Enable notifications when items are removed from your library (default: enabled).
+
 ## Newsletter HTML Format
 
 Allows for use of custom HTML formatting for emails! Defaults to original formatting, but can be modified now!
@@ -179,7 +196,7 @@ For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
 ### Fields & Color selection
 
 - Select the fields that you want as part of your embed.
-- Select the embed color for each item type.
+- Select the embed color for each event type (Add, Update, Delete) and item type (Series, Movies).
 
 # Issues
 
@@ -205,11 +222,13 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 - {Title} - Title of Movie/Series
 - {SeriesOverview} - Movie/Series overview
 - {ImageURL} - Poster image for the Movie/Series
+- {ItemURL} - Direct link to the item in Jellyfin's web interface
 - {Type} - Item type (Movie or Series)
 - {PremiereYear} - Year Movie/Series was Premiered
-- {RunTime} - Movie/Episode Duration (for Series, gives first found duration. Will fix for only single episode or average in future update) 
+- {RunTime} - Movie/Episode Duration (for Series, gives first found duration. Will fix for only single episode or average in future update)
 - {OfficialRating} - TV-PG, TV-13, TV-14, etc.
 - {CommunityRating} - Numerical rating stored in Jellyfin's metadata
+- {EventBadge} - Visual badge indicating the event type (NEW, UPDATED, REMOVED)
 ```
 
 ## Non-Recommended Tags
