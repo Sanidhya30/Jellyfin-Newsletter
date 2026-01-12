@@ -120,8 +120,9 @@ public class HtmlBuilder : ClientBuilder
     /// Builds chunked HTML strings from newsletter data, splitting entries into chunks based on configured email size.
     /// Groups entries by event type (Add, Update, Delete).
     /// </summary>
+    /// <param name="serverId">The Jellyfin server ID to include in item URLs.</param>
     /// <returns>A collection of tuples containing HTML strings and associated image streams with content IDs.</returns>
-    public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData()
+    public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData(string serverId)
     {
         // Group items by event type
         var addItems = new List<JsonFileObj>();
@@ -194,9 +195,9 @@ public class HtmlBuilder : ClientBuilder
         }
 
         // Build HTML for each category
-        var chunks = new List<(string, List<(MemoryStream?, string)>)>();
+        var chunks = new List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)>();
         StringBuilder currentChunkBuilder = new();
-        var currentChunkImages = new List<(MemoryStream?, string)>();
+        var currentChunkImages = new List<(MemoryStream? ImageStream, string ContentId)>();
         int currentChunkBytes = 0;
         const int overheadPerMail = 50000;
         int maxChunkSizeBytes = Config.EmailSize * 1024 * 1024; // Convert MB to bytes
@@ -209,8 +210,16 @@ public class HtmlBuilder : ClientBuilder
             currentChunkBuilder.Append(sectionHeader);
             currentChunkBytes += Encoding.UTF8.GetByteCount(sectionHeader);
             
-            ProcessItemsForChunks(addItems, "add", currentChunkBuilder, currentChunkImages, 
-                ref currentChunkBytes, maxChunkSizeBytes, overheadPerMail, chunks);
+            ProcessItemsForChunks(
+                addItems,
+                "add",
+                currentChunkBuilder,
+                currentChunkImages,
+                ref currentChunkBytes,
+                maxChunkSizeBytes,
+                overheadPerMail,
+                chunks,
+                serverId);
         }
 
         // Process Update items
@@ -223,7 +232,7 @@ public class HtmlBuilder : ClientBuilder
             if (currentChunkBuilder.Length > 0 && (currentChunkBytes + headerBytes + overheadPerMail) > maxChunkSizeBytes)
             {
                 Logger.Debug($"Email size exceeded before update section, finalizing current chunk. Size : {currentChunkBytes} bytes");
-                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
+                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream? ImageStream, string ContentId)>(currentChunkImages)));
                 currentChunkBuilder.Clear();
                 currentChunkImages.Clear();
                 currentChunkBytes = 0;
@@ -232,8 +241,16 @@ public class HtmlBuilder : ClientBuilder
             currentChunkBuilder.Append(sectionHeader);
             currentChunkBytes += headerBytes;
             
-            ProcessItemsForChunks(updateItems, "update", currentChunkBuilder, currentChunkImages, 
-                ref currentChunkBytes, maxChunkSizeBytes, overheadPerMail, chunks);
+            ProcessItemsForChunks(
+                updateItems,
+                "update",
+                currentChunkBuilder,
+                currentChunkImages,
+                ref currentChunkBytes,
+                maxChunkSizeBytes,
+                overheadPerMail,
+                chunks,
+                serverId);
         }
 
         // Process Delete items
@@ -246,7 +263,7 @@ public class HtmlBuilder : ClientBuilder
             if (currentChunkBuilder.Length > 0 && (currentChunkBytes + headerBytes + overheadPerMail) > maxChunkSizeBytes)
             {
                 Logger.Debug($"Email size exceeded before delete section, finalizing current chunk. Size : {currentChunkBytes} bytes");
-                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
+                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream? ImageStream, string ContentId)>(currentChunkImages)));
                 currentChunkBuilder.Clear();
                 currentChunkImages.Clear();
                 currentChunkBytes = 0;
@@ -255,8 +272,16 @@ public class HtmlBuilder : ClientBuilder
             currentChunkBuilder.Append(sectionHeader);
             currentChunkBytes += headerBytes;
             
-            ProcessItemsForChunks(deleteItems, "delete", currentChunkBuilder, currentChunkImages, 
-                ref currentChunkBytes, maxChunkSizeBytes, overheadPerMail, chunks);
+            ProcessItemsForChunks(
+                deleteItems,
+                "delete",
+                currentChunkBuilder,
+                currentChunkImages,
+                ref currentChunkBytes,
+                maxChunkSizeBytes,
+                overheadPerMail,
+                chunks,
+                serverId);
         }
 
         // Add final chunk if any
@@ -273,14 +298,15 @@ public class HtmlBuilder : ClientBuilder
     /// Processes a list of items and adds them to chunks, managing size limits.
     /// </summary>
     private void ProcessItemsForChunks(
-        List<JsonFileObj> items, 
+        List<JsonFileObj> items,
         string eventType,
         StringBuilder currentChunkBuilder,
-        List<(MemoryStream?, string)> currentChunkImages,
+        List<(MemoryStream? ImageStream, string ContentId)> currentChunkImages,
         ref int currentChunkBytes,
         int maxChunkSizeBytes,
         int overheadPerMail,
-        List<(string, List<(MemoryStream?, string)>)> chunks)
+        List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> chunks,
+        string serverId)
     {
         foreach (var item in items)
         {
@@ -295,8 +321,8 @@ public class HtmlBuilder : ClientBuilder
 
             // Track image size if needed
             int entryImageBytes = 0;
-            (MemoryStream?, string) imgToAdd = default;
-            if (Config.PosterType == "attachment") 
+            (MemoryStream? ImageStream, string ContentId) imgToAdd = default;
+            if (Config.PosterType == "attachment")
             {
                 var (resizedStream, contentId, success) = ResizeImage(item.PosterPath);
 
@@ -323,7 +349,7 @@ public class HtmlBuilder : ClientBuilder
             // Compose the entry's HTML now (for accurate size)
             string entryHTML = tmp_entry
                 .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+                .Replace("{ItemURL}", $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}", StringComparison.Ordinal);
 
             int entryBytes = Encoding.UTF8.GetByteCount(entryHTML) + entryImageBytes;
 
@@ -332,11 +358,11 @@ public class HtmlBuilder : ClientBuilder
             {
                 // finalize current chunk as one part (HTML fragment)
                 Logger.Debug($"Email size exceeded, finalizing current chunk. Size : {currentChunkBytes} bytes");
-                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream?, string)>(currentChunkImages)));
+                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream? ImageStream, string ContentId)>(currentChunkImages)));
                 currentChunkBuilder.Clear();
                 currentChunkImages.Clear();
                 currentChunkBytes = 0;
-                
+
                 // Add section header again in new chunk if we're continuing this category
                 string sectionHeader = GetEventSectionHeader(eventType);
                 currentChunkBuilder.Append(sectionHeader);
@@ -435,7 +461,7 @@ public class HtmlBuilder : ClientBuilder
                 // Compose the entry's HTML now
                 string entryHTML = tmp_entry
                     .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                    .Replace("{ServerURL}", Config.Hostname, StringComparison.Ordinal);
+                    .Replace("{ItemURL}", Config.Hostname, StringComparison.Ordinal);
 
                 testHTML.Append(entryHTML);
             }

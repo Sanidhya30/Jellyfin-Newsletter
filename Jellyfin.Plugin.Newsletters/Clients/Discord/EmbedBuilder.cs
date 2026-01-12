@@ -77,10 +77,13 @@ public class EmbedBuilder(Logger loggerInstance,
                     AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
                     AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
+                    // Add event type query otherwise discord deduplicate the embed with same url
+                    // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
+                    // Adding event type query should not cause issue
                     var embed = new Embed
                     {
                         Title = item.Title,
-                        Url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}",
+                        Url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}",
                         Color = embedColor,
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Fields = fieldsList.AsReadOnly(),
@@ -230,7 +233,7 @@ public class EmbedBuilder(Logger loggerInstance,
     /// <param name="eventType">The event type (Add, Delete, Update).</param>
     /// <param name="mediaType">The media type (Series or Movie).</param>
     /// <returns>The color as an integer value.</returns>
-    private int GetEventColor(string eventType, string mediaType)
+    private int GetEventColor(string? eventType, string mediaType)
     {
         if (string.IsNullOrEmpty(eventType))
         {
@@ -269,7 +272,7 @@ public class EmbedBuilder(Logger loggerInstance,
     /// </summary>
     /// <param name="eventType">The event type (Add, Delete, Update).</param>
     /// <returns>The formatted description prefix with emoji.</returns>
-    private static string GetEventDescriptionPrefix(string eventType)
+    private static string GetEventDescriptionPrefix(string? eventType)
     {
         if (string.IsNullOrEmpty(eventType))
         {

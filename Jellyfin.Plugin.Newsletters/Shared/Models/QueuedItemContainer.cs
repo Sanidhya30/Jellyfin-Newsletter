@@ -3,10 +3,24 @@ using MediaBrowser.Controller.Entities;
 
 namespace Jellyfin.Plugin.Newsletters.Shared.Models;
 
+/// <summary>
+/// Represents the type of event that occurred for a queued item.
+/// </summary>
 public enum EventType
 {
+    /// <summary>
+    /// Item was added to the library.
+    /// </summary>
     Add,
+
+    /// <summary>
+    /// Item was deleted from the library.
+    /// </summary>
     Delete,
+
+    /// <summary>
+    /// Item was updated in the library.
+    /// </summary>
     Update
 }
 
@@ -18,7 +32,7 @@ public class QueuedItemContainer
     /// <summary>
     /// Initializes a new instance of the <see cref="QueuedItemContainer"/> class.
     /// </summary>
-    /// <param name="id">The item id.</param>
+    /// <param name="item">The media item.</param>
     /// <param name="eventType">The event type.</param>
     public QueuedItemContainer(BaseItem item, EventType eventType)
     {

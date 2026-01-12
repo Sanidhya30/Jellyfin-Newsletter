@@ -8,6 +8,7 @@ using System.Net.Mime;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
+using MediaBrowser.Controller;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,9 +23,12 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
 [Authorize(Policy = Policies.RequiresElevation)]
 [ApiController]
 [Route("Smtp")]
-public class Smtp(Logger loggerInstance,
+public class Smtp(IServerApplicationHost appHost,
+    Logger loggerInstance,
     SQLiteDatabase dbInstance) : Client(loggerInstance, dbInstance), IClient
 {
+    private readonly IServerApplicationHost applicationHost = appHost;
+
     /// <summary>
     /// Sends a test email using the current SMTP configuration.
     /// </summary>
@@ -198,7 +202,7 @@ public class Smtp(Logger loggerInstance,
                 HtmlBuilder hb = new(Logger, Db);
 
                 string body = hb.GetDefaultHTMLBody;
-                ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData();
+                ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData(applicationHost.SystemId);
                 // string finalBody = hb.ReplaceBodyWithBuiltString(body, builtString);
                 // string finalBody = hb.TemplateReplace(hb.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
 

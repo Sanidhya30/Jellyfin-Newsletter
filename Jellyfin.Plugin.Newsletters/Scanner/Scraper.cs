@@ -164,7 +164,6 @@ public class Scraper
         logger.Debug($"========== End {label} Properties ==========");
     }
 
-
     /// <summary>
     /// Builds and processes objects from the provided media items and adds them to the current run data.
     /// </summary>
@@ -377,13 +376,12 @@ public class Scraper
                     {
                         logger.Warn("URL is not attainable at this time. Stopping scan.. Will resume during next scan.");
                         logger.Warn("Setting empty image url: " + currFileObj.Filename);
-                        currFileObj.ImageURL = "";
+                        currFileObj.ImageURL = string.Empty;
                     }
                     else
                     {
                         currFileObj.ImageURL = url;
                     }
-
                 }
 
                 // Process the item based on the event type
@@ -427,8 +425,8 @@ public class Scraper
         int season = item.Season;
         int episode = item.Episode;
 
-        bool wasDeletedInCurrRunData = InDatabaseWithEventType("CurrRunData", item.Filename.Replace("'", "''", StringComparison.Ordinal), item.Title.Replace("'", "''", StringComparison.Ordinal), item.Season, item.Episode, "Delete");
-        bool wasDeletedInNewsletterData = InDatabaseWithEventType("CurrNewsletterData", item.Filename.Replace("'", "''", StringComparison.Ordinal), item.Title.Replace("'", "''", StringComparison.Ordinal), item.Season, item.Episode, "Delete");
+        bool wasDeletedInCurrRunData = InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Delete");
+        bool wasDeletedInNewsletterData = InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Delete");
         
         if (wasDeletedInCurrRunData || wasDeletedInNewsletterData)
         {
@@ -439,7 +437,6 @@ public class Scraper
 
         AddItemToDatabase(item, "Add");
         logger.Debug("Addition entry added to CurrRunData");
-        
     }
 
     /// <summary>
@@ -452,23 +449,26 @@ public class Scraper
     {
         logger.Debug($"Processing Update event for {item.Title}");
 
+        string filename = item.Filename.Replace("'", "''", StringComparison.Ordinal);
+        string title = item.Title.Replace("'", "''", StringComparison.Ordinal);
+        int season = item.Season;
+        int episode = item.Episode;
+
         // If we already know it was deleted in CurrRunData/CurrNewsletterData, update it
         // Everytime we're going to send newsletter for update even if it's already in ArchiveData
         // therefore no need to check if it's already in ArchiveData
         if (wasDeletedInCurrRunData)
         {
-            UpdateEventTypeInDatabase("CurrRunData", item.Filename.Replace("'", "''", StringComparison.Ordinal), 
-                                      item.Title.Replace("'", "''", StringComparison.Ordinal), 
-                                      item.Season, item.Episode, "Update");
-            logger.Debug("Updated entry in CurrRunData");
+            RemoveFromDatabase("CurrRunData", filename, title, season, episode);
         }
-        else if (wasDeletedInNewsletterData)
+        
+        if (wasDeletedInNewsletterData)
         {
-            UpdateEventTypeInDatabase("CurrNewsletterData", item.Filename.Replace("'", "''", StringComparison.Ordinal), 
-                                      item.Title.Replace("'", "''", StringComparison.Ordinal), 
-                                      item.Season, item.Episode, "Update");
-            logger.Debug("Updated entry in CurrNewsletterData");
+            RemoveFromDatabase("CurrNewsletterData", filename, title, season, episode);
         }
+
+        AddItemToDatabase(item, "Update");
+        logger.Debug("Update entry added to CurrRunData");
     }
 
     /// <summary>
@@ -498,6 +498,7 @@ public class Scraper
             {
                 RemoveFromDatabase("CurrRunData", filename, title, season, episode);
             }
+
             if (hasExistingNewsletterData)
             {
                 RemoveFromDatabase("CurrNewsletterData", filename, title, season, episode);
@@ -505,29 +506,8 @@ public class Scraper
         }
 
         // Always add deletion entry (even if not previously in archive)
-        logger.Info($"Adding deletion notice for {item.Title}");
-
-        // Add deletion entry to CurrRunData
-        item = NoNull(item);
         AddItemToDatabase(item, "Delete");
         logger.Debug("Deletion entry added to CurrRunData");
-    }
-
-    /// <summary>
-    /// Checks if the item exists in any of the databases.
-    /// </summary>
-    /// <param name="item">The item to check.</param>
-    /// <returns>True if the item exists in any database, false otherwise.</returns>
-    private bool ItemExistsInAnyDatabase(JsonFileObj item)
-    {
-        string filename = item.Filename.Replace("'", "''", StringComparison.Ordinal);
-        string title = item.Title.Replace("'", "''", StringComparison.Ordinal);
-        int season = item.Season;
-        int episode = item.Episode;
-
-        return InDatabase("CurrRunData", filename, title, season, episode) ||
-               InDatabase("CurrNewsletterData", filename, title, season, episode) ||
-               InDatabase("ArchiveData", filename, title, season, episode);
     }
 
     /// <summary>
@@ -724,25 +704,5 @@ public class Scraper
 
         db.ExecuteSQL("DELETE FROM " + tableName + " WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + ";");
         logger.Debug($"Removed item from {tableName}");
-    }
-
-    /// <summary>
-    /// Updates the EventType of an item in the specified database table.
-    /// </summary>
-    /// <param name="tableName">The name of the table to update.</param>
-    /// <param name="fileName">The filename of the item.</param>
-    /// <param name="title">The title of the item.</param>
-    /// <param name="season">The season number.</param>
-    /// <param name="episode">The episode number.</param>
-    /// <param name="newEventType">The new event type to set.</param>
-    private void UpdateEventTypeInDatabase(string tableName, string fileName, string title, int season, int episode, string newEventType)
-    {
-        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(title) || string.IsNullOrEmpty(tableName))
-        {
-            return;
-        }
-
-        db.ExecuteSQL("UPDATE " + tableName + " SET EventType='" + newEventType + "' WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + ";");
-        logger.Debug($"Updated EventType to {newEventType} for item in {tableName}");
     }
 }
