@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -9,7 +11,7 @@ using Microsoft.Extensions.Hosting;
 namespace Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 
 /// <summary>
-/// Notifier when a library item is added.
+/// Notifier when a library item is added or removed.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ItemEventNotifierEntryPoint"/> class.
@@ -29,37 +31,44 @@ public class ItemEventNotifierEntryPoint(
 
     private void ItemAddedHandler(object? sender, ItemChangeEventArgs itemChangeEventArgs)
     {
-        // Never notify on virtual items.
-        if (itemChangeEventArgs.Item.IsVirtualItem)
+        HandleItemChange(itemChangeEventArgs, "add", itemManager.AddItem);
+    }
+
+    private void ItemDeletedHandler(object? sender, ItemChangeEventArgs itemChangeEventArgs)
+    {
+        HandleItemChange(itemChangeEventArgs, "delete", itemManager.DeleteItem);
+    }
+
+    private void HandleItemChange(ItemChangeEventArgs e, string eventName, Action<BaseItem> action)
+    {
+        var item = e.Item;
+        if (item.IsVirtualItem)
         {
             return;
         }
-        
-        var itemType = itemChangeEventArgs.Item.GetType();
 
-        if (config.SeriesEnabled && itemType == typeof(Episode))
+        string? itemTypeName = null;
+        if (config.MoviesEnabled && item is Movie)
         {
-            // Notify on series items.
-            logger.Debug($"Item event detected for episode: {itemChangeEventArgs.Item.Name}");
+            itemTypeName = "movie";
         }
-        else if (config.MoviesEnabled && itemType == typeof(Movie))
+        else if (config.SeriesEnabled && item is Episode)
         {
-            // Notify on movie items.
-            logger.Debug($"Item event detected for movie: {itemChangeEventArgs.Item.Name}");
-        }
-        else
-        {
-            // Ignore other types of items.
-            return;
+            itemTypeName = "episode";
         }
 
-        itemManager.AddItem(itemChangeEventArgs.Item);
+        if (itemTypeName is not null)
+        {
+            logger.Debug($"Item {eventName} event detected for {itemTypeName}: {item.Name}");
+            action(item);
+        }
     }
 
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken)
     {
         libManager.ItemAdded += ItemAddedHandler;
+        libManager.ItemRemoved += ItemDeletedHandler;
         return Task.CompletedTask;
     }
 
@@ -67,6 +76,7 @@ public class ItemEventNotifierEntryPoint(
     public Task StopAsync(CancellationToken cancellationToken)
     {
         libManager.ItemAdded -= ItemAddedHandler;
+        libManager.ItemRemoved -= ItemDeletedHandler;
         return Task.CompletedTask;
     }
 }

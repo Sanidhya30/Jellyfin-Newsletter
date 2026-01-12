@@ -26,7 +26,7 @@ public class EmbedBuilder(Logger loggerInstance,
     /// <returns>A read-only collection of tuples containing Discord embeds, image streams, and unique image names.</returns>
     public ReadOnlyCollection<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
     {
-        var completed = new HashSet<string>();
+        var completed = new HashSet<string>(); // Store "Title_EventType"
         var result = new List<(Embed, MemoryStream?, string)>();
 
         try
@@ -39,19 +39,35 @@ public class EmbedBuilder(Logger loggerInstance,
                 {
                     JsonFileObj item = JsonFileObj.ConvertToObj(row);
 
-                    if (!completed.Add(item.Title))
+                    // Check if the event type should be included based on configuration
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled)
                     {
                         continue;
                     }
 
-                    int embedColor = Convert.ToInt32(Config.DiscordMoviesEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
+                    // Create a unique key combining title and event type
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (completed.Contains(uniqueKey))
+                    {
+                        continue;
+                    }
+
+                    int embedColor = GetEventColor(item.EventType, item.Type);
                     string seaEps = string.Empty;
                     if (item.Type == "Series")
                     {
                         // for series only
                         ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
                         seaEps += GetSeasonEpisode(parsedInfoList);
-                        embedColor = Convert.ToInt32(Config.DiscordSeriesEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
                     }
 
                     var fieldsList = new Collection<EmbedField>();
@@ -61,10 +77,13 @@ public class EmbedBuilder(Logger loggerInstance,
                     AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
                     AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
+                    // Add event type query otherwise discord deduplicate the embed with same url
+                    // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
+                    // Adding event type query should not cause issue
                     var embed = new Embed
                     {
                         Title = item.Title,
-                        Url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}",
+                        Url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}",
                         Color = embedColor,
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Fields = fieldsList.AsReadOnly(),
@@ -73,7 +92,12 @@ public class EmbedBuilder(Logger loggerInstance,
                     // Check if DiscordDescriptionEnabled is true
                     if (Config.DiscordDescriptionEnabled)
                     {
-                        embed.Description = item.SeriesOverview;
+                        embed.Description = GetEventDescriptionPrefix(item.EventType) + "\n" + item.SeriesOverview;
+                    }
+                    else
+                    {
+                        // If description is disabled, still show the event type prefix
+                        embed.Description = GetEventDescriptionPrefix(item.EventType);
                     }
 
                     MemoryStream? resizedImageStream = null;
@@ -86,9 +110,10 @@ public class EmbedBuilder(Logger loggerInstance,
                         {
                             (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
 
+                            string thumbnailUrl = success ? $"attachment://{uniqueImageName}" : item.ImageURL;
                             embed.Thumbnail = new Thumbnail
                             {
-                                Url = $"attachment://{uniqueImageName}"
+                                Url = thumbnailUrl
                             };
                         }
                         else 
@@ -102,6 +127,7 @@ public class EmbedBuilder(Logger loggerInstance,
                     }
 
                     result.Add((embed, resizedImageStream, uniqueImageName));
+                    completed.Add(uniqueKey);
                 }
             }
         }
@@ -128,7 +154,7 @@ public class EmbedBuilder(Logger loggerInstance,
         try
         {
             // Populating embed with reference to a Series, as it'll will cover all the cases
-            int embedColor = Convert.ToInt32(Config.DiscordSeriesEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
+            int embedColor = GetEventColor("add", "Series"); // Use the new event-based color system for consistency
             string seaEps = "Season: 1 - Eps. 1 - 10\nSeason: 2 - Eps. 1 - 10\nSeason: 3 - Eps. 1 - 10";
 
             var fieldsList = new Collection<EmbedField>();
@@ -150,7 +176,11 @@ public class EmbedBuilder(Logger loggerInstance,
             // Check if DiscordDescriptionEnabled is true
             if (Config.DiscordDescriptionEnabled)
             {
-                embed.Description = "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
+                embed.Description = GetEventDescriptionPrefix("add") + "\n" + "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
+            }
+            else
+            {
+                embed.Description = GetEventDescriptionPrefix("add");
             }
 
             // Check if DiscordThumbnailEnabled is true
@@ -195,6 +225,67 @@ public class EmbedBuilder(Logger loggerInstance,
                 Inline = inline
             });
         }
+    }
+
+    /// <summary>
+    /// Gets the embed color based on the event type and media type.
+    /// </summary>
+    /// <param name="eventType">The event type (Add, Delete, Update).</param>
+    /// <param name="mediaType">The media type (Series or Movie).</param>
+    /// <returns>The color as an integer value.</returns>
+    private int GetEventColor(string? eventType, string mediaType)
+    {
+        if (string.IsNullOrEmpty(eventType))
+        {
+            // Default to add event colors if event type is not recognized
+            return mediaType == "Series" 
+                ? Convert.ToInt32(Config.DiscordSeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
+                : Convert.ToInt32(Config.DiscordMoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
+        }
+
+        var eventLower = eventType.ToLowerInvariant();
+        
+        if (mediaType == "Series")
+        {
+            return eventLower switch
+            {
+                "add" => Convert.ToInt32(Config.DiscordSeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "delete" => Convert.ToInt32(Config.DiscordSeriesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "update" => Convert.ToInt32(Config.DiscordSeriesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                _ => Convert.ToInt32(Config.DiscordSeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
+            };
+        }
+        else
+        {
+            return eventLower switch
+            {
+                "add" => Convert.ToInt32(Config.DiscordMoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "delete" => Convert.ToInt32(Config.DiscordMoviesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "update" => Convert.ToInt32(Config.DiscordMoviesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                _ => Convert.ToInt32(Config.DiscordMoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
+            };
+        }
+    }
+
+    /// <summary>
+    /// Gets the description prefix for the embed based on the event type.
+    /// </summary>
+    /// <param name="eventType">The event type (Add, Delete, Update).</param>
+    /// <returns>The formatted description prefix with emoji.</returns>
+    private static string GetEventDescriptionPrefix(string? eventType)
+    {
+        if (string.IsNullOrEmpty(eventType))
+        {
+            return "🎬 **Added to Library**";
+        }
+
+        return eventType.ToLowerInvariant() switch
+        {
+            "add" => "🎬 **Added to Library**",
+            "delete" => "🗑️ **Removed from Library**",
+            "update" => "🔄 **Updated in Library**",
+            _ => "🎬 **Added to Library**"
+        };
     }
 }
 

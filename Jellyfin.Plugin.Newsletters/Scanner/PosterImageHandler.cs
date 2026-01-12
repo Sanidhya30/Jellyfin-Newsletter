@@ -121,15 +121,16 @@ public class PosterImageHandler(Logger loggerInstance)
                         break; // Don't retry for 404-like situations
                     }
                 }
-                catch (WebException e)
+                catch (Exception e)
                 {
-                    logger.Warn($"[Attempt {attempt}] Failed for {externalIdName} => {externalIdValue}. Status: {e.Status}");
+                    // Handle both WebException and HttpRequestException (and any other exceptions)
+                    string exceptionType = e.GetType().Name;
+                    logger.Warn($"[Attempt {attempt}] {exceptionType} for {externalIdName} => {externalIdValue}. Message: {e.Message}");
 
                     if (attempt == maxRetries)
                     {
-                        logger.Debug("Max retry attempts reached for this external ID.");
-                        logger.Debug("WebClient Return STATUS: " + e.Status);
-                        logger.Debug(e.ToString().Split(")")[0].Split("(")[1]);
+                        logger.Error($"Max retry attempts reached for {externalIdName} => {externalIdValue} due to {exceptionType}.");
+                        logger.Error($"Error details: {e}");
                     }
 
                     Thread.Sleep(retryDelayMs);

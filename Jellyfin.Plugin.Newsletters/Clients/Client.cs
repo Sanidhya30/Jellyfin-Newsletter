@@ -40,8 +40,8 @@ public class Client(Logger loggerInstance,
         {
             Db.CreateConnection();
 
-            // copy tables
-            Db.ExecuteSQL("INSERT INTO ArchiveData SELECT * FROM CurrNewsletterData;");
+            // copy tables - use INSERT OR REPLACE to handle potential conflicts
+            Db.ExecuteSQL("INSERT OR REPLACE INTO ArchiveData SELECT * FROM CurrNewsletterData;");
             Db.ExecuteSQL("DELETE FROM CurrNewsletterData;");
         }
         catch (Exception e)

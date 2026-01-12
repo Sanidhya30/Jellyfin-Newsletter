@@ -108,6 +108,7 @@ public class SQLiteDatabase
             new_cols.Add("RunTime", "INT");
             new_cols.Add("OfficialRating", "TEXT");
             new_cols.Add("CommunityRating", "REAL");
+            new_cols.Add("EventType", "TEXT");
 
             var existingColumns = GetTableColumns(table);
 
@@ -119,6 +120,14 @@ public class SQLiteDatabase
                     {
                         logger.Debug($"Adding column {col.Key} to table {table}...");
                         ExecuteSQL($"ALTER TABLE {table} ADD COLUMN {col.Key} {col.Value};");
+
+                        // Set default values for newly added columns
+                        if (col.Key == "EventType")
+                        {
+                            // For backward compatibility, set existing records to "Add" since previous version only had additions
+                            logger.Debug($"Setting default EventType='Add' for existing records in {table}");
+                            ExecuteSQL($"UPDATE {table} SET EventType='Add' WHERE EventType IS NULL;");
+                        }
                     }
                     catch (SQLiteException sle)
                     {

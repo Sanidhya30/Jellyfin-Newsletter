@@ -27,6 +27,7 @@ public class JsonFileObj
         RunTime = 0;
         OfficialRating = string.Empty;
         CommunityRating = 0.0f;
+        EventType = string.Empty;
         ExternalIds = new Dictionary<string, string>();
     }
 
@@ -96,6 +97,11 @@ public class JsonFileObj
     public float? CommunityRating { get; set; }
 
     /// <summary>
+    /// Gets or sets the event type of the item (Add/Delete).
+    /// </summary>
+    public string EventType { get; set; }
+
+    /// <summary>
     /// Gets dictionary for external IDs like IMDb, TMDb, etc.
     /// </summary>
     public Dictionary<string, string> ExternalIds { get; }
@@ -121,7 +127,8 @@ public class JsonFileObj
             PremiereYear = row[9].ToString(),
             RunTime = string.IsNullOrEmpty(row[10].ToString()) ? 0 : int.Parse(row[10].ToString(), CultureInfo.CurrentCulture),
             OfficialRating = row[11].ToString(),
-            CommunityRating = string.IsNullOrEmpty(row[12].ToString()) ? 0.0f : float.Parse(row[12].ToString(), CultureInfo.InvariantCulture)
+            CommunityRating = string.IsNullOrEmpty(row[12].ToString()) ? 0.0f : float.Parse(row[12].ToString(), CultureInfo.InvariantCulture),
+            EventType = row.Count > 13 ? row[13].ToString() : string.Empty
         };
 
         return obj;
@@ -146,9 +153,10 @@ public class JsonFileObj
         item_dict.Add("{PremiereYear}", this.PremiereYear);
         item_dict.Add("{RunTime}", this.RunTime);
         item_dict.Add("{OfficialRating}", this.OfficialRating);
-        item_dict!.Add("{CommunityRating}", this.CommunityRating);
+        item_dict.Add("{CommunityRating}", this.CommunityRating);
+        item_dict.Add("{EventType}", this.EventType);
 
-        return item_dict;        
+        return item_dict;
     }
 
     /// <summary>

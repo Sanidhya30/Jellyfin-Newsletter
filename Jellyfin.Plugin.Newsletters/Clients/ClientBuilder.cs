@@ -45,7 +45,8 @@ public class ClientBuilder(Logger loggerInstance,
         List<NlDetailsJson> compiledList = new List<NlDetailsJson>();
         List<NlDetailsJson> finalList = new List<NlDetailsJson>();
 
-        foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "';"))
+        // Query by title and event type to avoid conflicts when same title exists with different events
+        foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "' AND EventType='" + currObj.EventType.Replace("'", "''", StringComparison.Ordinal) + "';"))
         {
             if (row is not null)
             {

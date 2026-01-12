@@ -21,14 +21,14 @@
                             <input id="Hostname" name="Hostname" type="text" is="emby-input" />
                             <div class="fieldDescription">
                                 Hostname for your JF server that is accessible from outside your network. Ensure to include http[s]:// and port number (if applicable). <b>DO NOT include a trailing slash '/'</b>. 
-                                <br><br>
-                                I.e: https://myServerDNSName.com:8096
+                                <br>
+                                i.e: https://myServerDNSName.com:8096
                             </div>
                         </div>
                     </div>
                     <div id="LibrarySelection">
+                        <b style="margin-bottom: 5px;">Types of items to scan:</b> 
                         <table>
-                            <th>Types of items to scan:</th>
                             <tr>
                                 <td>
                                     <div class="checkboxContainer checkboxContainer-withDescription">
@@ -44,6 +44,43 @@
                                             <input id="MoviesEnabled" name="MoviesEnabled" type="checkbox" is="emby-checkbox" />
                                             <span>Movies</span>
                                         </label>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div id="NewsletterEventSettings">
+                        <b style="margin-bottom: 5px;">Newsletter Event Settings:</b>
+                        <table>
+                            <tr>
+                                <td style="vertical-align: top;">
+                                    <div class="checkboxContainer checkboxContainer-withDescription">
+                                        <label class="emby-checkbox-label">
+                                            <input id="NewsletterOnItemAddedEnabled" name="NewsletterOnItemAddedEnabled" type="checkbox" is="emby-checkbox" />
+                                            <span>Send newsletter when items are added</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td style="vertical-align: top;">
+                                    <div class="checkboxContainer checkboxContainer-withDescription">
+                                        <label class="emby-checkbox-label">
+                                            <input id="NewsletterOnItemDeletedEnabled" name="NewsletterOnItemDeletedEnabled" type="checkbox" is="emby-checkbox" />
+                                            <span>Send newsletter when items are deleted</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td style="vertical-align: top;">
+                                    <div class="checkboxContainer checkboxContainer-withDescription">
+                                        <label class="emby-checkbox-label">
+                                            <input id="NewsletterOnItemUpdatedEnabled" name="NewsletterOnItemUpdatedEnabled" type="checkbox" is="emby-checkbox" />
+                                            <span>Send newsletter when items are updated</span>
+                                        </label>
+                                        <details style="margin-top: 5px; font-size: 0.85rem; cursor: pointer;">
+                                            <summary style="opacity: 0.7;">How does detection work?</summary>
+                                            <p style="padding: 10px; background: rgba(0,0,0,0.15); border-radius: 4px; margin-top: 5px; line-height: 1.4;">
+                                                Enable this to receive newsletters when items are updated. The update detection works differently than Jellyfin's built-in update event. This plugin detects updates based on how Radarr/Sonarr handle media upgrades - when a file is upgraded, the old file is deleted and a new one is added. This means an update is detected when a file deletion is immediately followed by a file addition with the same title/season/episode information.
+                                            </p>
+                                        </details>
                                     </div>
                                 </td>
                             </tr>
@@ -242,21 +279,50 @@
                             <div class="inputContainer">
                                 <table style="width: 100%; table-layout: fixed;">
                                     <tr>
-                                        <th colspan="6">Series Embed Color</th>
-                                        <th colspan="6">Movies Embed Color</th>
+                                        <th colspan="2">Series Add Event</th>
+                                        <th colspan="2">Series Delete Event</th>
+                                        <th colspan="2">Series Update Event</th>
                                     </tr>
                                     <tr>
-                                        <td colspan="6">
-                                            <input id="DiscordSeriesEmbedColor" name="DiscordSeriesEmbedColor" type="color" is="emby-input"
+                                        <td colspan="2">
+                                            <input id="DiscordSeriesAddEmbedColor" name="DiscordSeriesAddEmbedColor" type="color" is="emby-input"
                                                 style="height: 2.2em; width: 100%;" />
                                         </td>
-                                        <td colspan="6">
-                                            <input id="DiscordMoviesEmbedColor" name="DiscordMoviesEmbedColor" type="color" is="emby-input"
+                                        <td colspan="2">
+                                            <input id="DiscordSeriesDeleteEmbedColor" name="DiscordSeriesDeleteEmbedColor" type="color" is="emby-input"
+                                                style="height: 2.2em; width: 100%;" />
+                                        </td>
+                                        <td colspan="2">
+                                            <input id="DiscordSeriesUpdateEmbedColor" name="DiscordSeriesUpdateEmbedColor" type="color" is="emby-input"
                                                 style="height: 2.2em; width: 100%;" />
                                         </td>
                                     </tr>
                                 </table>
-                            </div>                            
+                            </div>
+                            <br>
+                            <div class="inputContainer">
+                                <table style="width: 100%; table-layout: fixed;">
+                                    <tr>
+                                        <th colspan="2">Movies Add Event</th>
+                                        <th colspan="2">Movies Delete Event</th>
+                                        <th colspan="2">Movies Update Event</th>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            <input id="DiscordMoviesAddEmbedColor" name="DiscordMoviesAddEmbedColor" type="color" is="emby-input"
+                                                style="height: 2.2em; width: 100%;" />
+                                        </td>
+                                        <td colspan="2">
+                                            <input id="DiscordMoviesDeleteEmbedColor" name="DiscordMoviesDeleteEmbedColor" type="color" is="emby-input"
+                                                style="height: 2.2em; width: 100%;" />
+                                        </td>
+                                        <td colspan="2">
+                                            <input id="DiscordMoviesUpdateEmbedColor" name="DiscordMoviesUpdateEmbedColor" type="color" is="emby-input"
+                                                style="height: 2.2em; width: 100%;" />
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
                             <button id="testButtonDiscord" is="emby-button" type="button" class="raised block emby-button">
                                 <span>Test Discord</span>
                             </button>
@@ -333,8 +399,12 @@
                     config.DiscordPGRatingEnabled = document.querySelector('#DiscordPGRatingEnabled').checked;
                     config.DiscordDurationEnabled = document.querySelector('#DiscordDurationEnabled').checked;
                     config.DiscordEpisodesEnabled = document.querySelector('#DiscordEpisodesEnabled').checked;
-                    config.DiscordSeriesEmbedColor = document.querySelector('#DiscordSeriesEmbedColor').value;
-                    config.DiscordMoviesEmbedColor = document.querySelector('#DiscordMoviesEmbedColor').value;
+                    config.DiscordSeriesAddEmbedColor = document.querySelector('#DiscordSeriesAddEmbedColor').value;
+                    config.DiscordSeriesDeleteEmbedColor = document.querySelector('#DiscordSeriesDeleteEmbedColor').value;
+                    config.DiscordSeriesUpdateEmbedColor = document.querySelector('#DiscordSeriesUpdateEmbedColor').value;
+                    config.DiscordMoviesAddEmbedColor = document.querySelector('#DiscordMoviesAddEmbedColor').value;
+                    config.DiscordMoviesDeleteEmbedColor = document.querySelector('#DiscordMoviesDeleteEmbedColor').value;
+                    config.DiscordMoviesUpdateEmbedColor = document.querySelector('#DiscordMoviesUpdateEmbedColor').value;
                     //emailDetails
                     config.ToAddr = document.querySelector('#ToAddr').value;
                     config.VisibleToAddr = document.querySelector('#VisibleToAddr').value;
@@ -352,6 +422,11 @@
                     //config.ApiKey = document.querySelector('#ApiKey').value;
                     //hosting options
                     config.Hostname = document.querySelector('#Hostname').value;
+                    
+                    // newsletter event settings
+                    config.NewsletterOnItemAddedEnabled = document.querySelector('#NewsletterOnItemAddedEnabled').checked;
+                    config.NewsletterOnItemUpdatedEnabled = document.querySelector('#NewsletterOnItemUpdatedEnabled').checked;
+                    config.NewsletterOnItemDeletedEnabled = document.querySelector('#NewsletterOnItemDeletedEnabled').checked;
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -379,8 +454,12 @@
                     document.querySelector('#DiscordPGRatingEnabled').checked = config.DiscordPGRatingEnabled;
                     document.querySelector('#DiscordDurationEnabled').checked = config.DiscordDurationEnabled;
                     document.querySelector('#DiscordEpisodesEnabled').checked = config.DiscordEpisodesEnabled;
-                    document.querySelector('#DiscordSeriesEmbedColor').value = config.DiscordSeriesEmbedColor;
-                    document.querySelector('#DiscordMoviesEmbedColor').value = config.DiscordMoviesEmbedColor;
+                    document.querySelector('#DiscordSeriesAddEmbedColor').value = config.DiscordSeriesAddEmbedColor;
+                    document.querySelector('#DiscordSeriesDeleteEmbedColor').value = config.DiscordSeriesDeleteEmbedColor;
+                    document.querySelector('#DiscordSeriesUpdateEmbedColor').value = config.DiscordSeriesUpdateEmbedColor;
+                    document.querySelector('#DiscordMoviesAddEmbedColor').value = config.DiscordMoviesAddEmbedColor;
+                    document.querySelector('#DiscordMoviesDeleteEmbedColor').value = config.DiscordMoviesDeleteEmbedColor;
+                    document.querySelector('#DiscordMoviesUpdateEmbedColor').value = config.DiscordMoviesUpdateEmbedColor;
                     //emailDetails
                     document.querySelector('#VisibleToAddr').value = config.VisibleToAddr;
                     document.querySelector('#ToAddr').value = config.ToAddr;
@@ -400,6 +479,11 @@
                     //document.querySelector('#ApiKey').value = config.ApiKey;
                     //hosting options
                     document.querySelector('#Hostname').value = config.Hostname;
+                    
+                    // newsletter event settings
+                    document.querySelector('#NewsletterOnItemAddedEnabled').checked = config.NewsletterOnItemAddedEnabled;
+                    document.querySelector('#NewsletterOnItemUpdatedEnabled').checked = config.NewsletterOnItemUpdatedEnabled;
+                    document.querySelector('#NewsletterOnItemDeletedEnabled').checked = config.NewsletterOnItemDeletedEnabled;
 
                     updateMaxEmailSizeVisibility();
 
