@@ -109,61 +109,6 @@ public class Scraper
         }
     }
 
-    private void PrintItemProperties(BaseItem item, string label = "Item")
-    {
-        logger.Debug($"========== {label} Properties ==========");
-        
-        if (item == null)
-        {
-            logger.Debug("Item is NULL");
-            return;
-        }
-        
-        var type = item.GetType();
-        logger.Debug($"Type: {type.Name}");
-        
-        // Get all public properties
-        var properties = type.GetProperties(System.Reflection.BindingFlags.Public | 
-                                        System.Reflection.BindingFlags.Instance);
-        
-        foreach (var prop in properties)
-        {
-            try
-            {
-                var value = prop.GetValue(item);
-                
-                // Handle different types of values
-                if (value == null)
-                {
-                    logger.Debug($"{prop.Name}: NULL");
-                }
-                else if (value is System.Collections.IEnumerable && !(value is string))
-                {
-                    // Handle collections
-                    var collection = ((System.Collections.IEnumerable)value).Cast<object>().ToList();
-                    logger.Debug($"{prop.Name}: [{collection.Count} items]");
-                    if (collection.Count > 0 && collection.Count <= 5)
-                    {
-                        foreach (var item2 in collection)
-                        {
-                            logger.Debug($"  - {item2}");
-                        }
-                    }
-                }
-                else
-                {
-                    logger.Debug($"{prop.Name}: {value}");
-                }
-            }
-            catch (Exception e)
-            {
-                logger.Debug($"{prop.Name}: [Error reading - {e.Message}]");
-            }
-        }
-        
-        logger.Debug($"========== End {label} Properties ==========");
-    }
-
     /// <summary>
     /// Builds and processes objects from the provided media items and adds them to the current run data.
     /// </summary>
@@ -191,16 +136,6 @@ public class Scraper
             {
                 try
                 {
-                    // Print all properties to see what's available
-                    if (eventType == EventType.Delete)
-                    {
-                        PrintItemProperties(item, "Deleted Episode");
-                    }
-                    else
-                    {
-                        PrintItemProperties(item, "Added Episode");
-                    }
-
                     if (type == "Series")
                     {
                         episode = item;
