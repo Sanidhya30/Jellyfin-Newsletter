@@ -1,10 +1,24 @@
+# 1.0.0.0
+
+- **Event-Based Notifications**: Added support for newsletters when items are added, updated, or deleted from the library
+- **Event Type Configuration**: Added options to enable/disable newsletters for specific events (add/update/delete) with default settings
+- **Discord Event Colors**: Added customizable embed colors for different event types (Add/Update/Delete) and item types (Series/Movies)
+- **New Template Tags**:
+  - `{EventBadge}` - Visual badge indicating the event type (NEW, UPDATED, REMOVED)
+  - `{ItemURL}` - Direct link to the item in Jellyfin's web interface
+- **Enhanced HTML Generation**: Improved email and Discord message generation with event-specific styling and sections
+- **Code Refactoring**: Improved event handling and item processing logic
+
 # 0.9.1.0
+
 - Support for Jellyfin 10.11.x.
 
 # 0.9.0.2
+
 - Bug fix for querying title in the newsletter.db.
 
 # 0.9.0.1
+
 - Bug fix for community rating parsing.
 - Bug fix for parsing runtime.
 
