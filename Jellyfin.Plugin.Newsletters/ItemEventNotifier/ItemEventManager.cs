@@ -92,12 +92,9 @@ public class ItemEventManager(
                             itemAddedQueue.AddOrUpdate(queueItem.ItemId, queueItem, (_, _) => queueItem);
                             continue;
                         }
-                        else if (item.ProviderIds.Keys.Count != 0)
-                        {
-                            // Item has provider ids, add to process list.
-                            logger.Debug($"Adding {item.Name} to process list for addition");
-                            itemsToProcess.Add((item, queueItem.EventType));
-                        }
+                        
+                        logger.Debug($"Adding {item.Name} to process list for addition");
+                        itemsToProcess.Add((item, queueItem.EventType));
                     }
                     else if (queueItem.EventType == EventType.Delete)
                     {
@@ -106,7 +103,10 @@ public class ItemEventManager(
                     }
                 }
 
-                await myScraper.GetSeriesData(itemsToProcess).ConfigureAwait(false);
+                if (itemsToProcess.Count > 0)
+                {
+                    await myScraper.GetSeriesData(itemsToProcess).ConfigureAwait(false);
+                }
             }
         }
     }

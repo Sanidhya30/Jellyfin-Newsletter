@@ -302,21 +302,17 @@ public class Scraper
                     logger.Warn(".../MyLibraryName/Series_Name/Season#_or_Specials/Episode.{ext}");
                 }
 
-                logger.Debug("Checking if PosterPath Exists");
-                if ((currFileObj.PosterPath != null) && (currFileObj.PosterPath.Length > 0))
-                {
-                    string url = SetImageURL(currFileObj);
+                string url = SetImageURL(currFileObj);
 
-                    if ((url == "429") || (url == "ERR") || string.IsNullOrEmpty(url))
-                    {
-                        logger.Warn("URL is not attainable at this time. Stopping scan.. Will resume during next scan.");
-                        logger.Warn("Setting empty image url: " + currFileObj.Filename);
-                        currFileObj.ImageURL = string.Empty;
-                    }
-                    else
-                    {
-                        currFileObj.ImageURL = url;
-                    }
+                if ((url == "429") || (url == "ERR") || string.IsNullOrEmpty(url))
+                {
+                    logger.Warn("URL is not attainable at this time. Stopping scan.. Will resume during next scan.");
+                    logger.Warn("Setting empty image url: " + currFileObj.Filename);
+                    currFileObj.ImageURL = string.Empty;
+                }
+                else
+                {
+                    currFileObj.ImageURL = url;
                 }
 
                 // Process the item based on the event type
@@ -566,7 +562,6 @@ public class Scraper
 
         logger.Debug("Grabbing poster...");
         logger.Debug(currObj.ItemID);
-        logger.Debug(currObj.PosterPath);
         // return string.Empty;
         return imageHandler.FetchImagePoster(currObj);
     }

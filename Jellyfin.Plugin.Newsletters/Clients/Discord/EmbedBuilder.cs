@@ -188,7 +188,7 @@ public class EmbedBuilder(Logger loggerInstance,
             {
                 embed.Thumbnail = new Thumbnail
                 {
-                    Url = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/logo.png"
+                    Url = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/images/logo.png"
                 };
             }
 

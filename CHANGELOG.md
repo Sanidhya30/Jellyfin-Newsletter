@@ -1,3 +1,7 @@
+# 1.0.1.0
+
+- Minor bug fix
+
 # 1.0.0.0
 
 - **Event-Based Notifications**: Added support for newsletters when items are added, updated, or deleted from the library
