@@ -21,23 +21,25 @@ This is my first end-to-end C# project, but I hope you enjoy!
 This plugin automatically scans a user's library (default every 4 hours), populates a list of *recently added (not previously scanned)* media, converts that data into HTML format, and sends out newsletters to every configured client (currently email and Discord webhook are supported). Additionally, it supports real-time event-based notifications for library changes (additions, updates, and deletions).
 
 <h2 align="center">Email Screenshots</h2>
-<p align="center" style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+<p align="center">
     <img src="images/Newsletter_Added_Email_Example.png"
          alt="Added Email Screenshot"
-         style="height: 630px; object-fit: contain;"/>
+         height="630"/>
     <img src="images/Newsletter_Removed_Email_Example.png"
          alt="Removed Email Screenshot"
-         style="height: 300px; object-fit: contain;"/>
+         height="300"/>
 </p>
 
 <h2 align="center">Discord Screenshots</h2>
-<p align="center" style="display: flex; justify-content: center; gap: 20px;">
+<p align="center">
     <img src="images/Newsletter_Added_Discord_Example.png"
          alt="Added Discord Screenshot"
-         style="height: 300px; object-fit: contain;"/>
+         height="300"
+         width="49%"/>
     <img src="images/Newsletter_Removed_Discord_Example.png"
          alt="Removed Discord Screenshot"
-         style="height: 300px; object-fit: contain;"/>
+         height="300"
+         width="49%"/>
 </p>
 
 # File Structure
