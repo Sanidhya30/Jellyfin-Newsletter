@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.0.1.0"
+version: "1.1.0.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated media"
@@ -13,6 +13,9 @@ artifacts:
   - "Jellyfin.Plugin.Newsletters.dll"
   - "SQLitePCL.pretty.dll"
   - "SixLabors.ImageSharp.dll"
+  - "MailKit.dll"
+  - "MimeKit.dll"
+  - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Minor bug fix
+  - Migrating from SmtpClient to MailKit. (Fixes the authentication fails issue for proton mail)
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

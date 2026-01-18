@@ -16,6 +16,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageReference Include="SQLitePCL.pretty.netstandard" Version="3.1.0" />
+    <PackageReference Include="MailKit" Version="4.14.1" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

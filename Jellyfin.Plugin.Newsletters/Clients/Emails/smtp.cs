@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Net;
-using System.Net.Mail;
-using System.Net.Mime;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MimeKit;
 
 // using System.Net.NetworkCredential;
 
@@ -22,8 +22,8 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
 // [Route("newsletters/[controller]")]
 [Authorize(Policy = Policies.RequiresElevation)]
 [ApiController]
-[Route("Smtp")]
-public class Smtp(IServerApplicationHost appHost,
+[Route("SmtpMailer")]
+public class SmtpMailer(IServerApplicationHost appHost,
     Logger loggerInstance,
     SQLiteDatabase dbInstance) : Client(loggerInstance, dbInstance), IClient
 {
@@ -89,45 +89,43 @@ public class Smtp(IServerApplicationHost appHost,
             string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
             builtString = builtString.Replace("{Date}", currDate, StringComparison.Ordinal);
 
-            using (var mail = new MailMessage
-            {
-                From = new MailAddress(emailFromAddress, emailFromAddress),
-                Subject = subject,
-                Body = Regex.Replace(builtString, "{[A-za-z]*}", " "),
-                IsBodyHtml = true
-            })
-            {
-                mail.To.Clear();
-                mail.Bcc.Clear();
+            var mail = new MimeMessage();
+            mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));
+            mail.Subject = subject;
 
-                if (!string.IsNullOrWhiteSpace(emailToAddress))
+            if (!string.IsNullOrWhiteSpace(emailToAddress))
+            {
+                foreach (string email in emailToAddress.Split(','))
                 {
-                    foreach (string email in emailToAddress.Split(','))
+                    if (!string.IsNullOrWhiteSpace(email))
                     {
-                        if (!string.IsNullOrWhiteSpace(email))
-                        {
-                            mail.To.Add(email.Trim());
-                        }
+                        mail.To.Add(MailboxAddress.Parse(email.Trim()));
                     }
                 }
+            }
 
-                if (!string.IsNullOrWhiteSpace(emailBccAddress))
+            if (!string.IsNullOrWhiteSpace(emailBccAddress))
+            {
+                foreach (string email in emailBccAddress.Split(','))
                 {
-                    foreach (string email in emailBccAddress.Split(','))
+                    if (!string.IsNullOrWhiteSpace(email))
                     {
-                        if (!string.IsNullOrWhiteSpace(email))
-                        {
-                            mail.Bcc.Add(email.Trim());
-                        }
+                        mail.Bcc.Add(MailboxAddress.Parse(email.Trim()));
                     }
                 }
+            }
 
-                using var smtp = new SmtpClient(smtpAddress, portNumber)
-                {
-                    Credentials = new NetworkCredential(username, password),
-                    EnableSsl = enableSSL
-                };
-                smtp.Send(mail);
+            var bodyBuilder = new BodyBuilder();
+            bodyBuilder.HtmlBody = Regex.Replace(builtString, "{[A-za-z]*}", " ");
+            mail.Body = bodyBuilder.ToMessageBody();
+
+            using (var client = new SmtpClient())
+            {
+                var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+                client.Connect(smtpAddress, portNumber, secureOptions);
+                client.Authenticate(username, password);
+                client.Send(mail);
+                client.Disconnect(true);
             }
 
             Logger.Debug($"Test email sent successfully sent.");
@@ -216,78 +214,76 @@ public class Smtp(IServerApplicationHost appHost,
                     string finalBody = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
                                         .Replace("{Date}", currDate, StringComparison.Ordinal);
 
-                    using (MailMessage mail = new())
+                    var mail = new MimeMessage();
+                    mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));
+
+                    if (!string.IsNullOrWhiteSpace(emailToAddress))
                     {
-                        mail.From = new MailAddress(emailFromAddress, emailFromAddress);
-                        mail.IsBodyHtml = true;
-
-                        if (!string.IsNullOrWhiteSpace(emailToAddress))
+                        foreach (string email in emailToAddress.Split(','))
                         {
-                            foreach (string email in emailToAddress.Split(','))
+                            if (!string.IsNullOrWhiteSpace(email))
                             {
-                                if (!string.IsNullOrWhiteSpace(email))
-                                {
-                                    mail.To.Add(email.Trim());
-                                }
+                                mail.To.Add(MailboxAddress.Parse(email.Trim()));
                             }
                         }
+                    }
 
-                        if (!string.IsNullOrWhiteSpace(emailBccAddress))
+                    if (!string.IsNullOrWhiteSpace(emailBccAddress))
+                    {
+                        foreach (string email in emailBccAddress.Split(','))
                         {
-                            foreach (string email in emailBccAddress.Split(','))
+                            if (!string.IsNullOrWhiteSpace(email))
                             {
-                                if (!string.IsNullOrWhiteSpace(email))
-                                {
-                                    mail.Bcc.Add(email.Trim());
-                                }
+                                mail.Bcc.Add(MailboxAddress.Parse(email.Trim()));
                             }
                         }
+                    }
 
-                        // Multi-part subject (optional, for clarity)
-                        mail.Subject = (chunks.Count > 1)
-                            ? $"{subject} (Part {partNum} of {chunks.Count})"
-                            : subject;
+                    // Multi-part subject (optional, for clarity)
+                    mail.Subject = (chunks.Count > 1)
+                        ? $"{subject} (Part {partNum} of {chunks.Count})"
+                        : subject;
 
-                        if (Config.PosterType == "attachment")
+                    var bodyBuilder = new BodyBuilder();
+
+                    if (Config.PosterType == "attachment")
+                    {
+                        bodyBuilder.HtmlBody = finalBody;
+
+                        foreach (var (stream, cid) in inlineImages)
                         {
-                            AlternateView htmlView = AlternateView.CreateAlternateViewFromString(finalBody, null, MediaTypeNames.Text.Html);
-
-                            foreach (var (stream, cid) in inlineImages)
+                            if (stream == null)
                             {
-                                if (stream == null)
-                                {
-                                    Logger.Warn($"Skipped LinkedResource creation for cid {cid}: stream is null.");
-                                    continue;
-                                }
-
-                                var imgRes = new LinkedResource(stream, MediaTypeNames.Image.Jpeg)
-                                {
-                                    ContentId = cid,
-                                    TransferEncoding = TransferEncoding.Base64,
-                                    ContentType = new ContentType("image/jpeg"),
-                                    ContentLink = new Uri("cid:" + cid)
-                                };
-                                imgRes.ContentType.Name = cid;
-                                htmlView.LinkedResources.Add(imgRes);
+                                Logger.Warn($"Skipped LinkedResource creation for cid {cid}: stream is null.");
+                                continue;
                             }
 
-                            mail.AlternateViews.Add(htmlView);
-
-                            // Increase timeout for larger attachments
-                            // This is useful if the email contains large images or attachments
-                            smtpTimeout = 300000; // 5 minutes timeout
-                        }
-                        else
-                        {
-                            mail.Body = Regex.Replace(finalBody, "{[A-za-z]*}", " ");
+                            stream.Position = 0;
+                            var image = bodyBuilder.LinkedResources.Add(cid, stream.ToArray(), new ContentType("image", "jpeg"));
+                            image.ContentId = cid;
                         }
 
-                        using SmtpClient smtp = new(smtpAddress, portNumber);
-                        smtp.Credentials = new NetworkCredential(username, password);
-                        smtp.EnableSsl = enableSSL;
-                        smtp.Timeout = smtpTimeout;
+                        // Increase timeout for larger attachments
+                        // This is useful if the email contains large images or attachments
+                        smtpTimeout = 300000; // 5 minutes timeout
+                    }
+                    else
+                    {
+                        bodyBuilder.HtmlBody = Regex.Replace(finalBody, "{[A-za-z]*}", " ");
+                    }
+
+                    mail.Body = bodyBuilder.ToMessageBody();
+
+                    using (var client = new SmtpClient())
+                    {
+                        client.Timeout = smtpTimeout;
+                        var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+                        
+                        client.Connect(smtpAddress, portNumber, secureOptions);
+                        client.Authenticate(username, password);
                         Logger.Debug($"Sending email part {partNum} with finalBody: {finalBody}");
-                        smtp.Send(mail);
+                        client.Send(mail);
+                        client.Disconnect(true);
                     }
 
                     Logger.Debug($"Email part {partNum} sent successfully.");
