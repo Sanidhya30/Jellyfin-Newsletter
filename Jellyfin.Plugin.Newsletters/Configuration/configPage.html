@@ -516,7 +516,7 @@
                 // Configure test notification
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     console.log("TEST: ", config);
-                    let url = ApiClient.getUrl('Smtp/SendTestMail');
+                    let url = ApiClient.getUrl('SmtpMailer/SendTestMail');
                     console.log("ServerAddr: ", ApiClient.serverAddress());
                     console.log("URL: ",url);
                     let data = JSON.stringify(config);

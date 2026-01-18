@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.1.0.0",
+                "changelog": "- Migrating from SmtpClient to MailKit. (Fixes the authentication fails issue for proton mail)\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.1.0.0/newsletters_1.1.0.0.zip",
+                "checksum": "7d3bc72bc5b65761a6559aa0a3f12e5e",
+                "timestamp": "2026-01-18T07:24:04Z"
+            },
+            {
                 "version": "1.0.1.0",
                 "changelog": "- Minor bug fix\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",

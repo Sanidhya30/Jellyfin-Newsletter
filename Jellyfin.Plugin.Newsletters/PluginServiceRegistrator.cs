@@ -19,7 +19,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
         // Register the clients
-        serviceCollection.AddScoped<IClient, Smtp>();
+        serviceCollection.AddScoped<IClient, SmtpMailer>();
         serviceCollection.AddScoped<IClient, DiscordWebhook>();
 
         // Register the item related services

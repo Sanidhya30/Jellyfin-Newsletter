@@ -1,3 +1,7 @@
+# 1.1.0.0
+
+- Migrating from SmtpClient to MailKit. (Fixes the authentication fails issue for proton mail)
+
 # 1.0.1.0
 
 - Minor bug fix
