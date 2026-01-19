@@ -86,6 +86,16 @@
                             </tr>
                         </table>
                     </div>
+                    <div id="FormattingSettings">
+                        <b>Formatting Settings:</b>
+                        <div class="inputContainer" id="CommunityRatingDecimals">
+                            <label class="inputLabel inputLabelUnfocused" for="CommunityRatingDecimalPlaces">Community Rating Decimal Places:</label>
+                            <input id="CommunityRatingDecimalPlaces" name="CommunityRatingDecimalPlaces" type="number" is="emby-input" min="0" max="4" />
+                            <div class="fieldDescription">
+                                Number of decimal places to display for community ratings (0-4). Default: 1
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- <div class="inputContainer" id="BodyTemplate" style="display: none;"> -->
                     <!-- Newsletter Formatting -->
@@ -428,6 +438,10 @@
                     config.NewsletterOnItemUpdatedEnabled = document.querySelector('#NewsletterOnItemUpdatedEnabled').checked;
                     config.NewsletterOnItemDeletedEnabled = document.querySelector('#NewsletterOnItemDeletedEnabled').checked;
 
+                    // formatting settings
+                    var decimalPlaces = parseInt(document.querySelector('#CommunityRatingDecimalPlaces').value);
+                    config.CommunityRatingDecimalPlaces = isNaN(decimalPlaces) ? 1 : decimalPlaces;
+
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
                         console.log("RESULT: ", result);
@@ -484,6 +498,9 @@
                     document.querySelector('#NewsletterOnItemAddedEnabled').checked = config.NewsletterOnItemAddedEnabled;
                     document.querySelector('#NewsletterOnItemUpdatedEnabled').checked = config.NewsletterOnItemUpdatedEnabled;
                     document.querySelector('#NewsletterOnItemDeletedEnabled').checked = config.NewsletterOnItemDeletedEnabled;
+
+                    // formatting settings
+                    document.querySelector('#CommunityRatingDecimalPlaces').value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
 
                     updateMaxEmailSizeVisibility();
 

@@ -124,6 +124,9 @@ public class PluginConfiguration : BasePluginConfiguration
         NewsletterOnItemAddedEnabled = true;
         NewsletterOnItemUpdatedEnabled = false;
         NewsletterOnItemDeletedEnabled = true;
+
+        // default community rating decimal places
+        CommunityRatingDecimalPlaces = 1;
     }
 
     /// <summary>
@@ -363,4 +366,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether newsletter should be sent when items are deleted.
     /// </summary>
     public bool NewsletterOnItemDeletedEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of decimal places to display for community ratings.
+    /// </summary>
+    public int CommunityRatingDecimalPlaces { get; set; }
 }
