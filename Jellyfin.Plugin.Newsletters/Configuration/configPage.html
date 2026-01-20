@@ -27,7 +27,7 @@
                         </div>
                     </div>
                     <div id="LibrarySelection">
-                        <b style="margin-bottom: 5px;">Types of items to scan:</b> 
+                        <b style="margin-bottom: 5px;">Types of items to scan:</b>
                         <table>
                             <tr>
                                 <td>
@@ -48,6 +48,22 @@
                                 </td>
                             </tr>
                         </table>
+
+                        <!-- Series Library Selection -->
+                        <div id="SeriesLibrarySelectionContainer" style="display: none; margin-top: 15px;">
+                            <b>Select Series Libraries to Scan:</b>
+                            <div id="SeriesLibraryCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-top: 5px; border-radius: 4px;">
+                                <p style="text-align: center; opacity: 0.7;">Loading series libraries...</p>
+                            </div>
+                        </div>
+
+                        <!-- Movies Library Selection -->
+                        <div id="MoviesLibrarySelectionContainer" style="display: none; margin-top: 15px;">
+                            <b>Select Movies Libraries to Scan:</b>
+                            <div id="MoviesLibraryCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-top: 5px; border-radius: 4px;">
+                                <p style="text-align: center; opacity: 0.7;">Loading movies libraries...</p>
+                            </div>
+                        </div>
                     </div>
                     <div id="NewsletterEventSettings">
                         <b style="margin-bottom: 5px;">Newsletter Event Settings:</b>
@@ -391,6 +407,206 @@
                 }
             }
             
+            // Fetch and display libraries based on selected types
+            function loadLibraries() {
+                var seriesEnabled = document.querySelector('#SeriesEnabled').checked;
+                var moviesEnabled = document.querySelector('#MoviesEnabled').checked;
+
+                // Load series libraries if enabled
+                if (seriesEnabled) {
+                    loadSeriesLibraries();
+                } else {
+                    document.getElementById('SeriesLibrarySelectionContainer').style.display = 'none';
+                }
+
+                // Load movies libraries if enabled
+                if (moviesEnabled) {
+                    loadMoviesLibraries();
+                } else {
+                    document.getElementById('MoviesLibrarySelectionContainer').style.display = 'none';
+                }
+            }
+
+            function loadSeriesLibraries() {
+                var url = ApiClient.getUrl('Library/MediaFolders');
+
+                ApiClient.getJSON(url).then(function(result) {
+                    var libraries = result.Items;
+                    var container = document.getElementById('SeriesLibraryCheckboxes');
+
+                    // Filter for series libraries
+                    var seriesLibraries = libraries.filter(function(library) {
+                        var collectionType = library.CollectionType ? library.CollectionType.toLowerCase() : '';
+                        return collectionType === 'tvshows';
+                    });
+
+                    if (seriesLibraries.length === 0) {
+                        container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No series libraries found</p>';
+                        document.getElementById('SeriesLibrarySelectionContainer').style.display = 'block';
+                        return;
+                    }
+
+                    container.innerHTML = '';
+
+                    seriesLibraries.forEach(function(library) {
+                        var div = document.createElement('div');
+                        div.className = 'checkboxContainer checkboxContainer-withDescription';
+                        div.style.marginBottom = '8px';
+
+                        var label = document.createElement('label');
+                        label.className = 'emby-checkbox-label';
+
+                        var checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = 'SeriesLibrary_' + library.Id;
+                        checkbox.name = 'SeriesLibrary_' + library.Id;
+                        checkbox.setAttribute('is', 'emby-checkbox');
+                        checkbox.setAttribute('data-library-id', library.Id);
+                        checkbox.className = 'series-library-checkbox';
+
+                        var span = document.createElement('span');
+                        span.textContent = library.Name;
+
+                        label.appendChild(checkbox);
+                        label.appendChild(span);
+                        div.appendChild(label);
+                        container.appendChild(div);
+                    });
+
+                    // Show the container
+                    document.getElementById('SeriesLibrarySelectionContainer').style.display = 'block';
+
+                    // Load saved selections
+                    loadSeriesLibrarySelections();
+                }).catch(function(error) {
+                    console.error('Error loading series libraries:', error);
+                    document.getElementById('SeriesLibraryCheckboxes').innerHTML =
+                        '<p style="text-align: center; color: #ff6b6b;">Error loading series libraries. Check console for details.</p>';
+                });
+            }
+
+            function loadMoviesLibraries() {
+                var url = ApiClient.getUrl('Library/MediaFolders');
+
+                ApiClient.getJSON(url).then(function(result) {
+                    var libraries = result.Items;
+                    var container = document.getElementById('MoviesLibraryCheckboxes');
+
+                    // Filter for movies libraries
+                    var moviesLibraries = libraries.filter(function(library) {
+                        var collectionType = library.CollectionType ? library.CollectionType.toLowerCase() : '';
+                        return collectionType === 'movies';
+                    });
+
+                    if (moviesLibraries.length === 0) {
+                        container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No movies libraries found</p>';
+                        document.getElementById('MoviesLibrarySelectionContainer').style.display = 'block';
+                        return;
+                    }
+
+                    container.innerHTML = '';
+
+                    moviesLibraries.forEach(function(library) {
+                        var div = document.createElement('div');
+                        div.className = 'checkboxContainer checkboxContainer-withDescription';
+                        div.style.marginBottom = '8px';
+
+                        var label = document.createElement('label');
+                        label.className = 'emby-checkbox-label';
+
+                        var checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = 'MoviesLibrary_' + library.Id;
+                        checkbox.name = 'MoviesLibrary_' + library.Id;
+                        checkbox.setAttribute('is', 'emby-checkbox');
+                        checkbox.setAttribute('data-library-id', library.Id);
+                        checkbox.className = 'movies-library-checkbox';
+
+                        var span = document.createElement('span');
+                        span.textContent = library.Name;
+
+                        label.appendChild(checkbox);
+                        label.appendChild(span);
+                        div.appendChild(label);
+                        container.appendChild(div);
+                    });
+
+                    // Show the container
+                    document.getElementById('MoviesLibrarySelectionContainer').style.display = 'block';
+
+                    // Load saved selections
+                    loadMoviesLibrarySelections();
+                }).catch(function(error) {
+                    console.error('Error loading movies libraries:', error);
+                    document.getElementById('MoviesLibraryCheckboxes').innerHTML =
+                        '<p style="text-align: center; color: #ff6b6b;">Error loading movies libraries. Check console for details.</p>';
+                });
+            }
+
+            // Load saved series library selections
+            function loadSeriesLibrarySelections() {
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                    var selectedLibraries = config.SelectedSeriesLibraries || [];
+
+                    // If no libraries are selected and series are enabled, select all by default
+                    if (selectedLibraries.length === 0 && document.querySelector('#SeriesEnabled').checked) {
+                        document.querySelectorAll('.series-library-checkbox').forEach(function(checkbox) {
+                            checkbox.checked = true;
+                        });
+                        // Save the default selection
+                        saveSeriesLibrariesSelection();
+                    } else {
+                        document.querySelectorAll('.series-library-checkbox').forEach(function(checkbox) {
+                            var libraryId = checkbox.getAttribute('data-library-id');
+                            checkbox.checked = selectedLibraries.indexOf(libraryId) !== -1;
+                        });
+                    }
+                });
+            }
+
+            // Load saved movies library selections
+            function loadMoviesLibrarySelections() {
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                    var selectedLibraries = config.SelectedMoviesLibraries || [];
+
+                    // If no libraries are selected and movies are enabled, select all by default
+                    if (selectedLibraries.length === 0 && document.querySelector('#MoviesEnabled').checked) {
+                        document.querySelectorAll('.movies-library-checkbox').forEach(function(checkbox) {
+                            checkbox.checked = true;
+                        });
+                        // Save the default selection
+                        saveMoviesLibrariesSelection();
+                    } else {
+                        document.querySelectorAll('.movies-library-checkbox').forEach(function(checkbox) {
+                            var libraryId = checkbox.getAttribute('data-library-id');
+                            checkbox.checked = selectedLibraries.indexOf(libraryId) !== -1;
+                        });
+                    }
+                });
+            }
+
+            function saveSeriesLibrariesSelection() {
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                    var selectedSeriesLibraries = [];
+                    document.querySelectorAll('.series-library-checkbox:checked').forEach(function(checkbox) {
+                        selectedSeriesLibraries.push(checkbox.getAttribute('data-library-id'));
+                    });
+                    config.SelectedSeriesLibraries = selectedSeriesLibraries;
+                    ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config);
+                });
+            }
+
+            function saveMoviesLibrariesSelection() {
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                    var selectedMoviesLibraries = [];
+                    document.querySelectorAll('.movies-library-checkbox:checked').forEach(function(checkbox) {
+                        selectedMoviesLibraries.push(checkbox.getAttribute('data-library-id'));
+                    });
+                    config.SelectedMoviesLibraries = selectedMoviesLibraries;
+                    ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config);
+                });
+            }
+
             function saveConfig() {
                 //console.log("test");
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
@@ -441,6 +657,20 @@
                     // formatting settings
                     var decimalPlaces = parseInt(document.querySelector('#CommunityRatingDecimalPlaces').value);
                     config.CommunityRatingDecimalPlaces = isNaN(decimalPlaces) ? 1 : decimalPlaces;
+
+                    // Save selected series libraries
+                    var selectedSeriesLibraries = [];
+                    document.querySelectorAll('.series-library-checkbox:checked').forEach(function(checkbox) {
+                        selectedSeriesLibraries.push(checkbox.getAttribute('data-library-id'));
+                    });
+                    config.SelectedSeriesLibraries = selectedSeriesLibraries;
+
+                    // Save selected movies libraries
+                    var selectedMoviesLibraries = [];
+                    document.querySelectorAll('.movies-library-checkbox:checked').forEach(function(checkbox) {
+                        selectedMoviesLibraries.push(checkbox.getAttribute('data-library-id'));
+                    });
+                    config.SelectedMoviesLibraries = selectedMoviesLibraries;
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -503,6 +733,8 @@
                     document.querySelector('#CommunityRatingDecimalPlaces').value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
 
                     updateMaxEmailSizeVisibility();
+                    
+                    loadLibraries();
 
                     Dashboard.hideLoadingMsg();
                 });
@@ -570,6 +802,23 @@
                 .addEventListener('change', function() {
                 updateMaxEmailSizeVisibility();
             });
+
+            // Load libraries when page loads
+            document.querySelector('#NewsletterConfigPage')
+                .addEventListener('pageshow', function() {
+                    loadLibraries();
+                });
+
+            // Update library visibility when checkboxes change
+            document.querySelector('#SeriesEnabled')
+                .addEventListener('change', function() {
+                    loadLibraries();
+                });
+
+            document.querySelector('#MoviesEnabled')
+                .addEventListener('change', function() {
+                    loadLibraries();
+                });
 
         </script>
     </div>
