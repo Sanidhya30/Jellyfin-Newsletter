@@ -26,44 +26,44 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Hidden inputs for SeriesEnabled and MoviesEnabled -->
+                    <input type="hidden" id="SeriesEnabled" value="false" />
+                    <input type="hidden" id="MoviesEnabled" value="false" />
+
                     <div id="LibrarySelection">
-                        <b style="margin-bottom: 5px;">Types of items to scan:</b>
-                        <table>
-                            <tr>
-                                <td>
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="SeriesEnabled" name="SeriesEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Series</span>
-                                        </label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="MoviesEnabled" name="MoviesEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Movies</span>
-                                        </label>
-                                    </div>
-                                </td>
-                            </tr>
+                        <b style="margin-bottom: 10px; display: block;">Library Selection:</b>
+                        <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%; text-align: center; padding: 10px; border: 1px solid #444; background: rgba(255,255,255,0.1);">Series</th>
+                                    <th style="width: 50%; text-align: center; padding: 10px; border: 1px solid #444; background: rgba(255,255,255,0.1);">Movies</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="vertical-align: top; padding: 10px; border: 1px solid #444;">
+                                        <div style="margin-bottom: 10px;">
+                                            <button id="SelectAllSeries" is="emby-button" type="button" class="raised button-submit select-all-btn">
+                                                <span>Select All Series</span>
+                                            </button>
+                                        </div>
+                                        <div id="SeriesLibraryCheckboxes" style="max-height: 200px; overflow-y: auto;">
+                                            <p style="text-align: center; opacity: 0.7;">Loading series libraries...</p>
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: top; padding: 10px; border: 1px solid #444;">
+                                        <div style="margin-bottom: 10px;">
+                                            <button id="SelectAllMovies" is="emby-button" type="button" class="raised button-submit select-all-btn">
+                                                <span>Select All Movies</span>
+                                            </button>
+                                        </div>
+                                        <div id="MoviesLibraryCheckboxes" style="max-height: 200px; overflow-y: auto;">
+                                            <p style="text-align: center; opacity: 0.7;">Loading movies libraries...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
-
-                        <!-- Series Library Selection -->
-                        <div id="SeriesLibrarySelectionContainer" style="display: none; margin-top: 15px;">
-                            <b>Select Series Libraries to Scan:</b>
-                            <div id="SeriesLibraryCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-top: 5px; border-radius: 4px;">
-                                <p style="text-align: center; opacity: 0.7;">Loading series libraries...</p>
-                            </div>
-                        </div>
-
-                        <!-- Movies Library Selection -->
-                        <div id="MoviesLibrarySelectionContainer" style="display: none; margin-top: 15px;">
-                            <b>Select Movies Libraries to Scan:</b>
-                            <div id="MoviesLibraryCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-top: 5px; border-radius: 4px;">
-                                <p style="text-align: center; opacity: 0.7;">Loading movies libraries...</p>
-                            </div>
-                        </div>
                     </div>
                     <div id="NewsletterEventSettings">
                         <b style="margin-bottom: 5px;">Newsletter Event Settings:</b>
@@ -380,6 +380,13 @@
             .DropdownSection {
                 cursor: pointer;
             }
+            .select-all-btn.all-selected {
+                background-color: #4CAF50 !important;
+                color: white !important;
+            }
+            .select-all-btn.all-selected span {
+                color: white !important;
+            }
         </style>
         <script type="text/javascript">
             var NewsletterConfig = {
@@ -407,24 +414,10 @@
                 }
             }
             
-            // Fetch and display libraries based on selected types
+            // Fetch and display libraries - always load both since they're visible in the table
             function loadLibraries() {
-                var seriesEnabled = document.querySelector('#SeriesEnabled').checked;
-                var moviesEnabled = document.querySelector('#MoviesEnabled').checked;
-
-                // Load series libraries if enabled
-                if (seriesEnabled) {
-                    loadSeriesLibraries();
-                } else {
-                    document.getElementById('SeriesLibrarySelectionContainer').style.display = 'none';
-                }
-
-                // Load movies libraries if enabled
-                if (moviesEnabled) {
-                    loadMoviesLibraries();
-                } else {
-                    document.getElementById('MoviesLibrarySelectionContainer').style.display = 'none';
-                }
+                loadSeriesLibraries();
+                loadMoviesLibraries();
             }
 
             function loadSeriesLibraries() {
@@ -442,7 +435,6 @@
 
                     if (seriesLibraries.length === 0) {
                         container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No series libraries found</p>';
-                        document.getElementById('SeriesLibrarySelectionContainer').style.display = 'block';
                         return;
                     }
 
@@ -473,11 +465,11 @@
                         container.appendChild(div);
                     });
 
-                    // Show the container
-                    document.getElementById('SeriesLibrarySelectionContainer').style.display = 'block';
-
                     // Load saved selections
-                    loadSeriesLibrarySelections();
+                    loadSeriesLibrarySelections().then(function() {
+                        // Update button state after loading selections
+                        updateSelectAllButtonState('#SelectAllSeries', '.series-library-checkbox', 'Series');
+                    });
                 }).catch(function(error) {
                     console.error('Error loading series libraries:', error);
                     document.getElementById('SeriesLibraryCheckboxes').innerHTML =
@@ -500,7 +492,6 @@
 
                     if (moviesLibraries.length === 0) {
                         container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No movies libraries found</p>';
-                        document.getElementById('MoviesLibrarySelectionContainer').style.display = 'block';
                         return;
                     }
 
@@ -531,11 +522,11 @@
                         container.appendChild(div);
                     });
 
-                    // Show the container
-                    document.getElementById('MoviesLibrarySelectionContainer').style.display = 'block';
-
                     // Load saved selections
-                    loadMoviesLibrarySelections();
+                    loadMoviesLibrarySelections().then(function() {
+                        // Update button state after loading selections
+                        updateSelectAllButtonState('#SelectAllMovies', '.movies-library-checkbox', 'Movies');
+                    });
                 }).catch(function(error) {
                     console.error('Error loading movies libraries:', error);
                     document.getElementById('MoviesLibraryCheckboxes').innerHTML =
@@ -545,7 +536,7 @@
 
             // Load saved series library selections
             function loadSeriesLibrarySelections() {
-                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                return ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
                     var selectedLibraries = config.SelectedSeriesLibraries || [];
 
                     // If no libraries are selected and series are enabled, select all by default
@@ -566,7 +557,7 @@
 
             // Load saved movies library selections
             function loadMoviesLibrarySelections() {
-                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                return ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
                     var selectedLibraries = config.SelectedMoviesLibraries || [];
 
                     // If no libraries are selected and movies are enabled, select all by default
@@ -809,16 +800,101 @@
                     loadLibraries();
                 });
 
-            // Update library visibility when checkboxes change
-            document.querySelector('#SeriesEnabled')
-                .addEventListener('change', function() {
-                    loadLibraries();
+            // Helper function to update button state
+            function updateSelectAllButton(buttonId, allSelected, selector) {
+                var type = selector.includes('series') ? 'Series' : 'Movies';
+                var button = document.querySelector(buttonId);
+                var span = button.querySelector('span');
+                if (allSelected) {
+                    button.classList.add('all-selected');
+                    span.textContent = 'Deselect All ' + type;
+                } else {
+                    button.classList.remove('all-selected');
+                    span.textContent = 'Select All ' + type;
+                }
+            }
+
+            // Helper function to update button state based on current checkbox state and config
+            function updateSelectAllButtonState(buttonId, selector, type) {
+                var checkboxes = document.querySelectorAll(selector);
+                var allChecked = Array.from(checkboxes).every(function(checkbox) {
+                    return checkbox.checked;
                 });
 
-            document.querySelector('#MoviesEnabled')
-                .addEventListener('change', function() {
-                    loadLibraries();
+                // Button shows "Deselect All" if all are checked
+                var shouldShowDeselect = allChecked;
+
+                updateSelectAllButton(buttonId, shouldShowDeselect, selector);
+            }
+
+            // Function to update SeriesEnabled based on library selections
+            function updateSeriesEnabled() {
+                var allSeriesSelected = Array.from(document.querySelectorAll('.series-library-checkbox')).every(function(checkbox) {
+                    return checkbox.checked;
                 });
+                document.querySelector('#SeriesEnabled').checked = allSeriesSelected;
+                updateSelectAllButtonState('#SelectAllSeries', '.series-library-checkbox', 'Series');
+            }
+
+            // Function to update MoviesEnabled based on library selections
+            function updateMoviesEnabled() {
+                var allMoviesSelected = Array.from(document.querySelectorAll('.movies-library-checkbox')).every(function(checkbox) {
+                    return checkbox.checked;
+                });
+                document.querySelector('#MoviesEnabled').checked = allMoviesSelected;
+                updateSelectAllButtonState('#SelectAllMovies', '.movies-library-checkbox', 'Movies');
+            }
+
+            // "Select All Series" button handler
+            document.querySelector('#SelectAllSeries')
+                .addEventListener('click', function(e) {
+                    var seriesCheckboxes = document.querySelectorAll('.series-library-checkbox');
+                    var allChecked = Array.from(seriesCheckboxes).every(function(checkbox) {
+                        return checkbox.checked;
+                    });
+
+                    // Toggle all series library checkboxes
+                    seriesCheckboxes.forEach(function(checkbox) {
+                        checkbox.checked = !allChecked;
+                    });
+
+                    // Update SeriesEnabled and button state
+                    updateSeriesEnabled();
+
+                    // Save the selections
+                    saveSeriesLibrariesSelection();
+                    e.preventDefault();
+                });
+
+            // "Select All Movies" button handler
+            document.querySelector('#SelectAllMovies')
+                .addEventListener('click', function(e) {
+                    var moviesCheckboxes = document.querySelectorAll('.movies-library-checkbox');
+                    var allChecked = Array.from(moviesCheckboxes).every(function(checkbox) {
+                        return checkbox.checked;
+                    });
+
+                    // Toggle all movies library checkboxes
+                    moviesCheckboxes.forEach(function(checkbox) {
+                        checkbox.checked = !allChecked;
+                    });
+
+                    // Update MoviesEnabled and button state
+                    updateMoviesEnabled();
+
+                    // Save the selections
+                    saveMoviesLibrariesSelection();
+                    e.preventDefault();
+                });
+
+            // Listen for individual checkbox changes to update enabled states
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('series-library-checkbox')) {
+                    updateSeriesEnabled();
+                } else if (e.target.classList.contains('movies-library-checkbox')) {
+                    updateMoviesEnabled();
+                }
+            });
 
         </script>
     </div>

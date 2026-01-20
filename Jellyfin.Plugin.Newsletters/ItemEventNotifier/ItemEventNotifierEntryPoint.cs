@@ -25,10 +25,14 @@ public class ItemEventNotifierEntryPoint(
     ILibraryManager libraryManager,
     Logger loggerInstance) : IHostedService
 {
-    private readonly PluginConfiguration config = Plugin.Instance!.Configuration;
     private readonly ItemEventManager itemManager = itemEventManager;
     private readonly ILibraryManager libManager = libraryManager;
     private readonly Logger logger = loggerInstance;
+
+    /// <summary>
+    /// Gets the current plugin configuration.
+    /// </summary>
+    private PluginConfiguration Config => Plugin.Instance!.Configuration;
 
     private string? GetLibraryId(BaseItem item)
     {
@@ -43,7 +47,7 @@ public class ItemEventNotifierEntryPoint(
                 return null;
             }
             
-            // logger.Debug($"Looking for library containing path: {item.Path}");
+            logger.Debug($"Looking for library containing path: {item.Path}");
             
             foreach (var folder in virtualFolders)
             {
@@ -51,13 +55,13 @@ public class ItemEventNotifierEntryPoint(
                 {
                     if (item.Path.StartsWith(location, StringComparison.OrdinalIgnoreCase))
                     {
-                        // logger.Debug($"Found library: {folder.Name} (ItemId: {folder.ItemId})");
+                        logger.Debug($"Found library: {folder.Name} (ItemId: {folder.ItemId})");
                         return folder.ItemId;
                     }
                 }
             }
             
-            // logger.Debug($"No library found for item {item.Name}");
+            logger.Debug($"No library found for item {item.Name}");
         }
         catch (Exception ex)
         {
@@ -75,11 +79,11 @@ public class ItemEventNotifierEntryPoint(
         }
         if (item is Movie)
         {
-            return config.SelectedMoviesLibraries.Contains(libraryId);
+            return Config.SelectedMoviesLibraries.Contains(libraryId);
         }
         else if (item is Episode)
         {
-            return config.SelectedSeriesLibraries.Contains(libraryId);
+            return Config.SelectedSeriesLibraries.Contains(libraryId);
         }
         return false;
     }
@@ -156,12 +160,14 @@ public class ItemEventNotifierEntryPoint(
         {
             return;
         }
+
         string? itemTypeName = null;
-        if (config.MoviesEnabled && item is Movie && IsLibrarySelected(item))
+
+        if ((item is Movie) && (Config.MoviesEnabled || IsLibrarySelected(item)))
         {
             itemTypeName = "movie";
         }
-        else if (config.SeriesEnabled && item is Episode && IsLibrarySelected(item))
+        else if ((item is Episode) && (Config.SeriesEnabled || IsLibrarySelected(item)))
         {
             itemTypeName = "episode";
         }
