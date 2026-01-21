@@ -19,12 +19,6 @@ namespace Jellyfin.Plugin.Newsletters.Scanner;
 public class Scraper
 {
     // Global Vars
-    // Readonly
-    private readonly PluginConfiguration config;
-    // private readonly string currRunScanList;
-    // private readonly string archiveFile;
-    // private readonly string currNewsletterDataFile;
-
     // Non-readonly
     private readonly PosterImageHandler imageHandler;
     private readonly SQLiteDatabase db;
@@ -32,6 +26,11 @@ public class Scraper
     private int totalLibCount;
 
     // private List<JsonFileObj> archiveObj;
+
+    /// <summary>
+    /// Gets the current plugin configuration.
+    /// </summary>
+    private PluginConfiguration Config => Plugin.Instance!.Configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Scraper"/> class.
@@ -43,22 +42,20 @@ public class Scraper
     {
         logger = loggerInstance;
         db = dbInstance;
-        
-        config = Plugin.Instance!.Configuration;
 
         totalLibCount = 0;
 
         imageHandler = imageHandlerInstance;
 
         logger.Debug("Setting Config Paths: ");
-        logger.Debug("\n  DataPath: " + config.DataPath +
-                     "\n  TempDirectory: " + config.TempDirectory +
-                     "\n  PluginsPath: " + config.PluginsPath +
-                     "\n  NewsletterDir: " + config.NewsletterDir +
-                     "\n  ProgramDataPath: " + config.ProgramDataPath +
-                     "\n  ProgramSystemPath: " + config.ProgramSystemPath +
-                     "\n  SystemConfigurationFilePath: " + config.SystemConfigurationFilePath +
-                     "\n  LogDirectoryPath: " + config.LogDirectoryPath );
+        logger.Debug("\n  DataPath: " + Config.DataPath +
+                     "\n  TempDirectory: " + Config.TempDirectory +
+                     "\n  PluginsPath: " + Config.PluginsPath +
+                     "\n  NewsletterDir: " + Config.NewsletterDir +
+                     "\n  ProgramDataPath: " + Config.ProgramDataPath +
+                     "\n  ProgramSystemPath: " + Config.ProgramSystemPath +
+                     "\n  SystemConfigurationFilePath: " + Config.SystemConfigurationFilePath +
+                     "\n  LogDirectoryPath: " + Config.LogDirectoryPath );
     }
 
     /// <summary>
@@ -89,7 +86,7 @@ public class Scraper
 
     private void BuildJsonObjsToCurrScanfile(IReadOnlyCollection<(BaseItem Item, EventType EventType)> items)
     {
-        if (!config.SeriesEnabled && !config.MoviesEnabled)
+        if (!Config.SeriesEnabled && !Config.MoviesEnabled)
         {
             logger.Info("No Libraries Enabled In Config!");
         }

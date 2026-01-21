@@ -19,12 +19,12 @@ namespace Jellyfin.Plugin.Newsletters.Clients;
 /// </summary>
 public class ClientBuilder(Logger loggerInstance,
     SQLiteDatabase dbInstance)
-{    
+{
     /// <summary>
     /// Gets the plugin configuration instance.
     /// </summary>
-    protected PluginConfiguration Config { get; } = Plugin.Instance!.Configuration;
-
+    protected PluginConfiguration Config => Plugin.Instance!.Configuration;
+    
     /// <summary>
     /// Gets the database instance.
     /// </summary>

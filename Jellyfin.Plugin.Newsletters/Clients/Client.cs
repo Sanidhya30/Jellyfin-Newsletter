@@ -17,7 +17,7 @@ public class Client(Logger loggerInstance,
     /// <summary>
     /// Gets the current plugin configuration.
     /// </summary>
-    protected PluginConfiguration Config { get; } = Plugin.Instance!.Configuration;
+    protected PluginConfiguration Config => Plugin.Instance!.Configuration;
 
     /// <summary>
     /// Gets the database instance.
