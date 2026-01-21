@@ -1,3 +1,4 @@
+#pragma warning disable CA2227, CA1002
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -355,14 +356,14 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool MoviesEnabled { get; set; }
 
     /// <summary>
-    /// Gets the list of selected series libraries.
+    /// Gets or sets the list of selected series libraries.
     /// </summary>
-    public Collection<string> SelectedSeriesLibraries { get; private set; } = new();
+    public Collection<string> SelectedSeriesLibraries { get; set; } = new();
 
     /// <summary>
-    /// Gets the list of selected movies libraries.
+    /// Gets or sets the list of selected movies libraries.
     /// </summary>
-    public Collection<string> SelectedMoviesLibraries { get; private set; } = new();
+    public Collection<string> SelectedMoviesLibraries { get; set; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether newsletter should be sent when items are added.
