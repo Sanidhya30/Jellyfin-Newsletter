@@ -1,3 +1,9 @@
+# 1.2.0.0
+
+- Added option to configure decimal places for community rating display in newsletters (0-4 places)
+- Added per-library selection for series and movies, allowing users to choose specific libraries instead of enabling/disabling all libraries
+- JavaScript code refactoring for improved UI functionality
+
 # 1.1.0.0
 
 - Migrating from SmtpClient to MailKit. (Fixes the authentication fails issue for proton mail)
