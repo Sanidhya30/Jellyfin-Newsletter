@@ -28,11 +28,6 @@ public class Scraper
     // private List<JsonFileObj> archiveObj;
 
     /// <summary>
-    /// Gets the current plugin configuration.
-    /// </summary>
-    private PluginConfiguration Config => Plugin.Instance!.Configuration;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="Scraper"/> class.
     /// </summary>
     /// <param name="loggerInstance">The logger instance to use for logging.</param>
@@ -57,6 +52,11 @@ public class Scraper
                      "\n  SystemConfigurationFilePath: " + Config.SystemConfigurationFilePath +
                      "\n  LogDirectoryPath: " + Config.LogDirectoryPath );
     }
+
+    /// <summary>
+    /// Gets the current plugin configuration.
+    /// </summary>
+    private PluginConfiguration Config => Plugin.Instance!.Configuration;
 
     /// <summary>
     /// Scans the provided media items and processes them for newsletter data.

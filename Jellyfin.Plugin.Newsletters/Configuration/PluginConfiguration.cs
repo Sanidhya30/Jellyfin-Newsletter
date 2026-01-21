@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using MediaBrowser.Model.Plugins;
 
@@ -354,14 +355,14 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool MoviesEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of selected series libraries.
+    /// Gets the list of selected series libraries.
     /// </summary>
-    public List<string> SelectedSeriesLibraries { get; set; } = new();
+    public Collection<string> SelectedSeriesLibraries { get; private set; } = new();
 
     /// <summary>
-    /// Gets or sets the list of selected movies libraries.
+    /// Gets the list of selected movies libraries.
     /// </summary>
-    public List<string> SelectedMoviesLibraries { get; set; } = new();
+    public Collection<string> SelectedMoviesLibraries { get; private set; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether newsletter should be sent when items are added.

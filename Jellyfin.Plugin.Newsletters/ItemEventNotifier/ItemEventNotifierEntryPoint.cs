@@ -43,7 +43,7 @@ public class ItemEventNotifierEntryPoint(
             
             if (string.IsNullOrEmpty(item.Path))
             {
-                logger.Debug($"Item {item.Name} has no path");
+                // logger.Debug($"Item {item.Name} has no path");
                 return null;
             }
             
@@ -55,7 +55,7 @@ public class ItemEventNotifierEntryPoint(
                 {
                     if (item.Path.StartsWith(location, StringComparison.OrdinalIgnoreCase))
                     {
-                        logger.Debug($"Found library: {folder.Name} (ItemId: {folder.ItemId})");
+                        // logger.Debug($"Found library: {folder.Name} (ItemId: {folder.ItemId})");
                         return folder.ItemId;
                     }
                 }
@@ -67,6 +67,7 @@ public class ItemEventNotifierEntryPoint(
         {
             logger.Error($"Error getting library ID for {item.Name}: {ex.Message}");
         }
+
         return null;
     }
 
@@ -77,6 +78,7 @@ public class ItemEventNotifierEntryPoint(
         {
             return false;
         }
+
         if (item is Movie)
         {
             return Config.SelectedMoviesLibraries.Contains(libraryId);
@@ -85,6 +87,7 @@ public class ItemEventNotifierEntryPoint(
         {
             return Config.SelectedSeriesLibraries.Contains(libraryId);
         }
+
         return false;
     }
 
@@ -96,61 +99,6 @@ public class ItemEventNotifierEntryPoint(
     private void ItemDeletedHandler(object? sender, ItemChangeEventArgs itemChangeEventArgs)
     {
         HandleItemChange(itemChangeEventArgs, "delete", itemManager.DeleteItem);
-    }
-
-    private void PrintItemProperties(BaseItem item, string label = "Item")
-    {
-        logger.Debug($"========== {label} Properties ==========");
-        
-        if (item == null)
-        {
-            logger.Debug("Item is NULL");
-            return;
-        }
-        
-        var type = item.GetType();
-        logger.Debug($"Type: {type.Name}");
-        
-        // Get all public properties
-        var properties = type.GetProperties(System.Reflection.BindingFlags.Public | 
-                                        System.Reflection.BindingFlags.Instance);
-        
-        foreach (var prop in properties)
-        {
-            try
-            {
-                var value = prop.GetValue(item);
-                
-                // Handle different types of values
-                if (value == null)
-                {
-                    logger.Debug($"{prop.Name}: NULL");
-                }
-                else if (value is System.Collections.IEnumerable && !(value is string))
-                {
-                    // Handle collections
-                    var collection = ((System.Collections.IEnumerable)value).Cast<object>().ToList();
-                    logger.Debug($"{prop.Name}: [{collection.Count} items]");
-                    if (collection.Count > 0 && collection.Count <= 5)
-                    {
-                        foreach (var item2 in collection)
-                        {
-                            logger.Debug($"  - {item2}");
-                        }
-                    }
-                }
-                else
-                {
-                    logger.Debug($"{prop.Name}: {value}");
-                }
-            }
-            catch (Exception e)
-            {
-                logger.Debug($"{prop.Name}: [Error reading - {e.Message}]");
-            }
-        }
-        
-        logger.Debug($"========== End {label} Properties ==========");
     }
 
     private void HandleItemChange(ItemChangeEventArgs e, string eventName, Action<BaseItem> action)
@@ -171,7 +119,7 @@ public class ItemEventNotifierEntryPoint(
         {
             itemTypeName = "episode";
         }
-        PrintItemProperties(item, "some item");
+
         if (itemTypeName is not null)
         {
             logger.Debug($"Item {eventName} event detected for {itemTypeName}: {item.Name}");
