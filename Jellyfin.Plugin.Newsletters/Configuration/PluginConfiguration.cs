@@ -1,4 +1,7 @@
+#pragma warning disable CA2227, CA1002
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using MediaBrowser.Model.Plugins;
 
@@ -124,6 +127,9 @@ public class PluginConfiguration : BasePluginConfiguration
         NewsletterOnItemAddedEnabled = true;
         NewsletterOnItemUpdatedEnabled = false;
         NewsletterOnItemDeletedEnabled = true;
+
+        // default community rating decimal places
+        CommunityRatingDecimalPlaces = 1;
     }
 
     /// <summary>
@@ -350,6 +356,16 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool MoviesEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets the list of selected series libraries.
+    /// </summary>
+    public Collection<string> SelectedSeriesLibraries { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the list of selected movies libraries.
+    /// </summary>
+    public Collection<string> SelectedMoviesLibraries { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets a value indicating whether newsletter should be sent when items are added.
     /// </summary>
     public bool NewsletterOnItemAddedEnabled { get; set; }
@@ -363,4 +379,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether newsletter should be sent when items are deleted.
     /// </summary>
     public bool NewsletterOnItemDeletedEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of decimal places to display for community ratings.
+    /// </summary>
+    public int CommunityRatingDecimalPlaces { get; set; }
 }

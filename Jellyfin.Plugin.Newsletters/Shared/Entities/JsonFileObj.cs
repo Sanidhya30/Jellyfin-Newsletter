@@ -179,7 +179,7 @@ public class JsonFileObj
             PremiereYear = "2025",
             RunTime = 60,
             OfficialRating = "TV-14",
-            CommunityRating = 10
+            CommunityRating = 8.413f
         };
 
         return obj;

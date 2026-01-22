@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
@@ -24,10 +25,71 @@ public class ItemEventNotifierEntryPoint(
     ILibraryManager libraryManager,
     Logger loggerInstance) : IHostedService
 {
-    private readonly PluginConfiguration config = Plugin.Instance!.Configuration;
     private readonly ItemEventManager itemManager = itemEventManager;
     private readonly ILibraryManager libManager = libraryManager;
     private readonly Logger logger = loggerInstance;
+
+    /// <summary>
+    /// Gets the current plugin configuration.
+    /// </summary>
+    private PluginConfiguration Config => Plugin.Instance!.Configuration;
+
+    private string? GetLibraryId(BaseItem item)
+    {
+        try
+        {
+            // Get all virtual folders (libraries)
+            var virtualFolders = libManager.GetVirtualFolders();
+            
+            if (string.IsNullOrEmpty(item.Path))
+            {
+                // logger.Debug($"Item {item.Name} has no path");
+                return null;
+            }
+            
+            logger.Debug($"Looking for library containing path: {item.Path}");
+            
+            foreach (var folder in virtualFolders)
+            {
+                foreach (var location in folder.Locations)
+                {
+                    if (item.Path.StartsWith(location, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // logger.Debug($"Found library: {folder.Name} (ItemId: {folder.ItemId})");
+                        return folder.ItemId;
+                    }
+                }
+            }
+            
+            logger.Debug($"No library found for item {item.Name}");
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Error getting library ID for {item.Name}: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    private bool IsLibrarySelected(BaseItem item)
+    {
+        var libraryId = GetLibraryId(item);
+        if (libraryId == null)
+        {
+            return false;
+        }
+
+        if (item is Movie)
+        {
+            return Config.SelectedMoviesLibraries.Contains(libraryId);
+        }
+        else if (item is Episode)
+        {
+            return Config.SelectedSeriesLibraries.Contains(libraryId);
+        }
+
+        return false;
+    }
 
     private void ItemAddedHandler(object? sender, ItemChangeEventArgs itemChangeEventArgs)
     {
@@ -48,11 +110,12 @@ public class ItemEventNotifierEntryPoint(
         }
 
         string? itemTypeName = null;
-        if (config.MoviesEnabled && item is Movie)
+
+        if ((item is Movie) && (Config.MoviesEnabled || IsLibrarySelected(item)))
         {
             itemTypeName = "movie";
         }
-        else if (config.SeriesEnabled && item is Episode)
+        else if ((item is Episode) && (Config.SeriesEnabled || IsLibrarySelected(item)))
         {
             itemTypeName = "episode";
         }
@@ -61,6 +124,10 @@ public class ItemEventNotifierEntryPoint(
         {
             logger.Debug($"Item {eventName} event detected for {itemTypeName}: {item.Name}");
             action(item);
+        }
+        else
+        {
+            logger.Debug($"Item {eventName} event ignored for {item.GetType().Name}: {item.Name}");
         }
     }
 

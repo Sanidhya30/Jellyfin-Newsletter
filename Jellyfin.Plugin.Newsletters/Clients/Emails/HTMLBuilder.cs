@@ -94,24 +94,15 @@ public class HtmlBuilder : ClientBuilder
             return htmlObj;
         }
 
+        if (replaceKey == "{CommunityRating}" && replaceValue is float rating)
+        {
+            replaceValue = rating.ToString($"F{Config.CommunityRatingDecimalPlaces}", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         Logger.Debug($"Replace Value {replaceKey} with " + replaceValue);
 
-        // Dictionary<string, object> html_params = new Dictionary<string, object>();
-        // html_params.Add("{Date}", DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
-        // html_params.Add(replaceKey, replaceValue);
-
         htmlObj = htmlObj.Replace(replaceKey, replaceValue.ToString(), StringComparison.Ordinal);
-        // Logger.Debug("HERE\n " + htmlObj)
 
-        // foreach (KeyValuePair<string, object> param in html_params)
-        // {
-        //     if (param.Value is not null)
-        //     {
-        //         htmlObj = htmlObj.Replace(param.Key, param.Value.ToString(), StringComparison.Ordinal);
-        //         // Logger.Debug("HERE\n " + htmlObj)
-        //     }
-        // }
-        
         Logger.Debug("New HTML OBJ: \n" + htmlObj);
         return htmlObj;
     }

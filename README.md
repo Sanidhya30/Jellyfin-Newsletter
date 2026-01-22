@@ -7,6 +7,7 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 * TMDB Integration
 * Local Poster images support as attachments
 * Event-Based item detection and notifications (Add/Update/Delete)
+* Per-library selection for series and movies
 * Multiple Bug Fixes and Enhancements
 
 # Jellyfin Newsletter Plugin
@@ -80,17 +81,25 @@ Movies
     └── Film-cd2.avi
 ```
 
+# How It Works
+
+This plugin uses event-driven notifications with scheduled processing. When library changes occur:
+
+- Library events (add/update/delete) are detected in real-time and stored in the database
+- A hidden background task processes these events every 30 seconds
+- The main Newsletter task generates and sends newsletters containing all accumulated events
+
 # Testing/Run Frequency
 
 Testing and Frequency can be managed through your Dashboard > Scheduled Tasks
 
 - There are 2 scheduled tasks:
-  - Newsletter: Which generates and sends out the newsletters via the clients configured in the plugin from the data scanned from the task below
-  - Filesystem Scraper:  Which scans your library, parses the data, and gets it ready for the email
+  - Newsletter: Generates and sends out newsletters containing all accumulated events since the last newsletter was sent
+  - Newsletter Item Scraper (hidden): Processes library events stored in the database (runs every 30 seconds)
 
 # Installation
 
-Manifest is up an running! You can now import the manifest in Jellyfin and this plugin will appear in the Catalog!
+Manifest is up and running! You can now import the manifest in Jellyfin and this plugin will appear in the Catalog!
 
 - Go to "Plugins" on your "Dashboard"
 - Go to the "Repositories" tab
@@ -113,24 +122,28 @@ Manifest is up an running! You can now import the manifest in Jellyfin and this 
 
 ### Library Selection
 
-- Select the item types you want to scan
-  - NOTE: this is Item types, not libraries
+- Choose specific libraries within each item type(Movies/Series) to include in newsletters
+  - Allows fine-grained control over which libraries trigger notifications
 
-## Newsletter Event Settings
+### Newsletter Event Settings
 
 Configure which library events should trigger newsletter notifications:
 
-### Send newsletter when items are added
+#### Send newsletter when items are added
 
 - Enable real-time notifications when new items are added to your library (default: enabled).
 
-### Send newsletter when items are updated
+#### Send newsletter when items are updated
 
 - Enable notifications when items are updated. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
 
-### Send newsletter when items are deleted
+#### Send newsletter when items are deleted
 
 - Enable notifications when items are removed from your library (default: enabled).
+
+### Community Rating Decimal Places
+
+- Configure the number of decimal places to display for community ratings in newsletters (0-4 places, default: 1)
 
 ## Newsletter HTML Format
 
@@ -158,7 +171,7 @@ For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
 
 ### To Addresses:
 
-- Recipients of the newsletter. Add add as many emails as you'd like, separated by commas.
+- Recipients of the newsletter. Add as many emails as you'd like, separated by commas.
   - All emails will be sent out via BCC
 
 ### From Address
@@ -187,7 +200,7 @@ For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
 ### Smtp Password
 
 - Your password to authenticate to the SMTP server above
-  - I'm not sure about other email servers, but google requires a Dev password to be created.
+  - I'm not sure about other email servers, but Google requires a Dev password to be created.
     - For gmail specific instructions, you can visit https://support.google.com/mail/answer/185833?hl=en for details
 
 ## Discord Config
@@ -252,7 +265,7 @@ These tags are ***available*** but not recommended to use. Untested behavior usi
 
 ## Known Issues
 
-See 'issues' tab in GitHub with the lable 'bug'
+See 'issues' tab in GitHub with the label 'bug'
 
 # Contribute
 

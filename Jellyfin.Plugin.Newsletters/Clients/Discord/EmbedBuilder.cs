@@ -72,7 +72,7 @@ public class EmbedBuilder(Logger loggerInstance,
 
                     var fieldsList = new Collection<EmbedField>();
 
-                    AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString(CultureInfo.InvariantCulture) ?? "N/A");
+                    AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
                     AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
                     AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
                     AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
@@ -153,20 +153,23 @@ public class EmbedBuilder(Logger loggerInstance,
 
         try
         {
+            // Use test object for consistency with HTML test
+            JsonFileObj item = JsonFileObj.GetTestObj();
+
             // Populating embed with reference to a Series, as it'll will cover all the cases
             int embedColor = GetEventColor("add", "Series"); // Use the new event-based color system for consistency
             string seaEps = "Season: 1 - Eps. 1 - 10\nSeason: 2 - Eps. 1 - 10\nSeason: 3 - Eps. 1 - 10";
 
             var fieldsList = new Collection<EmbedField>();
 
-            AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", "8.4");
-            AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", "TV-14");
-            AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", "45 min");
+            AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
+            AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
+            AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
             AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
             var embed = new Embed
             {
-                Title = "Newsletter-Test",
+                Title = item.Title,
                 Url = Config.Hostname,
                 Color = embedColor,
                 Timestamp = DateTime.UtcNow.ToString("o"),
@@ -176,7 +179,7 @@ public class EmbedBuilder(Logger loggerInstance,
             // Check if DiscordDescriptionEnabled is true
             if (Config.DiscordDescriptionEnabled)
             {
-                embed.Description = GetEventDescriptionPrefix("add") + "\n" + "Newsletter Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sit amet feugiat lectus. Mauris eu commodo arcu. Cras auctor ipsum nec sem vestibulum pellentesque.";
+                embed.Description = GetEventDescriptionPrefix("add") + "\n" + item.SeriesOverview;
             }
             else
             {
@@ -188,7 +191,7 @@ public class EmbedBuilder(Logger loggerInstance,
             {
                 embed.Thumbnail = new Thumbnail
                 {
-                    Url = "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/refs/heads/master/images/logo.png"
+                    Url = item.ImageURL
                 };
             }
 

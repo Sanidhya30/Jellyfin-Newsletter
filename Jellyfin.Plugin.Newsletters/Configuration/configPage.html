@@ -26,31 +26,46 @@
                             </div>
                         </div>
                     </div>
-                    <div id="LibrarySelection">
-                        <b style="margin-bottom: 5px;">Types of items to scan:</b> 
-                        <table>
-                            <tr>
-                                <td>
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="SeriesEnabled" name="SeriesEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Series</span>
-                                        </label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="MoviesEnabled" name="MoviesEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Movies</span>
-                                        </label>
-                                    </div>
-                                </td>
-                            </tr>
+                    <input type="hidden" id="SeriesEnabled" value="false" />
+                    <input type="hidden" id="MoviesEnabled" value="false" />
+
+                    <div class="inputContainer" id="LibrarySelection">
+                        <label class="inputLabel inputLabelUnfocused">Library Selection:</label>
+                        <table class="library-table">
+                            <thead>
+                                <tr>
+                                    <th>Series</th>
+                                    <th>Movies</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div style="margin-bottom: 10px;">
+                                            <button id="SelectAllSeries" is="emby-button" type="button" class="raised button-submit select-all-btn" onclick="toggleAll('Series')">
+                                                <span>Select All Series</span>
+                                            </button>
+                                        </div>
+                                        <div id="SeriesLibraryCheckboxes" class="library-checkbox-container">
+                                            <p class="loading-text">Loading series libraries...</p>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="margin-bottom: 10px;">
+                                            <button id="SelectAllMovies" is="emby-button" type="button" class="raised button-submit select-all-btn" onclick="toggleAll('Movies')">
+                                                <span>Select All Movies</span>
+                                            </button>
+                                        </div>
+                                        <div id="MoviesLibraryCheckboxes" class="library-checkbox-container">
+                                            <p class="loading-text">Loading movies libraries...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
-                    <div id="NewsletterEventSettings">
-                        <b style="margin-bottom: 5px;">Newsletter Event Settings:</b>
+                    <div class="inputContainer" id="NewsletterEventSettings">
+                        <label class="inputLabel inputLabelUnfocused">Newsletter Event Settings:</label>
                         <table>
                             <tr>
                                 <td style="vertical-align: top;">
@@ -85,6 +100,13 @@
                                 </td>
                             </tr>
                         </table>
+                    </div>
+                    <div class="inputContainer" id="CommunityRatingDecimals">
+                        <label class="inputLabel inputLabelUnfocused" for="CommunityRatingDecimalPlaces">Community Rating Decimal Places:</label>
+                        <input id="CommunityRatingDecimalPlaces" name="CommunityRatingDecimalPlaces" type="number" is="emby-input" min="0" max="4" />
+                        <div class="fieldDescription">
+                            Number of decimal places to display for community ratings (0-4). Default: 1
+                        </div>
                     </div>
 
                     <!-- <div class="inputContainer" id="BodyTemplate" style="display: none;"> -->
@@ -277,49 +299,31 @@
                                 </table>
                             </div>
                             <div class="inputContainer">
-                                <table style="width: 100%; table-layout: fixed;">
+                                <table class="color-table">
                                     <tr>
                                         <th colspan="2">Series Add Event</th>
                                         <th colspan="2">Series Delete Event</th>
                                         <th colspan="2">Series Update Event</th>
                                     </tr>
                                     <tr>
-                                        <td colspan="2">
-                                            <input id="DiscordSeriesAddEmbedColor" name="DiscordSeriesAddEmbedColor" type="color" is="emby-input"
-                                                style="height: 2.2em; width: 100%;" />
-                                        </td>
-                                        <td colspan="2">
-                                            <input id="DiscordSeriesDeleteEmbedColor" name="DiscordSeriesDeleteEmbedColor" type="color" is="emby-input"
-                                                style="height: 2.2em; width: 100%;" />
-                                        </td>
-                                        <td colspan="2">
-                                            <input id="DiscordSeriesUpdateEmbedColor" name="DiscordSeriesUpdateEmbedColor" type="color" is="emby-input"
-                                                style="height: 2.2em; width: 100%;" />
-                                        </td>
+                                        <td colspan="2"><input id="DiscordSeriesAddEmbedColor" name="DiscordSeriesAddEmbedColor" type="color" is="emby-input" /></td>
+                                        <td colspan="2"><input id="DiscordSeriesDeleteEmbedColor" name="DiscordSeriesDeleteEmbedColor" type="color" is="emby-input" /></td>
+                                        <td colspan="2"><input id="DiscordSeriesUpdateEmbedColor" name="DiscordSeriesUpdateEmbedColor" type="color" is="emby-input" /></td>
                                     </tr>
                                 </table>
                             </div>
                             <br>
                             <div class="inputContainer">
-                                <table style="width: 100%; table-layout: fixed;">
+                                <table class="color-table">
                                     <tr>
                                         <th colspan="2">Movies Add Event</th>
                                         <th colspan="2">Movies Delete Event</th>
                                         <th colspan="2">Movies Update Event</th>
                                     </tr>
                                     <tr>
-                                        <td colspan="2">
-                                            <input id="DiscordMoviesAddEmbedColor" name="DiscordMoviesAddEmbedColor" type="color" is="emby-input"
-                                                style="height: 2.2em; width: 100%;" />
-                                        </td>
-                                        <td colspan="2">
-                                            <input id="DiscordMoviesDeleteEmbedColor" name="DiscordMoviesDeleteEmbedColor" type="color" is="emby-input"
-                                                style="height: 2.2em; width: 100%;" />
-                                        </td>
-                                        <td colspan="2">
-                                            <input id="DiscordMoviesUpdateEmbedColor" name="DiscordMoviesUpdateEmbedColor" type="color" is="emby-input"
-                                                style="height: 2.2em; width: 100%;" />
-                                        </td>
+                                        <td colspan="2"><input id="DiscordMoviesAddEmbedColor" name="DiscordMoviesAddEmbedColor" type="color" is="emby-input" /></td>
+                                        <td colspan="2"><input id="DiscordMoviesDeleteEmbedColor" name="DiscordMoviesDeleteEmbedColor" type="color" is="emby-input" /></td>
+                                        <td colspan="2"><input id="DiscordMoviesUpdateEmbedColor" name="DiscordMoviesUpdateEmbedColor" type="color" is="emby-input" /></td>
                                     </tr>
                                 </table>
                             </div>
@@ -329,7 +333,7 @@
                         </details>
                     </div>
 
-                        <!-- buttons -->
+                    <!-- buttons -->
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                             <span>Save</span>
@@ -349,147 +353,246 @@
                 background: #C1C1BF;
             }
             td {
-                padding-right: 10px;
+                padding: 5px 10px;
             }
             .DropdownSection {
                 cursor: pointer;
             }
+            .select-all-btn.all-selected {
+                background-color: #4CAF50 !important;
+                color: white !important;
+            }
+            .select-all-btn.all-selected span {
+                color: white !important;
+            }
+            
+            /* Inline styles for classes */
+            .library-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            .library-table th { width: 50%; text-align: center; padding: 10px; border: 1px solid #444; background: rgba(255,255,255,0.1); }
+            .library-table td { vertical-align: top; padding: 10px; border: 1px solid #444; }
+            .library-checkbox-container { max-height: 200px; overflow-y: auto; }
+            .loading-text { text-align: center; opacity: 0.7; }
+            .color-table { width: 100%; table-layout: fixed; }
+            .color-table input { height: 2.2em; width: 100%; }
         </style>
         <script type="text/javascript">
             var NewsletterConfig = {
                 pluginUniqueId: '60f478ab-2dd6-4ea0-af10-04d033f75979'
             };
 
-            // function hideScraperConfig() {
-            //     let options = document.getElementsByName("options");
-            //     options.forEach((option) => {
-            //         option.style.display = 'none';
-            //     });
-            // }
-
-            // function showScraperConfig(id) {
-            //     document.getElementById(id).style.display = 'block';
-            // }
+            // Configuration fields mapping
+            var FIELDS = {
+                checkboxes: ['DebugMode', 'NewsletterOnItemAddedEnabled', 'NewsletterOnItemUpdatedEnabled', 'NewsletterOnItemDeletedEnabled', 'SeriesEnabled', 'MoviesEnabled', 'DiscordDescriptionEnabled', 'DiscordThumbnailEnabled', 'DiscordRatingEnabled', 'DiscordPGRatingEnabled', 'DiscordDurationEnabled', 'DiscordEpisodesEnabled'],
+                inputs: ['Hostname', 'SMTPServer', 'SMTPPort', 'SMTPUser', 'SMTPPass', 'DiscordWebhookURL', 'DiscordWebhookName', 'VisibleToAddr', 'ToAddr', 'FromAddr', 'Subject', 'Body', 'Entry', 'HostingSelector', 'EmailSize', 'DiscordSeriesAddEmbedColor', 'DiscordSeriesDeleteEmbedColor', 'DiscordSeriesUpdateEmbedColor', 'DiscordMoviesAddEmbedColor', 'DiscordMoviesDeleteEmbedColor', 'DiscordMoviesUpdateEmbedColor']
+            };
 
             function updateMaxEmailSizeVisibility() {
                 var posterType = document.querySelector('#HostingSelector').value;
                 var maxEmailSizeDiv = document.getElementById('MaxEmailSizeContainer');
-                if (posterType === "attachment") {
-                    maxEmailSizeDiv.style.display = '';
-                } else {
-                    maxEmailSizeDiv.style.display = 'none';
+                if (maxEmailSizeDiv) {
+                    maxEmailSizeDiv.style.display = (posterType === "attachment") ? '' : 'none';
                 }
             }
             
-            function saveConfig() {
-                //console.log("test");
-                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                    config.DebugMode = document.querySelector('#DebugMode').checked;
-                    //serverDetails
-                    config.SMTPServer = document.querySelector('#SMTPServer').value;
-                    config.SMTPPort = document.querySelector('#SMTPPort').value;
-                    config.SMTPUser = document.querySelector('#SMTPUser').value;
-                    config.SMTPPass = document.querySelector('#SMTPPass').value;
-                    //discordWebhookDetails
-                    config.DiscordWebhookURL = document.querySelector('#DiscordWebhookURL').value;
-                    config.DiscordWebhookName = document.querySelector('#DiscordWebhookName').value;
-                    config.DiscordDescriptionEnabled = document.querySelector('#DiscordDescriptionEnabled').checked;
-                    config.DiscordThumbnailEnabled = document.querySelector('#DiscordThumbnailEnabled').checked;
-                    config.DiscordRatingEnabled = document.querySelector('#DiscordRatingEnabled').checked;
-                    config.DiscordPGRatingEnabled = document.querySelector('#DiscordPGRatingEnabled').checked;
-                    config.DiscordDurationEnabled = document.querySelector('#DiscordDurationEnabled').checked;
-                    config.DiscordEpisodesEnabled = document.querySelector('#DiscordEpisodesEnabled').checked;
-                    config.DiscordSeriesAddEmbedColor = document.querySelector('#DiscordSeriesAddEmbedColor').value;
-                    config.DiscordSeriesDeleteEmbedColor = document.querySelector('#DiscordSeriesDeleteEmbedColor').value;
-                    config.DiscordSeriesUpdateEmbedColor = document.querySelector('#DiscordSeriesUpdateEmbedColor').value;
-                    config.DiscordMoviesAddEmbedColor = document.querySelector('#DiscordMoviesAddEmbedColor').value;
-                    config.DiscordMoviesDeleteEmbedColor = document.querySelector('#DiscordMoviesDeleteEmbedColor').value;
-                    config.DiscordMoviesUpdateEmbedColor = document.querySelector('#DiscordMoviesUpdateEmbedColor').value;
-                    //emailDetails
-                    config.ToAddr = document.querySelector('#ToAddr').value;
-                    config.VisibleToAddr = document.querySelector('#VisibleToAddr').value;
-                    config.FromAddr = document.querySelector('#FromAddr').value;
-                    config.Subject = document.querySelector('#Subject').value;
-                    //emailHtmlFormatting
-                    config.Body = document.querySelector('#Body').value;
-                    config.Entry = document.querySelector('#Entry').value;
-                    //librariesEnabled
-                    config.SeriesEnabled = document.querySelector('#SeriesEnabled').checked;
-                    config.MoviesEnabled = document.querySelector('#MoviesEnabled').checked;
-                    // scraperConfig
-                    config.PosterType = document.querySelector('#HostingSelector').value;
-                    config.EmailSize = document.querySelector('#EmailSize').value;
-                    //config.ApiKey = document.querySelector('#ApiKey').value;
-                    //hosting options
-                    config.Hostname = document.querySelector('#Hostname').value;
+            function loadLibraries() {
+                ApiClient.getJSON(ApiClient.getUrl('Library/MediaFolders')).then(function(result) {
+                    renderLibrarySection(result.Items, 'tvshows', 'Series');
+                    renderLibrarySection(result.Items, 'movies', 'Movies');
+                }).catch(function(error) {
+                    console.error('Error loading libraries:', error);
+                    var seriesBox = document.getElementById('SeriesLibraryCheckboxes');
+                    if(seriesBox) seriesBox.innerHTML = '<p style="text-align: center; color: #ff6b6b;">Error loading series libraries. Check console for details.</p>';
+                    var moviesBox = document.getElementById('MoviesLibraryCheckboxes');
+                    if(moviesBox) moviesBox.innerHTML = '<p style="text-align: center; color: #ff6b6b;">Error loading movies libraries. Check console for details.</p>';
+                });
+            }
+
+            function renderLibrarySection(libraries, typeFilter, prefix) {
+                var filtered = libraries.filter(function(l) { 
+                    return (l.CollectionType || '').toLowerCase() === typeFilter; 
+                });
+                var container = document.getElementById(prefix + 'LibraryCheckboxes');
+
+                if (!container) return;
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No ' + typeFilter + ' libraries found</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+
+                filtered.forEach(function(library) {
+                    var div = document.createElement('div');
+                    div.className = 'checkboxContainer checkboxContainer-withDescription';
+                    div.style.marginBottom = '8px';
                     
-                    // newsletter event settings
-                    config.NewsletterOnItemAddedEnabled = document.querySelector('#NewsletterOnItemAddedEnabled').checked;
-                    config.NewsletterOnItemUpdatedEnabled = document.querySelector('#NewsletterOnItemUpdatedEnabled').checked;
-                    config.NewsletterOnItemDeletedEnabled = document.querySelector('#NewsletterOnItemDeletedEnabled').checked;
+                    var label = document.createElement('label');
+                    label.className = 'emby-checkbox-label';
+                    
+                    var checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = prefix + 'Library_' + library.Id;
+                    checkbox.name = prefix + 'Library_' + library.Id;
+                    checkbox.setAttribute('is', 'emby-checkbox');
+                    checkbox.setAttribute('data-library-id', library.Id);
+                    checkbox.className = prefix.toLowerCase() + '-library-checkbox';
+                    // Event delegation handling via generic update
+                    checkbox.onchange = function() { updateSelectionState(prefix); };
+
+                    var span = document.createElement('span');
+                    span.textContent = library.Name;
+
+                    label.appendChild(checkbox);
+                    label.appendChild(span);
+                    div.appendChild(label);
+                    container.appendChild(div);
+                });
+
+                // Load saved selections
+                loadLibrarySelections(prefix);
+            }
+
+            // Load saved series/movies library selections
+            function loadLibrarySelections(prefix) {
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                    var savedIds = config['Selected' + prefix + 'Libraries'] || [];
+                    var checkboxes = document.querySelectorAll('.' + prefix.toLowerCase() + '-library-checkbox');
+                    
+                    // If no libraries are selected and enabled is true, select all by default
+                    var enabledCb = document.querySelector('#' + prefix + 'Enabled');
+                    var shouldSelectAll = savedIds.length === 0 && enabledCb && enabledCb.checked;
+                    
+                    for (var i = 0; i < checkboxes.length; i++) {
+                        var cb = checkboxes[i];
+                        cb.checked = shouldSelectAll || savedIds.indexOf(cb.getAttribute('data-library-id')) !== -1;
+                    }
+                    
+                    // Update button state after loading selections
+                    updateSelectionState(prefix);
+                });
+            }
+
+            // Helper function to update button state based on current checkbox state and config
+            function updateSelectionState(prefix) {
+                var checkboxes = document.querySelectorAll('.' + prefix.toLowerCase() + '-library-checkbox');
+                var allChecked = checkboxes.length > 0;
+                for (var i = 0; i < checkboxes.length; i++) {
+                    if (!checkboxes[i].checked) {
+                        allChecked = false;
+                        break;
+                    }
+                }
+                
+                // Function to update Enabled based on library selections
+                var enabledCb = document.querySelector('#' + prefix + 'Enabled');
+                if(enabledCb) enabledCb.checked = allChecked;
+
+                // Helper function to update button state
+                var btn = document.querySelector('#SelectAll' + prefix);
+                if (btn) {
+                    var span = btn.querySelector('span');
+                    if (allChecked) {
+                        btn.classList.add('all-selected');
+                        if(span) span.textContent = 'Deselect All ' + prefix;
+                    } else {
+                        btn.classList.remove('all-selected');
+                        if(span) span.textContent = 'Select All ' + prefix;
+                    }
+                }
+            }
+
+            // "Select All" button handler
+            window.toggleAll = function(prefix) {
+                var checkboxes = document.querySelectorAll('.' + prefix.toLowerCase() + '-library-checkbox');
+                var allChecked = true;
+                 for (var i = 0; i < checkboxes.length; i++) {
+                    if (!checkboxes[i].checked) {
+                        allChecked = false;
+                        break;
+                    }
+                }
+                
+                // Toggle all library checkboxes
+                for (var i = 0; i < checkboxes.length; i++) {
+                     checkboxes[i].checked = !allChecked;
+                }
+                
+                // Update Enabled and button state
+                updateSelectionState(prefix);
+            };
+
+            function saveConfig() {
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
+                    // Loop through mapped fields
+                    FIELDS.checkboxes.forEach(function(id) { 
+                        var el = document.querySelector('#' + id);
+                        if(el) config[id] = el.checked; 
+                    });
+                    FIELDS.inputs.forEach(function(id) { 
+                        var el = document.querySelector('#' + id);
+                        if(!el) return;
+                        // Handle manual name mapping
+                        if(id === 'HostingSelector') config.PosterType = el.value;
+                        else config[id] = el.value;
+                    });
+
+                    // Formatting Settings
+                    var decimalPlacesEl = document.querySelector('#CommunityRatingDecimalPlaces');
+                    var decimalPlaces = decimalPlacesEl ? parseInt(decimalPlacesEl.value) : 1;
+                    config.CommunityRatingDecimalPlaces = isNaN(decimalPlaces) ? 1 : decimalPlaces;
+
+                    // Save selected series libraries
+                    var selectedSeriesLibraries = [];
+                    var seriesChecked = document.querySelectorAll('.series-library-checkbox:checked');
+                    for (var i = 0; i < seriesChecked.length; i++) {
+                         selectedSeriesLibraries.push(seriesChecked[i].getAttribute('data-library-id'));
+                    }
+                    config.SelectedSeriesLibraries = selectedSeriesLibraries;
+
+                    // Save selected movies libraries
+                    var selectedMoviesLibraries = [];
+                    var moviesChecked = document.querySelectorAll('.movies-library-checkbox:checked');
+                    for (var i = 0; i < moviesChecked.length; i++) {
+                         selectedMoviesLibraries.push(moviesChecked[i].getAttribute('data-library-id'));
+                    }
+                    config.SelectedMoviesLibraries = selectedMoviesLibraries;
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
                         console.log("RESULT: ", result);
                     });
                 });
-
             }
 
             function loadConfig() {
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     console.log("Populating Page..");
-                    document.querySelector('#DebugMode').checked = config.DebugMode;
-                    //serverDetails
-                    document.querySelector('#SMTPServer').value = config.SMTPServer;
-                    document.querySelector('#SMTPPort').value = config.SMTPPort;
-                    document.querySelector('#SMTPUser').value = config.SMTPUser;
-                    document.querySelector('#SMTPPass').value = config.SMTPPass;
-                    //discordWebhookDetails
-                    document.querySelector('#DiscordWebhookURL').value = config.DiscordWebhookURL;
-                    document.querySelector('#DiscordWebhookName').value = config.DiscordWebhookName;
-                    document.querySelector('#DiscordDescriptionEnabled').checked = config.DiscordDescriptionEnabled;
-                    document.querySelector('#DiscordThumbnailEnabled').checked = config.DiscordThumbnailEnabled;
-                    document.querySelector('#DiscordRatingEnabled').checked = config.DiscordRatingEnabled;
-                    document.querySelector('#DiscordPGRatingEnabled').checked = config.DiscordPGRatingEnabled;
-                    document.querySelector('#DiscordDurationEnabled').checked = config.DiscordDurationEnabled;
-                    document.querySelector('#DiscordEpisodesEnabled').checked = config.DiscordEpisodesEnabled;
-                    document.querySelector('#DiscordSeriesAddEmbedColor').value = config.DiscordSeriesAddEmbedColor;
-                    document.querySelector('#DiscordSeriesDeleteEmbedColor').value = config.DiscordSeriesDeleteEmbedColor;
-                    document.querySelector('#DiscordSeriesUpdateEmbedColor').value = config.DiscordSeriesUpdateEmbedColor;
-                    document.querySelector('#DiscordMoviesAddEmbedColor').value = config.DiscordMoviesAddEmbedColor;
-                    document.querySelector('#DiscordMoviesDeleteEmbedColor').value = config.DiscordMoviesDeleteEmbedColor;
-                    document.querySelector('#DiscordMoviesUpdateEmbedColor').value = config.DiscordMoviesUpdateEmbedColor;
-                    //emailDetails
-                    document.querySelector('#VisibleToAddr').value = config.VisibleToAddr;
-                    document.querySelector('#ToAddr').value = config.ToAddr;
-                    document.querySelector('#FromAddr').value = config.FromAddr;
-                    document.querySelector('#Subject').value = config.Subject;
-                    //emailHtmlFormatting
-                    document.querySelector('#Body').value = config.Body;
-                    document.querySelector('#Entry').value = config.Entry;
-                    //librariesEnabled
-                    document.querySelector('#SeriesEnabled').checked = config.SeriesEnabled;
-                    document.querySelector('#MoviesEnabled').checked = config.MoviesEnabled;
-                    // scraperConfig
-                    document.querySelector('#HostingSelector').value = config.PosterType;
-                    document.querySelector('#EmailSize').value = config.EmailSize;
-                    // hideScraperConfig();
-                    // showScraperConfig(config.PHType);
-                    //document.querySelector('#ApiKey').value = config.ApiKey;
-                    //hosting options
-                    document.querySelector('#Hostname').value = config.Hostname;
                     
-                    // newsletter event settings
-                    document.querySelector('#NewsletterOnItemAddedEnabled').checked = config.NewsletterOnItemAddedEnabled;
-                    document.querySelector('#NewsletterOnItemUpdatedEnabled').checked = config.NewsletterOnItemUpdatedEnabled;
-                    document.querySelector('#NewsletterOnItemDeletedEnabled').checked = config.NewsletterOnItemDeletedEnabled;
+                    // Loop through mapped fields
+                    FIELDS.checkboxes.forEach(function(id) { 
+                        var el = document.querySelector('#' + id);
+                        if(el) el.checked = config[id]; 
+                    });
+                    
+                    FIELDS.inputs.forEach(function(id) {
+                        var el = document.querySelector('#' + id);
+                        if(el && config[id] !== undefined) el.value = config[id];
+                    });
+
+                    // Specific Mappings
+                    var hostingEl = document.querySelector('#HostingSelector');
+                    if(hostingEl && config.PosterType) hostingEl.value = config.PosterType;
+                    
+                    var ratingEl = document.querySelector('#CommunityRatingDecimalPlaces');
+                    if(ratingEl) ratingEl.value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
 
                     updateMaxEmailSizeVisibility();
+                    
+                    loadLibraries();
 
                     Dashboard.hideLoadingMsg();
                 });
-
             }
 
             document.querySelector('#NewsletterConfigPage')
@@ -511,16 +614,12 @@
             document.querySelector('#testButton')
                 .addEventListener('click', function(e) {
                 Dashboard.showLoadingMsg();
-                // saveConfig();
                 console.log("Test mail button pressed!");
-                // Configure test notification
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     console.log("TEST: ", config);
-                    let url = ApiClient.getUrl('SmtpMailer/SendTestMail');
-                    console.log("ServerAddr: ", ApiClient.serverAddress());
-                    console.log("URL: ",url);
-                    let data = JSON.stringify(config);
-                    ApiClient.ajax({ type: 'POST', url, data, contentType: 'application/json' });
+                    var url = ApiClient.getUrl('SmtpMailer/SendTestMail');
+                    var data = JSON.stringify(config);
+                    ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
                 });
                 Dashboard.hideLoadingMsg();
                 e.preventDefault();
@@ -531,16 +630,12 @@
             document.querySelector('#testButtonDiscord')
                 .addEventListener('click', function(e) {
                 Dashboard.showLoadingMsg();
-                // saveConfig();
                 console.log("Test discord message button pressed!");
-                // Configure test notification
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     console.log("TEST: ", config);
-                    let url = ApiClient.getUrl('Discord/SendDiscordTestMessage');
-                    // console.log("ServerAddr: ", ApiClient.serverAddress());
-                    // console.log("URL: ",url);
-                    let data = JSON.stringify(config);
-                    ApiClient.ajax({ type: 'POST', url, data, contentType: 'application/json' });
+                    var url = ApiClient.getUrl('Discord/SendDiscordTestMessage');
+                    var data = JSON.stringify(config);
+                    ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
                 });
                 Dashboard.hideLoadingMsg();
                 e.preventDefault();
@@ -553,7 +648,6 @@
                 .addEventListener('change', function() {
                 updateMaxEmailSizeVisibility();
             });
-
         </script>
     </div>
 </body>
