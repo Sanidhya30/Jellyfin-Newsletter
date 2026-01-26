@@ -80,10 +80,13 @@ public class EmbedBuilder(Logger loggerInstance,
                     // Add event type query otherwise discord deduplicate the embed with same url
                     // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
                     // Adding event type query should not cause issue
+                    string embedUrl = string.IsNullOrEmpty(Config.Hostname) 
+                        ? string.Empty 
+                        : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
                     var embed = new Embed
                     {
                         Title = item.Title,
-                        Url = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}",
+                        Url = embedUrl,
                         Color = embedColor,
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Fields = fieldsList.AsReadOnly(),
@@ -167,10 +170,13 @@ public class EmbedBuilder(Logger loggerInstance,
             AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
             AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
 
+            string embedUrl = string.IsNullOrEmpty(Config.Hostname) 
+                ? string.Empty
+                : Config.Hostname;
             var embed = new Embed
             {
                 Title = item.Title,
-                Url = Config.Hostname,
+                Url = embedUrl,
                 Color = embedColor,
                 Timestamp = DateTime.UtcNow.ToString("o"),
                 Fields = fieldsList.AsReadOnly(),
