@@ -338,9 +338,12 @@ public class HtmlBuilder : ClientBuilder
             tmp_entry = tmp_entry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
 
             // Compose the entry's HTML now (for accurate size)
+            string itemUrl = string.IsNullOrEmpty(Config.Hostname) 
+                ? string.Empty
+                : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
             string entryHTML = tmp_entry
                 .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                .Replace("{ItemURL}", $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}", StringComparison.Ordinal);
+                .Replace("{ItemURL}", itemUrl, StringComparison.Ordinal);
 
             int entryBytes = Encoding.UTF8.GetByteCount(entryHTML) + entryImageBytes;
 
@@ -450,9 +453,12 @@ public class HtmlBuilder : ClientBuilder
                 tmp_entry = tmp_entry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
 
                 // Compose the entry's HTML now
+                string itemUrl = string.IsNullOrEmpty(Config.Hostname) 
+                    ? string.Empty
+                    : Config.Hostname;
                 string entryHTML = tmp_entry
                     .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                    .Replace("{ItemURL}", Config.Hostname, StringComparison.Ordinal);
+                    .Replace("{ItemURL}", itemUrl, StringComparison.Ordinal);
 
                 testHTML.Append(entryHTML);
             }
