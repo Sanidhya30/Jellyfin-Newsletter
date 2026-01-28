@@ -7,6 +7,7 @@ using Jellyfin.Plugin.Newsletters.Scanner;
 using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -85,10 +86,10 @@ public class ItemEventManager(
                         }
 
                         // Metadata not refreshed yet and under retry limit.
-                        if (item.ProviderIds.Keys.Count == 0 && queueItem.RetryCount < MaxRetries)
+                        if (!IsMetadataComplete(item) && queueItem.RetryCount < MaxRetries)
                         {
-                            logger.Debug($"Requeue {item.Name}, no provider ids");
                             queueItem.RetryCount++;
+                            logger.Debug($"Requeue {item.Name}, metadata incomplete - Retry {queueItem.RetryCount}/{MaxRetries}");
                             itemAddedQueue.AddOrUpdate(queueItem.ItemId, queueItem, (_, _) => queueItem);
                             continue;
                         }
@@ -109,6 +110,50 @@ public class ItemEventManager(
                 }
             }
         }
+    }
+
+    private bool IsMetadataComplete(BaseItem item)
+    {
+        // 1. Provider IDs check (your existing check)
+        if (item.ProviderIds == null || item.ProviderIds.Keys.Count == 0)
+        {
+            logger.Debug($"{item.Name}: Missing provider IDs");
+            return false;
+        }
+
+        // 2. Check for valid name (not the filename fallback)
+        if (string.IsNullOrWhiteSpace(item.Name))
+        {
+            logger.Debug($"Item {item.Id}: Missing name");
+            return false;
+        }
+
+        // 3. Check if overview/description exists
+        if (string.IsNullOrWhiteSpace(item.Overview))
+        {
+            logger.Debug($"{item.Name}: Missing overview");
+            return false;
+        }
+
+        // 4. Check for primary image (poster/thumbnail)
+        if (string.IsNullOrWhiteSpace(item.PrimaryImagePath))
+        {
+            logger.Debug($"{item.Name}: Missing primary image");
+            return false;
+        }
+
+        // 5. Episode-specific checks
+        if (item is Episode episode)
+        {
+            // Episodes should have season/episode numbers
+            if (!episode.IndexNumber.HasValue || !episode.ParentIndexNumber.HasValue)
+            {
+                logger.Debug($"{item.Name}: Missing episode/season numbers");
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
