@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.2.0.0"
+version: "1.2.1.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated media"
@@ -17,7 +17,6 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Added option to configure decimal places for community rating display in newsletters.
-  - Added per-library selection for series and movies, allowing users to choose specific libraries.
-  - JavaScript code refactoring for improved UI functionality.
+  - Minor enhancement for item processing queue.
+  - Bug fix: Added handling of item URLs when hostname is empty in configuration.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

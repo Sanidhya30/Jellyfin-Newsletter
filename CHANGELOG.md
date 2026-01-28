@@ -1,3 +1,8 @@
+# 1.2.1.0
+
+- Enhanced logic to rely on other item details apart from provider ID before adding the item for processing
+- Bug Fix: Added handling of item URLs when hostname is empty in configuration
+
 # 1.2.0.0
 
 - Added option to configure decimal places for community rating display in newsletters (0-4 places)

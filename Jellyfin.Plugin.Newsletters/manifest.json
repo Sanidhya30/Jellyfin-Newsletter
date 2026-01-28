@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.2.1.0",
+                "changelog": "- Minor enhancement for item processing queue.\n- Bug fix: Added handling of item URLs when hostname is empty in configuration.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.2.1.0/newsletters_1.2.1.0.zip",
+                "checksum": "8114953ccac4cc9b9443c1101d0fcc2d",
+                "timestamp": "2026-01-28T15:40:19Z"
+            },
+            {
                 "version": "1.2.0.0",
                 "changelog": "- Added option to configure decimal places for community rating display in newsletters.\n- Added per-library selection for series and movies, allowing users to choose specific libraries.\n- JavaScript code refactoring for improved UI functionality.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",
