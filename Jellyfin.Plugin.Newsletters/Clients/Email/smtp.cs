@@ -14,7 +14,7 @@ using MimeKit;
 
 // using System.Net.NetworkCredential;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
+namespace Jellyfin.Plugin.Newsletters.Clients.Email;
 
 /// <summary>
 /// Interaction logic for SendMail.xaml.
@@ -121,6 +121,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
             using (var client = new SmtpClient())
             {
+                client.CheckCertificateRevocation = false;
                 var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
                 client.Connect(smtpAddress, portNumber, secureOptions);
                 client.Authenticate(username, password);
@@ -209,6 +210,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 int partNum = 1; // for multi-part email subjects if needed
                 foreach (var (builtString, inlineImages) in chunks)
                 {
+                    result = false;
                     Logger.Debug($"Email part {partNum} image count: {inlineImages.Count}");
                     // Add template substitutions
                     string finalBody = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
@@ -277,8 +279,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
                     using (var client = new SmtpClient())
                     {
                         client.Timeout = smtpTimeout;
+                        client.CheckCertificateRevocation = false;
                         var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
-                        
                         client.Connect(smtpAddress, portNumber, secureOptions);
                         client.Authenticate(username, password);
                         Logger.Debug($"Sending email part {partNum} with finalBody: {finalBody}");
@@ -288,10 +290,9 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
                     Logger.Debug($"Email part {partNum} sent successfully.");
                     hb.CleanUp(finalBody); // or as appropriate for the chunk
+                    result = true;
                     partNum++;
                 }
-
-                result = true;
             }
             else
             {

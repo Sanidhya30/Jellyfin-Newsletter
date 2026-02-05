@@ -122,6 +122,16 @@ public class PluginConfiguration : BasePluginConfiguration
         DiscordMoviesAddEmbedColor = "#00ff00";
         DiscordMoviesDeleteEmbedColor = "#ff0000";
         DiscordMoviesUpdateEmbedColor = "#0000ff";
+
+        // default telegram fields
+        TelegramBotToken = string.Empty;
+        TelegramChatId = string.Empty;
+        TelegramDescriptionEnabled = true;
+        TelegramThumbnailEnabled = true;
+        TelegramRatingEnabled = true;
+        TelegramPGRatingEnabled = true;
+        TelegramDurationEnabled = true;
+        TelegramEpisodesEnabled = true;
         
         // default newsletter event settings
         NewsletterOnItemAddedEnabled = true;
@@ -384,4 +394,46 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the number of decimal places to display for community ratings.
     /// </summary>
     public int CommunityRatingDecimalPlaces { get; set; }
+
+    // Telegram Bot Details
+
+    /// <summary>
+    /// Gets or sets the Telegram bot token.
+    /// </summary>
+    public string TelegramBotToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Telegram chat ID to send messages to.
+    /// </summary>
+    public string TelegramChatId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether description in Telegram messages should be visible.
+    /// </summary>
+    public bool TelegramDescriptionEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether thumbnail in Telegram messages should be visible.
+    /// </summary>
+    public bool TelegramThumbnailEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether rating in Telegram messages should be visible.
+    /// </summary>
+    public bool TelegramRatingEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether PG rating in Telegram messages should be visible.
+    /// </summary>
+    public bool TelegramPGRatingEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether duration in Telegram messages should be visible.
+    /// </summary>
+    public bool TelegramDurationEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether episodes list in Telegram messages should be visible.
+    /// </summary>
+    public bool TelegramEpisodesEnabled { get; set; }
 }

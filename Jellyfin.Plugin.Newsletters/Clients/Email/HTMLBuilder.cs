@@ -7,7 +7,7 @@ using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
+namespace Jellyfin.Plugin.Newsletters.Clients.Email;
 
 /// <summary>
 /// Builds HTML content for newsletters, including templating and chunking logic.
@@ -484,15 +484,9 @@ public class HtmlBuilder : ClientBuilder
 
     private string GetSeasonEpisodeHTML(IReadOnlyCollection<NlDetailsJson> list)
     {
-        string html = string.Empty;
-        foreach (NlDetailsJson obj in list)
-        {
-            Logger.Debug("SNIPPET OBJ: " + JsonConvert.SerializeObject(obj));
-            // html += "<div id='SeasonEpisode' class='text' style='color: #FFFFFF;'>Season: " + obj.Season + " - Eps. " + obj.EpisodeRange + "</div>";
-            html += "Season: " + obj.Season + " - Eps. " + obj.EpisodeRange + "<br>";
-        }
-
-        return html;
+        string baseText = GetSeasonEpisodeBase(list);
+        // Convert newlines to HTML <br> tags and trim the trailing newline
+        return baseText.TrimEnd('\r', '\n').Replace("\n", "<br>", StringComparison.Ordinal);
     }
 
     /// <summary>

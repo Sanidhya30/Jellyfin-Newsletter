@@ -213,14 +213,7 @@ public class EmbedBuilder(Logger loggerInstance,
 
     private string GetSeasonEpisode(IReadOnlyCollection<NlDetailsJson> list)
     {
-        string seaEps = string.Empty;
-        foreach (NlDetailsJson obj in list)
-        {
-            Logger.Debug("SNIPPET OBJ: " + JsonConvert.SerializeObject(obj));
-            seaEps += "Season: " + obj.Season + " - Eps. " + obj.EpisodeRange + "\n";
-        }
-
-        return seaEps;
+        return GetSeasonEpisodeBase(list);
     }
 
     private static void AddFieldIfEnabled(Collection<EmbedField> fieldsList, bool isEnabled, string name, string value, bool inline = true)
@@ -281,20 +274,13 @@ public class EmbedBuilder(Logger loggerInstance,
     /// </summary>
     /// <param name="eventType">The event type (Add, Delete, Update).</param>
     /// <returns>The formatted description prefix with emoji.</returns>
-    private static string GetEventDescriptionPrefix(string? eventType)
+    private string GetEventDescriptionPrefix(string? eventType)
     {
-        if (string.IsNullOrEmpty(eventType))
-        {
-            return "🎬 **Added to Library**";
-        }
-
-        return eventType.ToLowerInvariant() switch
-        {
-            "add" => "🎬 **Added to Library**",
-            "delete" => "🗑️ **Removed from Library**",
-            "update" => "🔄 **Updated in Library**",
-            _ => "🎬 **Added to Library**"
-        };
+        string basePrefix = GetEventDescriptionPrefixBase(eventType);
+        // Discord uses bold formatting for the description prefix
+        return basePrefix.Replace("Added to Library", "**Added to Library**", StringComparison.Ordinal)
+                        .Replace("Removed from Library", "**Removed from Library**", StringComparison.Ordinal)
+                        .Replace("Updated in Library", "**Updated in Library**", StringComparison.Ordinal);
     }
 }
 

@@ -1,25 +1,23 @@
-# Note
-
-This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https://github.com/Cloud9Developer/Jellyfin-Newsletter-Plugin), originally created by [Cloud9Developer](https://github.com/Cloud9Developer). As the original repository is no longer actively maintained, this introduces several improvements, new features, and bug fixes, including:
-
-* Discord Webhook Support
-* Removal of Imgur and Local Hosted Image Dependencies
-* TMDB Integration
-* Local Poster images support as attachments
-* Event-Based item detection and notifications (Add/Update/Delete)
-* Per-library selection for series and movies
-* Multiple Bug Fixes and Enhancements
-
 # Jellyfin Newsletter Plugin
 
 <p align='center'>
     <img src='images/logo.png' alt='Jellyfin Newsletter Plugin Logo' style='max-width: 500px; height: auto;'/><br>
 </p>
-This is my first end-to-end C# project, but I hope you enjoy!
+
+This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https://github.com/Cloud9Developer/Jellyfin-Newsletter-Plugin), originally created by [Cloud9Developer](https://github.com/Cloud9Developer). As the original repository is no longer actively maintained, this introduces several improvements, new features, and bug fixes, including:
+
+* Discord Webhook Support
+* Telegram Support
+* Removal of Imgur and Local Hosted Image Dependencies
+* TMDB Integration
+* Local Poster images support as attachments
+* Event-Based item detection and notifications (Add/Update/Delete)
+* Per-library selection for series and movies
+* Multiple Bug Fixes, Enhancements and much more!!!
 
 # Description
 
-This plugin automatically scans a user's library (default every 4 hours), populates a list of *recently added (not previously scanned)* media, converts that data into HTML format, and sends out newsletters to every configured client (currently email and Discord webhook are supported). Additionally, it supports real-time event-based notifications for library changes (additions, updates, and deletions).
+This plugin uses event-driven notifications with scheduled processing. When library changes occur (additions, or deletions), they are detected in real-time and stored in the database. A hidden background task processes these events every 30 seconds, and the main Newsletter task generates and sends newsletters containing all accumulated events.
 
 <h2 align="center">Email Screenshots</h2>
 <p align="center">
@@ -85,7 +83,7 @@ Movies
 
 This plugin uses event-driven notifications with scheduled processing. When library changes occur:
 
-- Library events (add/update/delete) are detected in real-time and stored in the database
+- Library events (add/delete) are detected in real-time and stored in the database
 - A hidden background task processes these events every 30 seconds
 - The main Newsletter task generates and sends newsletters containing all accumulated events
 
@@ -95,24 +93,22 @@ Testing and Frequency can be managed through your Dashboard > Scheduled Tasks
 
 - There are 2 scheduled tasks:
   - Newsletter: Generates and sends out newsletters containing all accumulated events since the last newsletter was sent
-  - Newsletter Item Scraper (hidden): Processes library events stored in the database (runs every 30 seconds)
+  - Newsletter Item Scraper (***hidden***): Processes library events stored in the database (runs every 30 seconds)
 
 # Installation
 
 Manifest is up and running! You can now import the manifest in Jellyfin and this plugin will appear in the Catalog!
 
 - Go to "Plugins" on your "Dashboard"
-- Go to the "Repositories" tab
-- Click the '+' to add a new Repository
-  - Give it a name (i.e. Newsletters)
+- Go to the "Manage Repositories" tab
+- Click the '+ New Respository' to add a new Repository
+  - Give it a name (for eg. Newsletters)
   - In "Repository URL," put "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/manifest.json"
   - Click "Save"
 - You should now see Jellyfin Newsletters in Catalog under the Category "Newsletters"
 - Once installed, restart Jellyfin to activate the plugin and configure your settings for the plugin
 
 # Configuration
-
-**Note** :- In previous version of Jellyfin Newsletter imgur or JF server was used for the poster image. This is now deprecated as we have moved to the tmdb api for fetching the poster image internally.
 
 ## General Config
 
@@ -127,19 +123,19 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 
 ### Newsletter Event Settings
 
-Configure which library events should trigger newsletter notifications:
+Configure which library events should be the part of newsletters:
 
 #### Send newsletter when items are added
 
-- Enable real-time notifications when new items are added to your library (default: enabled).
+- Enable newly added items section in the newsletter (default: enabled).
 
 #### Send newsletter when items are updated
 
-- Enable notifications when items are updated. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
+- Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
 
 #### Send newsletter when items are deleted
 
-- Enable notifications when items are removed from your library (default: enabled).
+- Enable deleted items section in the newsletter (default: enabled).
 
 ### Community Rating Decimal Places
 
@@ -218,6 +214,20 @@ For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
 - Select the fields that you want as part of your embed.
 - Select the embed color for each event type (Add, Update, Delete) and item type (Series, Movies).
 
+## Telegram Config
+
+### Bot Token:
+
+- Your Telegram bot token obtained from BotFather
+
+### Chat ID:
+
+- The chat ID(can be a user ID, group ID, or channel ID) where you want to send the newsletters
+
+### Fields selection
+
+- Select the fields that you want as part of your message.
+
 # Issues
 
 Please leave a ticket in the Issues on this GitHub page and I will get to it as soon as I can.
@@ -266,6 +276,31 @@ These tags are ***available*** but not recommended to use. Untested behavior usi
 ## Known Issues
 
 See 'issues' tab in GitHub with the label 'bug'
+
+# Planned Features
+
+The following features are planned for future releases:
+
+- [ ] **Support for delete events for series/season**
+  - Enhanced deletion tracking for series and individual seasons
+  - Improved cleanup of related data
+
+- [ ] **Support for update events to update the database**
+  - Real-time database synchronization for item updates
+  - Better handling of metadata changes and file upgrades
+
+- [ ] **Support for music/audio items**
+  - Extend newsletter functionality to music libraries
+  - Include album art, artist information, and track details
+
+- [ ] **Multiple webhook/telegram ID/email support with configurable parameters**
+  - Support for multiple notification endpoints per event type
+  - Individual configuration options for each recipient/channel
+  - Granular control over which events trigger newsletter for each endpoint
+
+- [ ] **Upcoming series/episodes section for newsletter**
+  - Integration with TV show databases for release date tracking
+  - Configurable lead time for upcoming content newsletter
 
 # Contribute
 

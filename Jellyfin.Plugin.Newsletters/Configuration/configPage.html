@@ -332,6 +332,86 @@
                             </button>
                         </details>
                     </div>
+                    
+                    <br>
+                    <!-- Telegram Bot Details -->
+                    <div id="HiddenDetails" name="TelegramDetails" class="DropdownSection">
+                        <details>
+                            <summary>Telegram Config</summary><br>
+                            <div class="inputContainer" id="TelegramBID">
+                                <label class="inputLabel inputLabelUnfocused" for="TelegramBotToken">Bot Token:</label>
+                                <input id="TelegramBotToken" name="TelegramBID" type="text" is="emby-input" />
+                                <div class="fieldDescription">Telegram bot token from @BotFather. Format: 123456789:ABCdefGhIJKlmnOPQRstuVWXyz123456789</div>
+                            </div>
+                            <div class="inputContainer" id="TelegramCID">
+                                <label class="inputLabel inputLabelUnfocused" for="TelegramChatId">Chat ID:</label>
+                                <input id="TelegramChatId" name="TelegramCID" type="text" is="emby-input" />
+                                <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Can be a user ID, group ID, or channel ID.</div>
+                            </div>
+                            <div id="TelegramFieldSelection">
+                                <table>
+                                    <tr>
+                                        <th colspan="2">Select the fields that you want to be part of the message:</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                                <label class="emby-checkbox-label">
+                                                    <input id="TelegramDescriptionEnabled" name="TelegramDescriptionEnabled" type="checkbox" is="emby-checkbox" />
+                                                    <span>Description</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                                <label class="emby-checkbox-label">
+                                                    <input id="TelegramThumbnailEnabled" name="TelegramThumbnailEnabled" type="checkbox" is="emby-checkbox" />
+                                                    <span>Thumbnail</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                                <label class="emby-checkbox-label">
+                                                    <input id="TelegramRatingEnabled" name="TelegramRatingEnabled" type="checkbox" is="emby-checkbox" />
+                                                    <span>Rating</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                                <label class="emby-checkbox-label">
+                                                    <input id="TelegramPGRatingEnabled" name="TelegramPGRatingEnabled" type="checkbox" is="emby-checkbox" />
+                                                    <span>PG Rating</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                                <label class="emby-checkbox-label">
+                                                    <input id="TelegramDurationEnabled" name="TelegramDurationEnabled" type="checkbox" is="emby-checkbox" />
+                                                    <span>Duration</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                                <label class="emby-checkbox-label">
+                                                    <input id="TelegramEpisodesEnabled" name="TelegramEpisodesEnabled" type="checkbox" is="emby-checkbox" />
+                                                    <span>Episodes List (Will only affect in Series)</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <button id="testButtonTelegram" is="emby-button" type="button" class="raised block emby-button">
+                                <span>Test Telegram</span>
+                            </button>
+                        </details>
+                    </div>
 
                     <!-- buttons -->
                     <div>
@@ -382,8 +462,8 @@
 
             // Configuration fields mapping
             var FIELDS = {
-                checkboxes: ['DebugMode', 'NewsletterOnItemAddedEnabled', 'NewsletterOnItemUpdatedEnabled', 'NewsletterOnItemDeletedEnabled', 'SeriesEnabled', 'MoviesEnabled', 'DiscordDescriptionEnabled', 'DiscordThumbnailEnabled', 'DiscordRatingEnabled', 'DiscordPGRatingEnabled', 'DiscordDurationEnabled', 'DiscordEpisodesEnabled'],
-                inputs: ['Hostname', 'SMTPServer', 'SMTPPort', 'SMTPUser', 'SMTPPass', 'DiscordWebhookURL', 'DiscordWebhookName', 'VisibleToAddr', 'ToAddr', 'FromAddr', 'Subject', 'Body', 'Entry', 'HostingSelector', 'EmailSize', 'DiscordSeriesAddEmbedColor', 'DiscordSeriesDeleteEmbedColor', 'DiscordSeriesUpdateEmbedColor', 'DiscordMoviesAddEmbedColor', 'DiscordMoviesDeleteEmbedColor', 'DiscordMoviesUpdateEmbedColor']
+                checkboxes: ['DebugMode', 'NewsletterOnItemAddedEnabled', 'NewsletterOnItemUpdatedEnabled', 'NewsletterOnItemDeletedEnabled', 'SeriesEnabled', 'MoviesEnabled', 'DiscordDescriptionEnabled', 'DiscordThumbnailEnabled', 'DiscordRatingEnabled', 'DiscordPGRatingEnabled', 'DiscordDurationEnabled', 'DiscordEpisodesEnabled', 'TelegramDescriptionEnabled', 'TelegramThumbnailEnabled', 'TelegramRatingEnabled', 'TelegramPGRatingEnabled', 'TelegramDurationEnabled', 'TelegramEpisodesEnabled'],
+                inputs: ['Hostname', 'SMTPServer', 'SMTPPort', 'SMTPUser', 'SMTPPass', 'DiscordWebhookURL', 'DiscordWebhookName', 'VisibleToAddr', 'ToAddr', 'FromAddr', 'Subject', 'Body', 'Entry', 'HostingSelector', 'EmailSize', 'DiscordSeriesAddEmbedColor', 'DiscordSeriesDeleteEmbedColor', 'DiscordSeriesUpdateEmbedColor', 'DiscordMoviesAddEmbedColor', 'DiscordMoviesDeleteEmbedColor', 'DiscordMoviesUpdateEmbedColor', 'TelegramBotToken', 'TelegramChatId']
             };
 
             function updateMaxEmailSizeVisibility() {
@@ -640,6 +720,22 @@
                 Dashboard.hideLoadingMsg();
                 e.preventDefault();
                 alert("Test discord message sent! In case message doesn't arrive, check your Discord webhook configuration and server logs for errors.");
+                return false;
+            });
+
+            document.querySelector('#testButtonTelegram')
+                .addEventListener('click', function(e) {
+                Dashboard.showLoadingMsg();
+                console.log("Test Telegram message button pressed!");
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
+                    console.log("TEST: ", config);
+                    var url = ApiClient.getUrl('Telegram/SendTelegramTestMessage');
+                    var data = JSON.stringify(config);
+                    ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
+                });
+                Dashboard.hideLoadingMsg();
+                e.preventDefault();
+                alert("Test Telegram message sent! In case message doesn't arrive, check your Telegram bot configuration and server logs for errors.");
                 return false;
             });
             
