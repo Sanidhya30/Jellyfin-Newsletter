@@ -121,6 +121,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
             using (var client = new SmtpClient())
             {
+                client.CheckCertificateRevocation = false;
                 var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
                 client.Connect(smtpAddress, portNumber, secureOptions);
                 client.Authenticate(username, password);
@@ -278,8 +279,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
                     using (var client = new SmtpClient())
                     {
                         client.Timeout = smtpTimeout;
+                        client.CheckCertificateRevocation = false;
                         var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
-                        
                         client.Connect(smtpAddress, portNumber, secureOptions);
                         client.Authenticate(username, password);
                         Logger.Debug($"Sending email part {partNum} with finalBody: {finalBody}");
