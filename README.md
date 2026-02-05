@@ -41,6 +41,16 @@ This plugin uses event-driven notifications with scheduled processing. When libr
          width="49%"/>
 </p>
 
+<h2 align="center">Telegram Screenshots</h2>
+<p align="center">
+    <img src="images/Newsletter_Added_Telegram_Example.png"
+         alt="Added Telegram Screenshot"
+         height="600"/>
+    <img src="images/Newsletter_Removed_Telegram_Example.png"
+         alt="Removed Telegram Screenshot"
+         height="600"/>
+</p>
+
 # File Structure
 
 To ensure proper images are being pulled from Jellyfin's database, ensure you follow the standard Organization Scheme for naming and organizing your files. https://jellyfin.org/docs/general/server/media/books
