@@ -14,7 +14,7 @@ using MimeKit;
 
 // using System.Net.NetworkCredential;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
+namespace Jellyfin.Plugin.Newsletters.Clients.Email;
 
 /// <summary>
 /// Interaction logic for SendMail.xaml.

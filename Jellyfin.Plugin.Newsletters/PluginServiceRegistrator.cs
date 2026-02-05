@@ -1,6 +1,6 @@
 ﻿using Jellyfin.Plugin.Newsletters.Clients;
 using Jellyfin.Plugin.Newsletters.Clients.Discord;
-using Jellyfin.Plugin.Newsletters.Clients.Emails;
+using Jellyfin.Plugin.Newsletters.Clients.Email;
 using Jellyfin.Plugin.Newsletters.Clients.Telegram;
 using Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 using Jellyfin.Plugin.Newsletters.Scanner;

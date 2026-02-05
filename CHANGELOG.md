@@ -1,3 +1,9 @@
+# 1.3.0.0
+
+- Telegram client support for the newsletters 
+- Disabled CRL check in smtp
+- Minor bug fix in case of sending an empty mail
+
 # 1.2.1.0
 
 - Enhanced logic to rely on other item details apart from provider ID before adding the item for processing

@@ -7,7 +7,7 @@ using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
 
-namespace Jellyfin.Plugin.Newsletters.Clients.Emails;
+namespace Jellyfin.Plugin.Newsletters.Clients.Email;
 
 /// <summary>
 /// Builds HTML content for newsletters, including templating and chunking logic.
