@@ -209,6 +209,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 int partNum = 1; // for multi-part email subjects if needed
                 foreach (var (builtString, inlineImages) in chunks)
                 {
+                    result = false;
                     Logger.Debug($"Email part {partNum} image count: {inlineImages.Count}");
                     // Add template substitutions
                     string finalBody = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
@@ -288,10 +289,9 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
                     Logger.Debug($"Email part {partNum} sent successfully.");
                     hb.CleanUp(finalBody); // or as appropriate for the chunk
+                    result = true;
                     partNum++;
                 }
-
-                result = true;
             }
             else
             {

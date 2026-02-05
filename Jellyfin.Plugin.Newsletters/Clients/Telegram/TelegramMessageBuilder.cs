@@ -147,12 +147,15 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                 jellyfinUrl = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={systemId}&event={eventType}";
             }
             
-            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"*[{EscapeMarkdown(item.Title)}]({jellyfinUrl})* \\({EscapeMarkdown(eventPrefix)}\\)");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"*[{EscapeMarkdown(item.Title)}]({jellyfinUrl})*");
         }
         else
         {
-            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"*{EscapeMarkdown(item.Title)}* \\({EscapeMarkdown(eventPrefix)}\\)");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"*{EscapeMarkdown(item.Title)}*");
         }
+
+        messageBuilder.AppendLine(EscapeMarkdown(eventPrefix));
+        messageBuilder.AppendLine();
         
         // Add description if enabled
         if (Config.TelegramDescriptionEnabled && !string.IsNullOrEmpty(item.SeriesOverview))
@@ -238,11 +241,8 @@ public class TelegramMessageBuilder(Logger loggerInstance,
             return string.Empty;
         }
 
-        // Escape backslash FIRST, before other characters
-        text = text.Replace("\\", "\\\\", StringComparison.Ordinal);
-
         // Telegram MarkdownV2 requires escaping these characters outside of code blocks
-        var specialChars = new[] { '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' };
+        var specialChars = new[] { '\\', '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' };
         
         foreach (var ch in specialChars)
         {
