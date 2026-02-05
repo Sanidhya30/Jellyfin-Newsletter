@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -319,5 +320,45 @@ public class ClientBuilder(Logger loggerInstance,
     private static List<NlDetailsJson> SortListByEpisode(List<NlDetailsJson> list)
     {
         return list.OrderBy(x => x.Episode).ToList();
+    }
+
+    /// <summary>
+    /// Gets the season and episode information from a collection of parsed series details.
+    /// This is the base implementation shared across all clients.
+    /// </summary>
+    /// <param name="list">The collection of parsed series details.</param>
+    /// <returns>A string containing formatted season and episode information.</returns>
+    protected string GetSeasonEpisodeBase(IReadOnlyCollection<NlDetailsJson> list)
+    {
+        var result = new System.Text.StringBuilder();
+        foreach (NlDetailsJson obj in list)
+        {
+            Logger.Debug("SNIPPET OBJ: " + JsonConvert.SerializeObject(obj));
+            result.AppendLine(CultureInfo.InvariantCulture, $"Season: {obj.Season} - Eps. {obj.EpisodeRange}");
+        }
+
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// Gets the event description prefix with emoji for the specified event type.
+    /// This is the base implementation shared across all clients.
+    /// </summary>
+    /// <param name="eventType">The event type (add, delete, update).</param>
+    /// <returns>The formatted description prefix with emoji.</returns>
+    protected string GetEventDescriptionPrefixBase(string? eventType)
+    {
+        if (string.IsNullOrEmpty(eventType))
+        {
+            return "🎬 Added to Library";
+        }
+
+        return eventType.ToLowerInvariant() switch
+        {
+            "add" => "🎬 Added to Library",
+            "delete" => "🗑️ Removed from Library",
+            "update" => "🔄 Updated in Library",
+            _ => "🎬 Added to Library"
+        };
     }
 }

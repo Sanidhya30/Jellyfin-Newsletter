@@ -17,12 +17,28 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     /// <summary>
     /// Builds a test message for Telegram.
     /// </summary>
-    /// <returns>A formatted test message string.</returns>
-    public string BuildTestMessage()
+    /// <returns>A tuple containing the formatted test message string and the image URL.</returns>
+    public (string MessageText, string? ImageUrl) BuildTestMessage()
     {
         JsonFileObj item = JsonFileObj.GetTestObj();
         
-        return BuildMessageText(item, "test");
+        try
+        {
+            Db.CreateConnection();
+            string messageText = BuildMessageText(item, "newsletter-test");
+            string? imageUrl = item.ImageURL;
+            
+            return (messageText, imageUrl);
+        }
+        catch (Exception e)
+        {
+            Logger.Error("Error building test message: " + e);
+            return (string.Empty, null);
+        }
+        finally
+        {
+            Db.CloseConnection();
+        }
     }
 
     /// <summary>
@@ -32,7 +48,7 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     /// <returns>A collection of message tuples containing text and optional image data.</returns>
     public ReadOnlyCollection<(string MessageText, string? ImageUrl, MemoryStream? ImageStream, string UniqueImageName)> BuildMessagesFromNewsletterData(string systemId)
     {
-        var completed = new HashSet<string>();
+        var completed = new HashSet<string>(); // Store "Title_EventType"
         var result = new List<(string, string?, MemoryStream?, string)>();
 
         try
@@ -45,14 +61,27 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                 {
                     JsonFileObj item = JsonFileObj.ConvertToObj(row);
 
-                    // Event type filtering...
+                    // Check if the event type should be included based on configuration
                     string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled) continue;
-                    if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled) continue;
-                    if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled) continue;
+                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled)
+                    {
+                        continue;
+                    }
+                    else if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled)
+                    {
+                        continue;
+                    }
 
+                    // Create a unique key combining title and event type
                     string uniqueKey = $"{item.Title}_{eventType}";
-                    if (completed.Contains(uniqueKey)) continue;
+                    if (completed.Contains(uniqueKey))
+                    {
+                        continue;
+                    }
 
                     var messageText = BuildMessageText(item, systemId);
                     
@@ -69,7 +98,7 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                         }
                         else
                         {
-                            // Use external URL directly - Telegram will download it
+                            // Use external URL directly
                             imageUrl = item.ImageURL;
                         }
                     }
@@ -105,19 +134,52 @@ public class TelegramMessageBuilder(Logger loggerInstance,
         string eventType = item.EventType?.ToLowerInvariant() ?? "add";
         string eventPrefix = GetEventDescriptionPrefix(eventType);
         
-        // Add header with event type
-        messageBuilder.AppendLine(EscapeMarkdown(eventPrefix));
-        messageBuilder.AppendLine();
+        // Add title with Jellyfin link if hostname is configured
+        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID))
+        {
+            string jellyfinUrl;
+            if (systemId == "newsletter-test")
+            {
+                jellyfinUrl = Config.Hostname;
+            }
+            else
+            {
+                jellyfinUrl = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={systemId}&event={eventType}";
+            }
+            
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"*[{EscapeMarkdown(item.Title)}]({jellyfinUrl})* \\({EscapeMarkdown(eventPrefix)}\\)");
+        }
+        else
+        {
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"*{EscapeMarkdown(item.Title)}* \\({EscapeMarkdown(eventPrefix)}\\)");
+        }
         
-        // Add title
-        messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"*{EscapeMarkdown(item.Title)}*");
+        // Add description if enabled
+        if (Config.TelegramDescriptionEnabled && !string.IsNullOrEmpty(item.SeriesOverview))
+        {
+            messageBuilder.AppendLine(EscapeMarkdown(item.SeriesOverview));
+        }
+
         messageBuilder.AppendLine();
 
         // Add series/episode information if available
         if (item.Type == "Series" && Config.TelegramEpisodesEnabled)
         {
-            ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
-            string seaEps = GetSeasonEpisode(parsedInfoList);
+            string seaEps;
+            if (item.Title == "Newsletter-Test")
+            {
+                // For test object, create hardcoded episode info
+                var testSeaEps = new System.Text.StringBuilder();
+                testSeaEps.AppendLine("Season: 1 - Eps. 1 - 10");
+                testSeaEps.AppendLine("Season: 2 - Eps. 1 - 10");
+                testSeaEps.AppendLine("Season: 3 - Eps. 1 - 10");
+                seaEps = testSeaEps.ToString();
+            }
+            else
+            {
+                ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
+                seaEps = GetSeasonEpisode(parsedInfoList);
+            }
             
             if (!string.IsNullOrWhiteSpace(seaEps))
             {
@@ -127,47 +189,23 @@ public class TelegramMessageBuilder(Logger loggerInstance,
             }
         }
 
-        // Add description if enabled
-        if (Config.TelegramDescriptionEnabled && !string.IsNullOrEmpty(item.SeriesOverview))
-        {
-            messageBuilder.AppendLine(EscapeMarkdown(item.SeriesOverview));
-            messageBuilder.AppendLine();
-        }
-
         // Add metadata fields
         var metadataParts = new List<string>();
 
-        if (Config.TelegramRatingEnabled && item.CommunityRating.HasValue)
+        if (Config.TelegramRatingEnabled)
         {
-            var ratingString = item.CommunityRating.Value.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture);
-            metadataParts.Add($"Rating: {EscapeMarkdown(ratingString)}");
+            // var ratingString = item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A";
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Rating: {EscapeMarkdown(item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A")}");
         }
 
-        if (Config.TelegramPGRatingEnabled && !string.IsNullOrEmpty(item.OfficialRating))
+        if (Config.TelegramPGRatingEnabled)
         {
-            metadataParts.Add($"PG Rating: {EscapeMarkdown(item.OfficialRating)}");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"PG Rating: {EscapeMarkdown(item.OfficialRating ?? "N/A")}");
         }
 
-        if (Config.TelegramDurationEnabled && item.RunTime > 0)
+        if (Config.TelegramDurationEnabled)
         {
-            metadataParts.Add($"Duration: {item.RunTime} min");
-        }
-
-        if (metadataParts.Count > 0)
-        {
-            foreach (var part in metadataParts)
-            {
-                messageBuilder.AppendLine(part);
-            }
-
-            messageBuilder.AppendLine();
-        }
-
-        // Add Jellyfin link if hostname is configured
-        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID))
-        {
-            string jellyfinUrl = $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={systemId}&event={eventType}";
-            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"[View in Jellyfin]({jellyfinUrl})");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Duration: {item.RunTime} min");
         }
 
         return messageBuilder.ToString().Trim();
@@ -175,13 +213,7 @@ public class TelegramMessageBuilder(Logger loggerInstance,
 
     private string GetSeasonEpisode(IReadOnlyCollection<NlDetailsJson> list)
     {
-        var seaEps = new System.Text.StringBuilder();
-        foreach (NlDetailsJson obj in list)
-        {
-            seaEps.AppendLine(CultureInfo.InvariantCulture, $"Season: {obj.Season} - Eps. {obj.EpisodeRange}");
-        }
-
-        return seaEps.ToString();
+        return GetSeasonEpisodeBase(list);
     }
 
     /// <summary>
@@ -189,20 +221,9 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     /// </summary>
     /// <param name="eventType">The event type (add, delete, update).</param>
     /// <returns>The formatted description prefix with emoji.</returns>
-    private static string GetEventDescriptionPrefix(string? eventType)
+    private string GetEventDescriptionPrefix(string? eventType)
     {
-        if (string.IsNullOrEmpty(eventType))
-        {
-            return "🎬 Added to Library";
-        }
-
-        return eventType.ToLowerInvariant() switch
-        {
-            "add" => "🎬 Added to Library",
-            "delete" => "🗑️ Removed from Library",
-            "update" => "🔄 Updated in Library",
-            _ => "🎬 Added to Library"
-        };
+        return GetEventDescriptionPrefixBase(eventType);
     }
 
     /// <summary>
@@ -217,6 +238,9 @@ public class TelegramMessageBuilder(Logger loggerInstance,
             return string.Empty;
         }
 
+        // Escape backslash FIRST, before other characters
+        text = text.Replace("\\", "\\\\", StringComparison.Ordinal);
+
         // Telegram MarkdownV2 requires escaping these characters outside of code blocks
         var specialChars = new[] { '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' };
         
@@ -224,9 +248,6 @@ public class TelegramMessageBuilder(Logger loggerInstance,
         {
             text = text.Replace(ch.ToString(), $"\\{ch}", StringComparison.Ordinal);
         }
-        
-        // Also escape backslash
-        text = text.Replace("\\\\", "\\\\\\\\", StringComparison.Ordinal);
 
         return text;
     }

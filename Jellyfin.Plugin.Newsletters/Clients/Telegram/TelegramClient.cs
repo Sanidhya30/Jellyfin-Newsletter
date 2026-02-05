@@ -67,30 +67,33 @@ public class TelegramClient(IServerApplicationHost appHost,
         try
         {
             TelegramMessageBuilder builder = new(Logger, Db);
-            var testMessage = builder.BuildTestMessage();
+            var (testMessage, imageUrl) = builder.BuildTestMessage();
+            bool messageSent = false;
 
-            var payload = new
+            if (string.IsNullOrEmpty(testMessage))
             {
-                chat_id = chatId,
-                text = testMessage,
-                parse_mode = "MarkdownV2"
-            };
+                Logger.Error("Failed to build test message.");
+                return;
+            }
 
-            var jsonPayload = JsonSerializer.Serialize(payload);
-            Logger.Debug("Sending Telegram test message: " + jsonPayload);
-
-            var requestUri = $"https://api.telegram.org/bot{botToken}/sendMessage";
-            using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-            var response = _httpClient.PostAsync(requestUri, content).GetAwaiter().GetResult();
-
-            if (response.IsSuccessStatusCode)
+            if (Config.TelegramThumbnailEnabled && !string.IsNullOrEmpty(imageUrl))
             {
-                Logger.Debug("Telegram test message sent successfully");
+                // Send using external URL
+                messageSent = SendPhotoWithUrl(botToken, chatId, imageUrl, testMessage);
             }
             else
             {
-                var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                Logger.Error($"Telegram test message failed: {response.StatusCode} - {error}");
+                // Otherwise send text message
+                messageSent = SendTextMessage(botToken, chatId, testMessage);
+            }
+
+            if (messageSent)
+            {
+                Logger.Info("Telegram test message sent successfully");
+            }
+            else
+            {
+                Logger.Error("Failed to send Telegram test message");
             }
         }
         catch (Exception e)
@@ -137,6 +140,9 @@ public class TelegramClient(IServerApplicationHost appHost,
                     {
                         if (imageStream != null)
                         {
+                            // Reset stream position before reading
+                            imageStream.Position = 0;
+
                             // Send as multipart file upload
                             messageSent = SendPhotoMessage(botToken, chatId, imageStream, messageText, uniqueImageName);
                         }
@@ -202,8 +208,9 @@ public class TelegramClient(IServerApplicationHost appHost,
                 };
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
+                Logger.Debug("Sending Telegram text message: " + jsonPayload);
+                
                 var requestUri = $"https://api.telegram.org/bot{botToken}/sendMessage";
-
                 using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
                 var response = _httpClient.PostAsync(requestUri, content).GetAwaiter().GetResult();
 
@@ -238,35 +245,64 @@ public class TelegramClient(IServerApplicationHost appHost,
     {
         try
         {
-            // Split caption if it exceeds Telegram's 1024 character limit for captions
-            var captions = SplitMessage(caption, 1024);
-
-            foreach (var cap in captions)
+            // Telegram caption limit is 1024 characters
+            // If caption exceeds limit, we'll send the photo with truncated caption
+            // and follow up with text messages for the rest
+            var requestUri = $"https://api.telegram.org/bot{botToken}/sendPhoto";
+            
+            string photoCaption = caption;
+            string remainingText = string.Empty;
+            
+            if (caption.Length > 1024)
             {
-                using var multipartContent = new MultipartFormDataContent();
+                // Truncate caption and save remainder
+                photoCaption = string.Concat(caption.AsSpan(0, 1020), "\\.\\.\\.");
+                remainingText = caption.AsSpan(1020).ToString();
+            }
 
-                // Add the photo
-                var fileContent = new ByteArrayContent(imageStream.ToArray());
-                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-                multipartContent.Add(fileContent, "photo", uniqueImageName);
+            // Reset stream position to beginning
+            imageStream.Position = 0;
 
-                // Add other form fields
-                multipartContent.Add(new StringContent(chatId), "chat_id");
-                multipartContent.Add(new StringContent(cap), "caption");
+            using var multipartContent = new MultipartFormDataContent();
+
+            // Add chat_id as form field
+            multipartContent.Add(new StringContent(chatId), "chat_id");
+
+            // Add caption if provided
+            if (!string.IsNullOrEmpty(photoCaption))
+            {
+                multipartContent.Add(new StringContent(photoCaption), "caption");
                 multipartContent.Add(new StringContent("MarkdownV2"), "parse_mode");
+            }
 
-                var requestUri = $"https://api.telegram.org/bot{botToken}/sendPhoto";
-                var response = _httpClient.PostAsync(requestUri, multipartContent).GetAwaiter().GetResult();
+            // Add photo file
+            var fileContent = new ByteArrayContent(imageStream.ToArray());
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+            
+            // The field name MUST be "photo" for sendPhoto
+            multipartContent.Add(fileContent, "photo", uniqueImageName);
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    Logger.Error($"Telegram photo message failed: {response.StatusCode} - {error}");
-                    return false;
-                }
+            Logger.Debug("Sending Telegram photo with caption: " + photoCaption);
+
+            var response = _httpClient.PostAsync(requestUri, multipartContent).GetAwaiter().GetResult();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                Logger.Error($"Telegram photo message failed: {response.StatusCode} - {error}");
+                return false;
             }
 
             Logger.Debug("Telegram photo message sent successfully");
+
+            // If there's remaining text, send it as follow-up text messages
+            if (!string.IsNullOrEmpty(remainingText))
+            {
+                Logger.Debug("Sending remaining caption text as separate message");
+                Thread.Sleep(100); // Small delay before follow-up
+                return SendTextMessage(botToken, chatId, remainingText);
+            }
+
             return true;
         }
         catch (Exception e)
@@ -276,35 +312,60 @@ public class TelegramClient(IServerApplicationHost appHost,
         }
     }
 
+    /// <summary>
+    /// Sends a photo message to Telegram using an external URL.
+    /// </summary>
+    /// <param name="botToken">The Telegram bot token.</param>
+    /// <param name="chatId">The chat ID to send to.</param>
+    /// <param name="photoUrl">The URL of the photo to send.</param>
+    /// <param name="caption">The caption for the photo.</param>
+    /// <returns>True if sent successfully; otherwise, false.</returns>
     private bool SendPhotoWithUrl(string botToken, string chatId, string photoUrl, string caption)
     {
         try
         {
+            // Telegram caption limit is 1024 characters
+            string photoCaption = caption;
+            string remainingText = string.Empty;
+            
+            if (caption.Length > 1024)
+            {
+                photoCaption = string.Concat(caption.AsSpan(0, 1020), "\\.\\.\\.");
+                remainingText = caption.AsSpan(1020).ToString();
+            }
+
             var payload = new
             {
                 chat_id = chatId,
-                photo = photoUrl,  // Direct URL string
-                caption = caption,
+                photo = photoUrl,
+                caption = photoCaption,
                 parse_mode = "MarkdownV2"
             };
 
             var jsonPayload = JsonSerializer.Serialize(payload);
-            var requestUri = $"https://api.telegram.org/bot{botToken}/sendPhoto";
+            Logger.Debug("Sending Telegram photo via URL: " + jsonPayload);
             
+            var requestUri = $"https://api.telegram.org/bot{botToken}/sendPhoto";
             using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
             var response = _httpClient.PostAsync(requestUri, content).GetAwaiter().GetResult();
 
-            if (response.IsSuccessStatusCode)
-            {
-                Logger.Debug("Telegram photo sent successfully via URL");
-                return true;
-            }
-            else
+            if (!response.IsSuccessStatusCode)
             {
                 var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                Logger.Error($"Telegram sendPhoto failed: {response.StatusCode} - {error}");
+                Logger.Error($"Telegram sendPhoto via URL failed: {response.StatusCode} - {error}");
                 return false;
             }
+
+            Logger.Debug("Telegram photo sent successfully via URL");
+
+            // Send remaining text if any
+            if (!string.IsNullOrEmpty(remainingText))
+            {
+                Thread.Sleep(100);
+                return SendTextMessage(botToken, chatId, remainingText);
+            }
+
+            return true;
         }
         catch (Exception e)
         {
