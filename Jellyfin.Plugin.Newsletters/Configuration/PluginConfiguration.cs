@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.Newsletters.Configuration;
@@ -436,4 +437,87 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether episodes list in Telegram messages should be visible.
     /// </summary>
     public bool TelegramEpisodesEnabled { get; set; }
+
+    // Multi-Configuration Collections
+
+    /// <summary>
+    /// Gets or sets the collection of Discord webhook configurations.
+    /// </summary>
+    public Collection<DiscordConfiguration> DiscordConfigurations { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the collection of Telegram bot configurations.
+    /// </summary>
+    public Collection<TelegramConfiguration> TelegramConfigurations { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the collection of Email/SMTP configurations.
+    /// </summary>
+    public Collection<EmailConfiguration> EmailConfigurations { get; set; } = new();
+
+    /// <summary>
+    /// Migrates legacy single-value configuration properties to the new collection-based format.
+    /// This ensures backward compatibility when upgrading from older plugin versions.
+    /// </summary>
+    public void MigrateFromLegacy()
+    {
+        // Migrate Discord configuration if legacy values exist and no new configs present
+        if (DiscordConfigurations.Count == 0 && !string.IsNullOrEmpty(DiscordWebhookURL))
+        {
+            DiscordConfigurations.Add(new DiscordConfiguration
+            {
+                Name = "Discord (Migrated)",
+                WebhookURL = DiscordWebhookURL,
+                WebhookName = DiscordWebhookName,
+                DescriptionEnabled = DiscordDescriptionEnabled,
+                ThumbnailEnabled = DiscordThumbnailEnabled,
+                RatingEnabled = DiscordRatingEnabled,
+                PGRatingEnabled = DiscordPGRatingEnabled,
+                DurationEnabled = DiscordDurationEnabled,
+                EpisodesEnabled = DiscordEpisodesEnabled,
+                SeriesAddEmbedColor = DiscordSeriesAddEmbedColor,
+                SeriesDeleteEmbedColor = DiscordSeriesDeleteEmbedColor,
+                SeriesUpdateEmbedColor = DiscordSeriesUpdateEmbedColor,
+                MoviesAddEmbedColor = DiscordMoviesAddEmbedColor,
+                MoviesDeleteEmbedColor = DiscordMoviesDeleteEmbedColor,
+                MoviesUpdateEmbedColor = DiscordMoviesUpdateEmbedColor
+            });
+        }
+
+        // Migrate Telegram configuration if legacy values exist and no new configs present
+        if (TelegramConfigurations.Count == 0 && !string.IsNullOrEmpty(TelegramBotToken))
+        {
+            TelegramConfigurations.Add(new TelegramConfiguration
+            {
+                Name = "Telegram (Migrated)",
+                BotToken = TelegramBotToken,
+                ChatId = TelegramChatId,
+                DescriptionEnabled = TelegramDescriptionEnabled,
+                ThumbnailEnabled = TelegramThumbnailEnabled,
+                RatingEnabled = TelegramRatingEnabled,
+                PGRatingEnabled = TelegramPGRatingEnabled,
+                DurationEnabled = TelegramDurationEnabled,
+                EpisodesEnabled = TelegramEpisodesEnabled
+            });
+        }
+
+        // Migrate Email configuration if legacy values exist and no new configs present
+        if (EmailConfigurations.Count == 0 && !string.IsNullOrEmpty(SMTPServer) && !string.IsNullOrEmpty(SMTPUser))
+        {
+            EmailConfigurations.Add(new EmailConfiguration
+            {
+                Name = "Email (Migrated)",
+                SMTPServer = SMTPServer,
+                SMTPPort = SMTPPort,
+                SMTPUser = SMTPUser,
+                SMTPPass = SMTPPass,
+                VisibleToAddr = VisibleToAddr,
+                ToAddr = ToAddr,
+                FromAddr = FromAddr,
+                Subject = Subject,
+                Body = Body,
+                Entry = Entry
+            });
+        }
+    }
 }

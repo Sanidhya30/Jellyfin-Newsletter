@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Text.Json.Serialization;
+using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json;
@@ -23,8 +24,9 @@ public class EmbedBuilder(Logger loggerInstance,
     /// Builds Discord embeds from newsletter data stored in the database.
     /// </summary>
     /// <param name="serverId">The Jellyfin server ID to include in embed URLs.</param>
+    /// <param name="discordConfig">The Discord configuration to use for building embeds.</param>
     /// <returns>A read-only collection of tuples containing Discord embeds, image streams, and unique image names.</returns>
-    public ReadOnlyCollection<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId)
+    public ReadOnlyCollection<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId, DiscordConfiguration discordConfig)
     {
         var completed = new HashSet<string>(); // Store "Title_EventType"
         var result = new List<(Embed, MemoryStream?, string)>();
@@ -61,7 +63,7 @@ public class EmbedBuilder(Logger loggerInstance,
                         continue;
                     }
 
-                    int embedColor = GetEventColor(item.EventType, item.Type);
+                    int embedColor = GetEventColor(item.EventType, item.Type, discordConfig);
                     string seaEps = string.Empty;
                     if (item.Type == "Series")
                     {
@@ -72,10 +74,10 @@ public class EmbedBuilder(Logger loggerInstance,
 
                     var fieldsList = new Collection<EmbedField>();
 
-                    AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
-                    AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
-                    AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
-                    AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
+                    AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
+                    AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
+                    AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", $"{item.RunTime} min");
+                    AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);
 
                     // Add event type query otherwise discord deduplicate the embed with same url
                     // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
@@ -93,7 +95,7 @@ public class EmbedBuilder(Logger loggerInstance,
                     };
 
                     // Check if DiscordDescriptionEnabled is true
-                    if (Config.DiscordDescriptionEnabled)
+                    if (discordConfig.DescriptionEnabled)
                     {
                         embed.Description = GetEventDescriptionPrefix(item.EventType) + "\n" + item.SeriesOverview;
                     }
@@ -107,7 +109,7 @@ public class EmbedBuilder(Logger loggerInstance,
                     string uniqueImageName = string.Empty;
 
                     // Check if DiscordThumbnailEnabled is true
-                    if (Config.DiscordThumbnailEnabled)
+                    if (discordConfig.ThumbnailEnabled)
                     {
                         if (Config.PosterType == "attachment")
                         {
@@ -149,8 +151,9 @@ public class EmbedBuilder(Logger loggerInstance,
     /// <summary>
     /// Builds a test Discord embed with sample data for testing webhook connectivity.
     /// </summary>
+    /// <param name="discordConfig">The Discord configuration to use for building the test embed.</param>
     /// <returns>A read-only collection containing a single test embed.</returns>
-    public ReadOnlyCollection<Embed> BuildEmbedForTest()
+    public ReadOnlyCollection<Embed> BuildEmbedForTest(DiscordConfiguration discordConfig)
     {
         Collection<Embed> embeds = new Collection<Embed>();
 
@@ -160,15 +163,15 @@ public class EmbedBuilder(Logger loggerInstance,
             JsonFileObj item = JsonFileObj.GetTestObj();
 
             // Populating embed with reference to a Series, as it'll will cover all the cases
-            int embedColor = GetEventColor("add", "Series"); // Use the new event-based color system for consistency
+            int embedColor = GetEventColor("add", "Series", discordConfig);
             string seaEps = "Season: 1 - Eps. 1 - 10\nSeason: 2 - Eps. 1 - 10\nSeason: 3 - Eps. 1 - 10";
 
             var fieldsList = new Collection<EmbedField>();
 
-            AddFieldIfEnabled(fieldsList, Config.DiscordRatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
-            AddFieldIfEnabled(fieldsList, Config.DiscordPGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
-            AddFieldIfEnabled(fieldsList, Config.DiscordDurationEnabled, "Duration", $"{item.RunTime} min");
-            AddFieldIfEnabled(fieldsList, Config.DiscordEpisodesEnabled, "Episodes", seaEps, false);
+            AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
+            AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
+            AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", $"{item.RunTime} min");
+            AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);
 
             string embedUrl = string.IsNullOrEmpty(Config.Hostname) 
                 ? string.Empty
@@ -183,7 +186,7 @@ public class EmbedBuilder(Logger loggerInstance,
             };
 
             // Check if DiscordDescriptionEnabled is true
-            if (Config.DiscordDescriptionEnabled)
+            if (discordConfig.DescriptionEnabled)
             {
                 embed.Description = GetEventDescriptionPrefix("add") + "\n" + item.SeriesOverview;
             }
@@ -193,7 +196,7 @@ public class EmbedBuilder(Logger loggerInstance,
             }
 
             // Check if DiscordThumbnailEnabled is true
-            if (Config.DiscordThumbnailEnabled)
+            if (discordConfig.ThumbnailEnabled)
             {
                 embed.Thumbnail = new Thumbnail
                 {
@@ -234,15 +237,16 @@ public class EmbedBuilder(Logger loggerInstance,
     /// </summary>
     /// <param name="eventType">The event type (Add, Delete, Update).</param>
     /// <param name="mediaType">The media type (Series or Movie).</param>
+    /// <param name="discordConfig">The Discord configuration containing color settings.</param>
     /// <returns>The color as an integer value.</returns>
-    private int GetEventColor(string? eventType, string mediaType)
+    private static int GetEventColor(string? eventType, string mediaType, DiscordConfiguration discordConfig)
     {
         if (string.IsNullOrEmpty(eventType))
         {
             // Default to add event colors if event type is not recognized
             return mediaType == "Series" 
-                ? Convert.ToInt32(Config.DiscordSeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
-                : Convert.ToInt32(Config.DiscordMoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
+                ? Convert.ToInt32(discordConfig.SeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
+                : Convert.ToInt32(discordConfig.MoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16);
         }
 
         var eventLower = eventType.ToLowerInvariant();
@@ -251,20 +255,20 @@ public class EmbedBuilder(Logger loggerInstance,
         {
             return eventLower switch
             {
-                "add" => Convert.ToInt32(Config.DiscordSeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
-                "delete" => Convert.ToInt32(Config.DiscordSeriesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
-                "update" => Convert.ToInt32(Config.DiscordSeriesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
-                _ => Convert.ToInt32(Config.DiscordSeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
+                "add" => Convert.ToInt32(discordConfig.SeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "delete" => Convert.ToInt32(discordConfig.SeriesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "update" => Convert.ToInt32(discordConfig.SeriesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                _ => Convert.ToInt32(discordConfig.SeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
             };
         }
         else
         {
             return eventLower switch
             {
-                "add" => Convert.ToInt32(Config.DiscordMoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
-                "delete" => Convert.ToInt32(Config.DiscordMoviesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
-                "update" => Convert.ToInt32(Config.DiscordMoviesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
-                _ => Convert.ToInt32(Config.DiscordMoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
+                "add" => Convert.ToInt32(discordConfig.MoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "delete" => Convert.ToInt32(discordConfig.MoviesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "update" => Convert.ToInt32(discordConfig.MoviesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                _ => Convert.ToInt32(discordConfig.MoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
             };
         }
     }

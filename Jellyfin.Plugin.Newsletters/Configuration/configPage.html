@@ -175,286 +175,47 @@
 
                     <!-- Email Tab -->
                     <div id="Email" class="tab-content">
-                        <div class="inputContainer" id="ToAddress">
-                            <label class="inputLabel inputLabelUnfocused" for="VisibleToAddr">To Address:</label>
-                            <input id="VisibleToAddr" name="VisibleToAddr" type="text" is="emby-input" />
-                            <div class="fieldDescription">Recipient's email to recieve newsletter. If more than 1,
-                                seperate with commas</div>
+                        <div class="config-header">
+                            <h3>Email Configurations</h3>
+                            <button type="button" is="emby-button" class="raised button-submit"
+                                onclick="addEmailConfig()">
+                                <span>+ Add Email Configuration</span>
+                            </button>
                         </div>
-                        <div class="inputContainer" id="BCCAddress">
-                            <label class="inputLabel inputLabelUnfocused" for="ToAddr">BCC Address:</label>
-                            <input id="ToAddr" name="ToAddr" type="text" is="emby-input" />
-                            <div class="fieldDescription">Recipient's email to recieve newsletter(in BCC). If more than
-                                1, seperate with commas</div>
+                        <div id="EmailConfigList" class="config-list">
+                            <p class="no-configs-text">No email configurations yet. Click "Add Email Configuration" to
+                                create one.</p>
                         </div>
-                        <div class="inputContainer" id="FromAddress">
-                            <label class="inputLabel inputLabelUnfocused" for="FromAddr">From Address:</label>
-                            <input id="FromAddr" name="FromAddr" type="text" is="emby-input" />
-                            <div class="fieldDescription">The address that the newsletter will come from</div>
-                        </div>
-                        <div class="inputContainer" id="SubjectTemplate">
-                            <label class="inputLabel inputLabelUnfocused" for="Subject">Subject:</label>
-                            <input id="Subject" name="Subject" type="text" is="emby-input" />
-                            <div class="fieldDescription">Subject field of the newsletter (Default: 'Jellyfin
-                                Newsletter)</div>
-                        </div>
-                        <div class="inputContainer" id="SMTPServerAddress">
-                            <label class="inputLabel inputLabelUnfocused" for="SMTPServer">SMTP Server Address:</label>
-                            <input id="SMTPServer" name="SMTPServerName" type="text" is="emby-input" />
-                            <div class="fieldDescription">Server address of the SMTP server/service you want to use
-                                (i.e. smtp.gmail.com)</div>
-                        </div>
-                        <div class="inputContainer" id="SMTPPortNum">
-                            <label class="inputLabel inputLabelUnfocused" for="SMTPPort">SMTP Port:</label>
-                            <input id="SMTPPort" name="SMTPPortNum" type="number" is="emby-input" min="0" />
-                            <div class="fieldDescription">SMTP Port that the server/service listed above uses (i.e. 587)
-                            </div>
-                        </div>
-                        <div class="inputContainer" id="SMTPUsername">
-                            <label class="inputLabel inputLabelUnfocused" for="SMTPUser">SMTP Username:</label>
-                            <input id="SMTPUser" name="SMTPUsername" type="text" is="emby-input" />
-                            <div class="fieldDescription">Username/email that will be used to login to the SMTP server
-                            </div>
-                        </div>
-                        <div class="inputContainer" id="SMTPPassword">
-                            <label class="inputLabel inputLabelUnfocused" for="SMTPPass">SMTP Password:</label>
-                            <input id="SMTPPass" name="SMTPPassword" type="text" is="emby-input" />
-                            <div class="fieldDescription">Password that will be used to login to the SMTP server</div>
-                        </div>
-                        <div class="inputContainer" id="BodyTemplate">
-                            <label class="inputLabel inputLabelUnfocused" for="Body">Body Html:</label>
-                            <div class="fieldDescription">
-                                See below for Field Names to use in your custom HTML:<br>
-                                {Date} - The date of Newsletter generation. <br>
-                                {EntryData} - This is the insert of the custom HTML from the field EntryData below. If
-                                not used, email will have no data. <br>
-                            </div>
-                            <textarea id="Body" name="Body" dataname="Body"
-                                style="width: 100%; height: 400px"></textarea>
-                            <div class="fieldDescription">HTML formatting for main Body of email. Defaults to a
-                                predefined template</div>
-                        </div>
-                        <!-- Entry/Cell Data -->
-                        <div class="inputContainer" id="EntryTemplate">
-                            <label class="inputLabel inputLabelUnfocused" for="Entry">EntryData Html:</label>
-                            <div class="fieldDescription">
-                                See below for Field Names to use in your custom HTML:<br>
-                                {ImageURL} - The physical URL for the image to be used. For HTML formatting, should be
-                                used within a 'img' tag as it's source. <br>
-                                {Title} - Title of the Series/Movie for the entry <br>
-                                {SeasonEpsInfo} - Season-Episode information for a series (Doesn't show for movies) <br>
-                                {SeriesOverview} - The series/movie overview <br>
-                            </div>
-                            <textarea id="Entry" name="Entry" dataname="Entry"
-                                style="width: 100%; height: 400px"></textarea>
-                            <div class="fieldDescription">Html formatting for each Entry (episode, movie, etc.) for the
-                                email. Defaults to a predefined template</div>
-                        </div>
-                        <button id="testButton" is="emby-button" type="button" class="raised block emby-button">
-                            <span>Test Email</span>
-                        </button>
                     </div>
 
                     <!-- Discord Tab -->
                     <div id="Discord" class="tab-content">
-                        <div class="inputContainer" id="DiscordWebhookAddress">
-                            <label class="inputLabel inputLabelUnfocused" for="DiscordWebhookURL">Webook URL:</label>
-                            <input id="DiscordWebhookURL" name="DiscordWebhookAddress" type="text" is="emby-input" />
-                            <div class="fieldDescription">Discord webhook URL that you want to use.</div>
+                        <div class="config-header">
+                            <h3>Discord Webhook Configurations</h3>
+                            <button type="button" is="emby-button" class="raised button-submit"
+                                onclick="addDiscordConfig()">
+                                <span>+ Add Discord Webhook</span>
+                            </button>
                         </div>
-                        <div class="inputContainer" id="DiscordWKName">
-                            <label class="inputLabel inputLabelUnfocused" for="DiscordWebhookName">Webhook Name:</label>
-                            <input id="DiscordWebhookName" name="DiscordWKName" type="text" is="emby-input" />
-                            <div class="fieldDescription">Name that you want to give to discord webhook. Defaults to
-                                "Jellyfin Newsletter"</div>
+                        <div id="DiscordConfigList" class="config-list">
+                            <p class="no-configs-text">No Discord configurations yet. Click "Add Discord Webhook" to
+                                create one.</p>
                         </div>
-                        <div id="DiscordFieldSelection">
-                            <table>
-                                <tr>
-                                    <th colspan="2">Select the fields that you want to be part of the message:</th>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="DiscordDescriptionEnabled" name="DiscordDescriptionEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Description</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="DiscordThumbnailEnabled" name="DiscordThumbnailEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Thumbnail</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="DiscordRatingEnabled" name="DiscordRatingEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Rating</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="DiscordPGRatingEnabled" name="DiscordPGRatingEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>PG Rating</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="DiscordDurationEnabled" name="DiscordDurationEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Duration</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="DiscordEpisodesEnabled" name="DiscordEpisodesEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Episodes List (Will only affect in Series)</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="inputContainer">
-                            <table class="color-table">
-                                <tr>
-                                    <th colspan="2">Series Add Event</th>
-                                    <th colspan="2">Series Delete Event</th>
-                                    <th colspan="2">Series Update Event</th>
-                                </tr>
-                                <tr>
-                                    <td colspan="2"><input id="DiscordSeriesAddEmbedColor"
-                                            name="DiscordSeriesAddEmbedColor" type="color" is="emby-input" /></td>
-                                    <td colspan="2"><input id="DiscordSeriesDeleteEmbedColor"
-                                            name="DiscordSeriesDeleteEmbedColor" type="color" is="emby-input" /></td>
-                                    <td colspan="2"><input id="DiscordSeriesUpdateEmbedColor"
-                                            name="DiscordSeriesUpdateEmbedColor" type="color" is="emby-input" /></td>
-                                </tr>
-                            </table>
-                        </div>
-                        <br>
-                        <div class="inputContainer">
-                            <table class="color-table">
-                                <tr>
-                                    <th colspan="2">Movies Add Event</th>
-                                    <th colspan="2">Movies Delete Event</th>
-                                    <th colspan="2">Movies Update Event</th>
-                                </tr>
-                                <tr>
-                                    <td colspan="2"><input id="DiscordMoviesAddEmbedColor"
-                                            name="DiscordMoviesAddEmbedColor" type="color" is="emby-input" /></td>
-                                    <td colspan="2"><input id="DiscordMoviesDeleteEmbedColor"
-                                            name="DiscordMoviesDeleteEmbedColor" type="color" is="emby-input" /></td>
-                                    <td colspan="2"><input id="DiscordMoviesUpdateEmbedColor"
-                                            name="DiscordMoviesUpdateEmbedColor" type="color" is="emby-input" /></td>
-                                </tr>
-                            </table>
-                        </div>
-                        <button id="testButtonDiscord" is="emby-button" type="button" class="raised block emby-button">
-                            <span>Test Discord</span>
-                        </button>
                     </div>
 
                     <!-- Telegram Tab -->
                     <div id="Telegram" class="tab-content">
-                        <div class="inputContainer" id="TelegramBID">
-                            <label class="inputLabel inputLabelUnfocused" for="TelegramBotToken">Bot Token:</label>
-                            <input id="TelegramBotToken" name="TelegramBID" type="text" is="emby-input" />
-                            <div class="fieldDescription">Telegram bot token from @BotFather. Format:
-                                123456789:ABCdefGhIJKlmnOPQRstuVWXyz123456789</div>
+                        <div class="config-header">
+                            <h3>Telegram Bot Configurations</h3>
+                            <button type="button" is="emby-button" class="raised button-submit"
+                                onclick="addTelegramConfig()">
+                                <span>+ Add Telegram Bot</span>
+                            </button>
                         </div>
-                        <div class="inputContainer" id="TelegramCID">
-                            <label class="inputLabel inputLabelUnfocused" for="TelegramChatId">Chat ID:</label>
-                            <input id="TelegramChatId" name="TelegramCID" type="text" is="emby-input" />
-                            <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Can be a
-                                user ID, group ID, or channel ID.</div>
+                        <div id="TelegramConfigList" class="config-list">
+                            <p class="no-configs-text">No Telegram configurations yet. Click "Add Telegram Bot" to
+                                create one.</p>
                         </div>
-                        <div id="TelegramFieldSelection">
-                            <table>
-                                <tr>
-                                    <th colspan="2">Select the fields that you want to be part of the message:</th>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="TelegramDescriptionEnabled" name="TelegramDescriptionEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Description</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="TelegramThumbnailEnabled" name="TelegramThumbnailEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Thumbnail</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="TelegramRatingEnabled" name="TelegramRatingEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Rating</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="TelegramPGRatingEnabled" name="TelegramPGRatingEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>PG Rating</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="TelegramDurationEnabled" name="TelegramDurationEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Duration</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="checkboxContainer checkboxContainer-withDescription">
-                                            <label class="emby-checkbox-label">
-                                                <input id="TelegramEpisodesEnabled" name="TelegramEpisodesEnabled"
-                                                    type="checkbox" is="emby-checkbox" />
-                                                <span>Episodes List (Will only affect in Series)</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                        <button id="testButtonTelegram" is="emby-button" type="button" class="raised block emby-button">
-                            <span>Test Telegram</span>
-                        </button>
                     </div>
 
                     <!-- buttons -->
@@ -467,11 +228,6 @@
             </div>
         </div>
         <style>
-            #testButton,
-            #testButtonDiscord {
-                background: #C1C1BF;
-            }
-
             td {
                 padding: 5px 10px;
             }
@@ -571,11 +327,124 @@
                     opacity: 1;
                 }
             }
+
+            /* Multi-Configuration Styles */
+            .config-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .config-header h3 {
+                margin: 0;
+            }
+
+            .config-list {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .no-configs-text {
+                text-align: center;
+                opacity: 0.7;
+                padding: 20px;
+            }
+
+            .config-accordion {
+                border: 1px solid #444;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .config-accordion-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 15px;
+                background: rgba(255, 255, 255, 0.05);
+                cursor: pointer;
+                user-select: none;
+            }
+
+            .config-accordion-header:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            .config-accordion-title {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .config-accordion-title .expand-icon {
+                transition: transform 0.3s;
+            }
+
+            .config-accordion.expanded .expand-icon {
+                transform: rotate(90deg);
+            }
+
+            .config-accordion-actions {
+                display: flex;
+                gap: 8px;
+            }
+
+            .config-accordion-content {
+                display: none;
+                padding: 15px;
+                border-top: 1px solid #444;
+            }
+
+            .config-accordion.expanded .config-accordion-content {
+                display: block;
+            }
+
+            .config-action-btn {
+                padding: 5px 12px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.85em;
+            }
+
+            .config-action-btn.test-btn {
+                background: #00a4dc;
+                color: white;
+            }
+
+            .config-action-btn.delete-btn {
+                background: #dc3545;
+                color: white;
+            }
+
+            .config-action-btn:hover {
+                opacity: 0.9;
+            }
+
+            .config-field-row {
+                display: flex;
+                gap: 15px;
+                flex-wrap: wrap;
+            }
+
+            .config-field-row>.inputContainer {
+                flex: 1;
+                min-width: 200px;
+            }
         </style>
         <script type="text/javascript">
             var NewsletterConfig = {
                 pluginUniqueId: '60f478ab-2dd6-4ea0-af10-04d033f75979'
             };
+
+            // In-memory config storage for multi-config management
+            var discordConfigs = [];
+            var telegramConfigs = [];
+            var emailConfigs = [];
 
             // Tab switching function
             window.openTab = function (evt, tabName) {
@@ -592,10 +461,10 @@
                 evt.currentTarget.className += " active";
             };
 
-            // Configuration fields mapping
+            // Configuration fields mapping (for General tab only now)
             var FIELDS = {
-                checkboxes: ['DebugMode', 'NewsletterOnItemAddedEnabled', 'NewsletterOnItemUpdatedEnabled', 'NewsletterOnItemDeletedEnabled', 'SeriesEnabled', 'MoviesEnabled', 'DiscordDescriptionEnabled', 'DiscordThumbnailEnabled', 'DiscordRatingEnabled', 'DiscordPGRatingEnabled', 'DiscordDurationEnabled', 'DiscordEpisodesEnabled', 'TelegramDescriptionEnabled', 'TelegramThumbnailEnabled', 'TelegramRatingEnabled', 'TelegramPGRatingEnabled', 'TelegramDurationEnabled', 'TelegramEpisodesEnabled'],
-                inputs: ['Hostname', 'SMTPServer', 'SMTPPort', 'SMTPUser', 'SMTPPass', 'DiscordWebhookURL', 'DiscordWebhookName', 'VisibleToAddr', 'ToAddr', 'FromAddr', 'Subject', 'Body', 'Entry', 'HostingSelector', 'EmailSize', 'DiscordSeriesAddEmbedColor', 'DiscordSeriesDeleteEmbedColor', 'DiscordSeriesUpdateEmbedColor', 'DiscordMoviesAddEmbedColor', 'DiscordMoviesDeleteEmbedColor', 'DiscordMoviesUpdateEmbedColor', 'TelegramBotToken', 'TelegramChatId']
+                checkboxes: ['DebugMode', 'NewsletterOnItemAddedEnabled', 'NewsletterOnItemUpdatedEnabled', 'NewsletterOnItemDeletedEnabled', 'SeriesEnabled', 'MoviesEnabled'],
+                inputs: ['Hostname', 'HostingSelector', 'EmailSize']
             };
 
             function updateMaxEmailSizeVisibility() {
@@ -605,6 +474,420 @@
                     maxEmailSizeDiv.style.display = (posterType === "attachment") ? '' : 'none';
                 }
             }
+
+            function generateUUID() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    var r = Math.random() * 16 | 0;
+                    var v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+
+            // ===================== DISCORD CONFIG FUNCTIONS =====================
+
+            function addDiscordConfig() {
+                var newConfig = {
+                    Id: generateUUID(),
+                    Name: 'New Discord Webhook',
+                    WebhookURL: '',
+                    WebhookName: 'Jellyfin Newsletter',
+                    DescriptionEnabled: true,
+                    ThumbnailEnabled: true,
+                    RatingEnabled: true,
+                    PGRatingEnabled: false,
+                    DurationEnabled: false,
+                    EpisodesEnabled: true,
+                    SeriesAddEmbedColor: '#00FF00',
+                    SeriesDeleteEmbedColor: '#FF0000',
+                    SeriesUpdateEmbedColor: '#0000FF',
+                    MoviesAddEmbedColor: '#00FF00',
+                    MoviesDeleteEmbedColor: '#FF0000',
+                    MoviesUpdateEmbedColor: '#0000FF'
+                };
+                discordConfigs.push(newConfig);
+                renderDiscordConfigs();
+            }
+
+            function removeDiscordConfig(id) {
+                if (confirm('Are you sure you want to remove this Discord webhook configuration?')) {
+                    discordConfigs = discordConfigs.filter(function (c) { return c.Id !== id; });
+                    renderDiscordConfigs();
+                }
+            }
+
+            function testDiscordConfig(id) {
+                Dashboard.showLoadingMsg();
+                var url = ApiClient.getUrl('Discord/SendDiscordTestMessage') + '?configurationId=' + encodeURIComponent(id);
+                ApiClient.ajax({ type: 'POST', url: url }).then(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert("Test Discord message sent! Check your webhook channel.");
+                }).catch(function (err) {
+                    Dashboard.hideLoadingMsg();
+                    alert("Failed to send test message. Check server logs for details.");
+                });
+            }
+
+            function toggleDiscordAccordion(id) {
+                var accordion = document.getElementById('discord-accordion-' + id);
+                if (accordion) {
+                    accordion.classList.toggle('expanded');
+                }
+            }
+
+            function updateDiscordConfigFromUI(id) {
+                var config = discordConfigs.find(function (c) { return c.Id === id; });
+                if (!config) return;
+
+                config.Name = document.getElementById('discord-name-' + id).value || 'Unnamed';
+                config.WebhookURL = document.getElementById('discord-url-' + id).value;
+                config.WebhookName = document.getElementById('discord-webhookname-' + id).value;
+                config.DescriptionEnabled = document.getElementById('discord-desc-' + id).checked;
+                config.ThumbnailEnabled = document.getElementById('discord-thumb-' + id).checked;
+                config.RatingEnabled = document.getElementById('discord-rating-' + id).checked;
+                config.PGRatingEnabled = document.getElementById('discord-pgrating-' + id).checked;
+                config.DurationEnabled = document.getElementById('discord-duration-' + id).checked;
+                config.EpisodesEnabled = document.getElementById('discord-episodes-' + id).checked;
+                config.SeriesAddEmbedColor = document.getElementById('discord-series-add-color-' + id).value;
+                config.SeriesDeleteEmbedColor = document.getElementById('discord-series-delete-color-' + id).value;
+                config.SeriesUpdateEmbedColor = document.getElementById('discord-series-update-color-' + id).value;
+                config.MoviesAddEmbedColor = document.getElementById('discord-movies-add-color-' + id).value;
+                config.MoviesDeleteEmbedColor = document.getElementById('discord-movies-delete-color-' + id).value;
+                config.MoviesUpdateEmbedColor = document.getElementById('discord-movies-update-color-' + id).value;
+
+                // Update header title
+                var headerTitle = document.querySelector('#discord-accordion-' + id + ' .config-name');
+                if (headerTitle) headerTitle.textContent = config.Name;
+            }
+
+            function renderDiscordConfigs() {
+                var container = document.getElementById('DiscordConfigList');
+                if (discordConfigs.length === 0) {
+                    container.innerHTML = '<p class="no-configs-text">No Discord configurations yet. Click "Add Discord Webhook" to create one.</p>';
+                    return;
+                }
+
+                var html = '';
+                discordConfigs.forEach(function (config) {
+                    html += '<div id="discord-accordion-' + config.Id + '" class="config-accordion">';
+                    html += '  <div class="config-accordion-header" onclick="toggleDiscordAccordion(\'' + config.Id + '\')">';
+                    html += '    <div class="config-accordion-title">';
+                    html += '      <span class="expand-icon">▶</span>';
+                    html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
+                    html += '    </div>';
+                    html += '    <div class="config-accordion-actions">';
+                    html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testDiscordConfig(\'' + config.Id + '\')">Test</button>';
+                    html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeDiscordConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="config-accordion-content">';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Configuration Name:</label>';
+                    html += '      <input id="discord-name-' + config.Id + '" type="text" is="emby-input" value="' + (config.Name || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Webhook URL:</label>';
+                    html += '      <input id="discord-url-' + config.Id + '" type="text" is="emby-input" value="' + (config.WebhookURL || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Webhook Display Name:</label>';
+                    html += '      <input id="discord-webhookname-' + config.Id + '" type="text" is="emby-input" value="' + (config.WebhookName || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div style="margin: 15px 0;">';
+                    html += '      <label class="inputLabel">Message Fields:</label>';
+                    html += '      <table><tr>';
+                    html += '        <td><label><input id="discord-desc-' + config.Id + '" type="checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Description</label></td>';
+                    html += '        <td><label><input id="discord-thumb-' + config.Id + '" type="checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Thumbnail</label></td>';
+                    html += '        <td><label><input id="discord-rating-' + config.Id + '" type="checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Rating</label></td>';
+                    html += '      </tr><tr>';
+                    html += '        <td><label><input id="discord-pgrating-' + config.Id + '" type="checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> PG Rating</label></td>';
+                    html += '        <td><label><input id="discord-duration-' + config.Id + '" type="checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Duration</label></td>';
+                    html += '        <td><label><input id="discord-episodes-' + config.Id + '" type="checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Episodes</label></td>';
+                    html += '      </tr></table>';
+                    html += '    </div>';
+                    html += '    <div style="margin: 15px 0;">';
+                    html += '      <label class="inputLabel">Embed Colors:</label>';
+                    html += '      <table class="color-table">';
+                    html += '        <tr><th>Series Add</th><th>Series Delete</th><th>Series Update</th></tr>';
+                    html += '        <tr>';
+                    html += '          <td><input id="discord-series-add-color-' + config.Id + '" type="color" value="' + (config.SeriesAddEmbedColor || '#00FF00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-series-delete-color-' + config.Id + '" type="color" value="' + (config.SeriesDeleteEmbedColor || '#FF0000') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-series-update-color-' + config.Id + '" type="color" value="' + (config.SeriesUpdateEmbedColor || '#0000FF') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '        </tr>';
+                    html += '        <tr><th>Movies Add</th><th>Movies Delete</th><th>Movies Update</th></tr>';
+                    html += '        <tr>';
+                    html += '          <td><input id="discord-movies-add-color-' + config.Id + '" type="color" value="' + (config.MoviesAddEmbedColor || '#00FF00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-movies-delete-color-' + config.Id + '" type="color" value="' + (config.MoviesDeleteEmbedColor || '#FF0000') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-movies-update-color-' + config.Id + '" type="color" value="' + (config.MoviesUpdateEmbedColor || '#0000FF') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '        </tr>';
+                    html += '      </table>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+
+            // ===================== TELEGRAM CONFIG FUNCTIONS =====================
+
+            function addTelegramConfig() {
+                var newConfig = {
+                    Id: generateUUID(),
+                    Name: 'New Telegram Bot',
+                    BotToken: '',
+                    ChatId: '',
+                    DescriptionEnabled: true,
+                    ThumbnailEnabled: true,
+                    RatingEnabled: true,
+                    PGRatingEnabled: false,
+                    DurationEnabled: false,
+                    EpisodesEnabled: true
+                };
+                telegramConfigs.push(newConfig);
+                renderTelegramConfigs();
+            }
+
+            function removeTelegramConfig(id) {
+                if (confirm('Are you sure you want to remove this Telegram bot configuration?')) {
+                    telegramConfigs = telegramConfigs.filter(function (c) { return c.Id !== id; });
+                    renderTelegramConfigs();
+                }
+            }
+
+            function testTelegramConfig(id) {
+                Dashboard.showLoadingMsg();
+                var url = ApiClient.getUrl('Telegram/SendTelegramTestMessage') + '?configurationId=' + encodeURIComponent(id);
+                ApiClient.ajax({ type: 'POST', url: url }).then(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert("Test Telegram message sent! Check your chat.");
+                }).catch(function (err) {
+                    Dashboard.hideLoadingMsg();
+                    alert("Failed to send test message. Check server logs for details.");
+                });
+            }
+
+            function toggleTelegramAccordion(id) {
+                var accordion = document.getElementById('telegram-accordion-' + id);
+                if (accordion) {
+                    accordion.classList.toggle('expanded');
+                }
+            }
+
+            function updateTelegramConfigFromUI(id) {
+                var config = telegramConfigs.find(function (c) { return c.Id === id; });
+                if (!config) return;
+
+                config.Name = document.getElementById('telegram-name-' + id).value || 'Unnamed';
+                config.BotToken = document.getElementById('telegram-token-' + id).value;
+                config.ChatId = document.getElementById('telegram-chatid-' + id).value;
+                config.DescriptionEnabled = document.getElementById('telegram-desc-' + id).checked;
+                config.ThumbnailEnabled = document.getElementById('telegram-thumb-' + id).checked;
+                config.RatingEnabled = document.getElementById('telegram-rating-' + id).checked;
+                config.PGRatingEnabled = document.getElementById('telegram-pgrating-' + id).checked;
+                config.DurationEnabled = document.getElementById('telegram-duration-' + id).checked;
+                config.EpisodesEnabled = document.getElementById('telegram-episodes-' + id).checked;
+
+                var headerTitle = document.querySelector('#telegram-accordion-' + id + ' .config-name');
+                if (headerTitle) headerTitle.textContent = config.Name;
+            }
+
+            function renderTelegramConfigs() {
+                var container = document.getElementById('TelegramConfigList');
+                if (telegramConfigs.length === 0) {
+                    container.innerHTML = '<p class="no-configs-text">No Telegram configurations yet. Click "Add Telegram Bot" to create one.</p>';
+                    return;
+                }
+
+                var html = '';
+                telegramConfigs.forEach(function (config) {
+                    html += '<div id="telegram-accordion-' + config.Id + '" class="config-accordion">';
+                    html += '  <div class="config-accordion-header" onclick="toggleTelegramAccordion(\'' + config.Id + '\')">';
+                    html += '    <div class="config-accordion-title">';
+                    html += '      <span class="expand-icon">▶</span>';
+                    html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
+                    html += '    </div>';
+                    html += '    <div class="config-accordion-actions">';
+                    html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testTelegramConfig(\'' + config.Id + '\')">Test</button>';
+                    html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeTelegramConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="config-accordion-content">';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Configuration Name:</label>';
+                    html += '      <input id="telegram-name-' + config.Id + '" type="text" is="emby-input" value="' + (config.Name || '') + '" onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Bot Token:</label>';
+                    html += '      <input id="telegram-token-' + config.Id + '" type="text" is="emby-input" value="' + (config.BotToken || '') + '" onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Telegram bot token from @BotFather. Format: 123456789:ABCdefGhIJKlmnOPQRstuVWXyz123456789</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Chat ID:</label>';
+                    html += '      <input id="telegram-chatid-' + config.Id + '" type="text" is="emby-input" value="' + (config.ChatId || '') + '" onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Telegram chat ID or group ID to send messages to.</div>';
+                    html += '    </div>';
+                    html += '    <div style="margin: 15px 0;">';
+                    html += '      <label class="inputLabel">Message Fields:</label>';
+                    html += '      <table><tr>';
+                    html += '        <td><label><input id="telegram-desc-' + config.Id + '" type="checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Description</label></td>';
+                    html += '        <td><label><input id="telegram-thumb-' + config.Id + '" type="checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Thumbnail</label></td>';
+                    html += '        <td><label><input id="telegram-rating-' + config.Id + '" type="checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Rating</label></td>';
+                    html += '      </tr><tr>';
+                    html += '        <td><label><input id="telegram-pgrating-' + config.Id + '" type="checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> PG Rating</label></td>';
+                    html += '        <td><label><input id="telegram-duration-' + config.Id + '" type="checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Duration</label></td>';
+                    html += '        <td><label><input id="telegram-episodes-' + config.Id + '" type="checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Episodes</label></td>';
+                    html += '      </tr></table>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+
+            // ===================== EMAIL CONFIG FUNCTIONS =====================
+
+            function addEmailConfig() {
+                var newConfig = {
+                    Id: generateUUID(),
+                    Name: 'New Email Configuration',
+                    SMTPServer: '',
+                    SMTPPort: 587,
+                    SMTPUser: '',
+                    SMTPPass: '',
+                    VisibleToAddr: '',
+                    ToAddr: '',
+                    FromAddr: '',
+                    Subject: 'Jellyfin Newsletter',
+                    Body: '',
+                    Entry: ''
+                };
+                emailConfigs.push(newConfig);
+                renderEmailConfigs();
+            }
+
+            function removeEmailConfig(id) {
+                if (confirm('Are you sure you want to remove this email configuration?')) {
+                    emailConfigs = emailConfigs.filter(function (c) { return c.Id !== id; });
+                    renderEmailConfigs();
+                }
+            }
+
+            function testEmailConfig(id) {
+                Dashboard.showLoadingMsg();
+                var url = ApiClient.getUrl('SmtpMailer/SendTestMail') + '?configurationId=' + encodeURIComponent(id);
+                ApiClient.ajax({ type: 'POST', url: url }).then(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert("Test email sent! Check your inbox.");
+                }).catch(function (err) {
+                    Dashboard.hideLoadingMsg();
+                    alert("Failed to send test email. Check server logs for details.");
+                });
+            }
+
+            function toggleEmailAccordion(id) {
+                var accordion = document.getElementById('email-accordion-' + id);
+                if (accordion) {
+                    accordion.classList.toggle('expanded');
+                }
+            }
+
+            function updateEmailConfigFromUI(id) {
+                var config = emailConfigs.find(function (c) { return c.Id === id; });
+                if (!config) return;
+
+                config.Name = document.getElementById('email-name-' + id).value || 'Unnamed';
+                config.SMTPServer = document.getElementById('email-server-' + id).value;
+                config.SMTPPort = parseInt(document.getElementById('email-port-' + id).value) || 587;
+                config.SMTPUser = document.getElementById('email-user-' + id).value;
+                config.SMTPPass = document.getElementById('email-pass-' + id).value;
+                config.VisibleToAddr = document.getElementById('email-to-' + id).value;
+                config.ToAddr = document.getElementById('email-bcc-' + id).value;
+                config.FromAddr = document.getElementById('email-from-' + id).value;
+                config.Subject = document.getElementById('email-subject-' + id).value;
+                config.Body = document.getElementById('email-body-' + id).value;
+                config.Entry = document.getElementById('email-entry-' + id).value;
+
+                var headerTitle = document.querySelector('#email-accordion-' + id + ' .config-name');
+                if (headerTitle) headerTitle.textContent = config.Name;
+            }
+
+            function renderEmailConfigs() {
+                var container = document.getElementById('EmailConfigList');
+                if (emailConfigs.length === 0) {
+                    container.innerHTML = '<p class="no-configs-text">No email configurations yet. Click "Add Email Configuration" to create one.</p>';
+                    return;
+                }
+
+                var html = '';
+                emailConfigs.forEach(function (config) {
+                    html += '<div id="email-accordion-' + config.Id + '" class="config-accordion">';
+                    html += '  <div class="config-accordion-header" onclick="toggleEmailAccordion(\'' + config.Id + '\')">';
+                    html += '    <div class="config-accordion-title">';
+                    html += '      <span class="expand-icon">▶</span>';
+                    html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
+                    html += '    </div>';
+                    html += '    <div class="config-accordion-actions">';
+                    html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testEmailConfig(\'' + config.Id + '\')">Test</button>';
+                    html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeEmailConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="config-accordion-content">';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Configuration Name:</label>';
+                    html += '      <input id="email-name-' + config.Id + '" type="text" is="emby-input" value="' + (config.Name || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="config-field-row">';
+                    html += '      <div class="inputContainer">';
+                    html += '        <label class="inputLabel inputLabelUnfocused">SMTP Server:</label>';
+                    html += '        <input id="email-server-' + config.Id + '" type="text" is="emby-input" value="' + (config.SMTPServer || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      </div>';
+                    html += '      <div class="inputContainer">';
+                    html += '        <label class="inputLabel inputLabelUnfocused">SMTP Port:</label>';
+                    html += '        <input id="email-port-' + config.Id + '" type="number" is="emby-input" value="' + (config.SMTPPort || 587) + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      </div>';
+                    html += '    </div>';
+                    html += '    <div class="config-field-row">';
+                    html += '      <div class="inputContainer">';
+                    html += '        <label class="inputLabel inputLabelUnfocused">SMTP Username:</label>';
+                    html += '        <input id="email-user-' + config.Id + '" type="text" is="emby-input" value="' + (config.SMTPUser || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      </div>';
+                    html += '      <div class="inputContainer">';
+                    html += '        <label class="inputLabel inputLabelUnfocused">SMTP Password:</label>';
+                    html += '        <input id="email-pass-' + config.Id + '" type="password" is="emby-input" value="' + (config.SMTPPass || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      </div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">To Address:</label>';
+                    html += '      <input id="email-to-' + config.Id + '" type="text" is="emby-input" value="' + (config.VisibleToAddr || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Recipient\'s email. Separate multiple with commas.</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">BCC Address:</label>';
+                    html += '      <input id="email-bcc-' + config.Id + '" type="text" is="emby-input" value="' + (config.ToAddr || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">BCC recipients. Separate multiple with commas.</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">From Address:</label>';
+                    html += '      <input id="email-from-' + config.Id + '" type="text" is="emby-input" value="' + (config.FromAddr || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Subject:</label>';
+                    html += '      <input id="email-subject-' + config.Id + '" type="text" is="emby-input" value="' + (config.Subject || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Body HTML:</label>';
+                    html += '      <textarea id="email-body-' + config.Id + '" style="width: 100%; height: 200px;" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')">' + (config.Body || '') + '</textarea>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Entry HTML:</label>';
+                    html += '      <textarea id="email-entry-' + config.Id + '" style="width: 100%; height: 200px;" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')">' + (config.Entry || '') + '</textarea>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+
+            // ===================== LIBRARY FUNCTIONS =====================
 
             function loadLibraries() {
                 ApiClient.getJSON(ApiClient.getUrl('Library/MediaFolders')).then(function (result) {
@@ -734,9 +1017,11 @@
                 updateSelectionState(prefix);
             };
 
+            // ===================== SAVE / LOAD CONFIG =====================
+
             function saveConfig() {
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                    // Loop through mapped fields
+                    // General tab fields
                     FIELDS.checkboxes.forEach(function (id) {
                         var el = document.querySelector('#' + id);
                         if (el) config[id] = el.checked;
@@ -754,7 +1039,7 @@
                     var decimalPlaces = decimalPlacesEl ? parseInt(decimalPlacesEl.value) : 1;
                     config.CommunityRatingDecimalPlaces = isNaN(decimalPlaces) ? 1 : decimalPlaces;
 
-                    // Save selected series libraries
+                    // Save selected libraries
                     var selectedSeriesLibraries = [];
                     var seriesChecked = document.querySelectorAll('.series-library-checkbox:checked');
                     for (var i = 0; i < seriesChecked.length; i++) {
@@ -770,18 +1055,23 @@
                     }
                     config.SelectedMoviesLibraries = selectedMoviesLibraries;
 
+                    // Save multi-configurations
+                    config.DiscordConfigurations = discordConfigs;
+                    config.TelegramConfigurations = telegramConfigs;
+                    config.EmailConfigurations = emailConfigs;
+
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
-                        console.log("RESULT: ", result);
+                        console.log("Config saved: ", result);
                     });
                 });
             }
 
             function loadConfig() {
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                    console.log("Populating Page..");
+                    console.log("Loading config...", config);
 
-                    // Loop through mapped fields
+                    // General tab fields
                     FIELDS.checkboxes.forEach(function (id) {
                         var el = document.querySelector('#' + id);
                         if (el) el.checked = config[id];
@@ -800,6 +1090,15 @@
                     if (ratingEl) ratingEl.value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
 
                     updateMaxEmailSizeVisibility();
+
+                    // Load multi-configurations
+                    discordConfigs = config.DiscordConfigurations || [];
+                    telegramConfigs = config.TelegramConfigurations || [];
+                    emailConfigs = config.EmailConfigurations || [];
+
+                    renderDiscordConfigs();
+                    renderTelegramConfigs();
+                    renderEmailConfigs();
 
                     loadLibraries();
 
@@ -822,56 +1121,6 @@
                     return false;
                 });
 
-            // button to test SMTP configration
-            document.querySelector('#testButton')
-                .addEventListener('click', function (e) {
-                    Dashboard.showLoadingMsg();
-                    console.log("Test mail button pressed!");
-                    ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                        console.log("TEST: ", config);
-                        var url = ApiClient.getUrl('SmtpMailer/SendTestMail');
-                        var data = JSON.stringify(config);
-                        ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
-                    });
-                    Dashboard.hideLoadingMsg();
-                    e.preventDefault();
-                    alert("Test email sent! In case email doesn't arrive, check your SMTP configuration and server logs for errors.");
-                    return false;
-                });
-
-            document.querySelector('#testButtonDiscord')
-                .addEventListener('click', function (e) {
-                    Dashboard.showLoadingMsg();
-                    console.log("Test discord message button pressed!");
-                    ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                        console.log("TEST: ", config);
-                        var url = ApiClient.getUrl('Discord/SendDiscordTestMessage');
-                        var data = JSON.stringify(config);
-                        ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
-                    });
-                    Dashboard.hideLoadingMsg();
-                    e.preventDefault();
-                    alert("Test discord message sent! In case message doesn't arrive, check your Discord webhook configuration and server logs for errors.");
-                    return false;
-                });
-
-            document.querySelector('#testButtonTelegram')
-                .addEventListener('click', function (e) {
-                    Dashboard.showLoadingMsg();
-                    console.log("Test Telegram message button pressed!");
-                    ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                        console.log("TEST: ", config);
-                        var url = ApiClient.getUrl('Telegram/SendTelegramTestMessage');
-                        var data = JSON.stringify(config);
-                        ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
-                    });
-                    Dashboard.hideLoadingMsg();
-                    e.preventDefault();
-                    alert("Test Telegram message sent! In case message doesn't arrive, check your Telegram bot configuration and server logs for errors.");
-                    return false;
-                });
-
-            // Scrapper config
             document.querySelector('#HostingSelector')
                 .addEventListener('change', function () {
                     updateMaxEmailSizeVisibility();

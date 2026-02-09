@@ -42,6 +42,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         }
 
         SetConfigPaths(applicationPaths);
+
+        // Migrate legacy single-value configuration to new collection-based format
+        Configuration.MigrateFromLegacy();
     }
 
     /// <inheritdoc />
