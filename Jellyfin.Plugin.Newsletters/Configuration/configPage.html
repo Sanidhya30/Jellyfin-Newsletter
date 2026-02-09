@@ -1,420 +1,464 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <title>Newsletters</title>
 </head>
+
 <body>
-    <div id="NewsletterConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div id="NewsletterConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
+        data-require="emby-input,emby-button,emby-select,emby-checkbox">
         <div data-role="content">
             <div class="content-primary">
                 <form id="NewsletterConfigForm">
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="DebugMode" name="DebugMode" type="checkbox" is="emby-checkbox" />
-                            <span>Debug Mode</span>
-                        </label>
+                    <!-- Tab Navigation -->
+                    <div class="tab-bar">
+                        <button type="button" class="tab-link active"
+                            onclick="openTab(event, 'General')">General</button>
+                        <button type="button" class="tab-link" onclick="openTab(event, 'Email')">Email</button>
+                        <button type="button" class="tab-link" onclick="openTab(event, 'Discord')">Discord</button>
+                        <button type="button" class="tab-link" onclick="openTab(event, 'Telegram')">Telegram</button>
                     </div>
-                    <div id="CommonDetails">
-                        <div class="inputContainer" id="LocalHostname">
-                            <label class="inputLabel inputLabelUnfocused" for="Hostname">Server URL:</label>
-                            <input id="Hostname" name="Hostname" type="text" is="emby-input" />
-                            <div class="fieldDescription">
-                                Hostname for your JF server that is accessible from outside your network. Ensure to include http[s]:// and port number (if applicable). <b>DO NOT include a trailing slash '/'</b>. 
-                                <br>
-                                i.e: https://myServerDNSName.com:8096
+
+                    <!-- General Tab -->
+                    <div id="General" class="tab-content" style="display: block;">
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="DebugMode" name="DebugMode" type="checkbox" is="emby-checkbox" />
+                                <span>Debug Mode</span>
+                            </label>
+                        </div>
+                        <div id="CommonDetails">
+                            <div class="inputContainer" id="LocalHostname">
+                                <label class="inputLabel inputLabelUnfocused" for="Hostname">Server URL:</label>
+                                <input id="Hostname" name="Hostname" type="text" is="emby-input" />
+                                <div class="fieldDescription">
+                                    Hostname for your JF server that is accessible from outside your network. Ensure to
+                                    include http[s]:// and port number (if applicable). <b>DO NOT include a trailing
+                                        slash '/'</b>.
+                                    <br>
+                                    i.e: https://myServerDNSName.com:8096
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <input type="hidden" id="SeriesEnabled" value="false" />
-                    <input type="hidden" id="MoviesEnabled" value="false" />
+                        <input type="hidden" id="SeriesEnabled" value="false" />
+                        <input type="hidden" id="MoviesEnabled" value="false" />
 
-                    <div class="inputContainer" id="LibrarySelection">
-                        <label class="inputLabel inputLabelUnfocused">Library Selection:</label>
-                        <table class="library-table">
-                            <thead>
+                        <div class="inputContainer" id="LibrarySelection">
+                            <label class="inputLabel inputLabelUnfocused">Library Selection:</label>
+                            <table class="library-table">
+                                <thead>
+                                    <tr>
+                                        <th>Series</th>
+                                        <th>Movies</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div style="margin-bottom: 10px;">
+                                                <button id="SelectAllSeries" is="emby-button" type="button"
+                                                    class="raised button-submit select-all-btn"
+                                                    onclick="toggleAll('Series')">
+                                                    <span>Select All Series</span>
+                                                </button>
+                                            </div>
+                                            <div id="SeriesLibraryCheckboxes" class="library-checkbox-container">
+                                                <p class="loading-text">Loading series libraries...</p>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="margin-bottom: 10px;">
+                                                <button id="SelectAllMovies" is="emby-button" type="button"
+                                                    class="raised button-submit select-all-btn"
+                                                    onclick="toggleAll('Movies')">
+                                                    <span>Select All Movies</span>
+                                                </button>
+                                            </div>
+                                            <div id="MoviesLibraryCheckboxes" class="library-checkbox-container">
+                                                <p class="loading-text">Loading movies libraries...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="inputContainer" id="NewsletterEventSettings">
+                            <label class="inputLabel inputLabelUnfocused">Newsletter Event Settings:</label>
+                            <table>
                                 <tr>
-                                    <th>Series</th>
-                                    <th>Movies</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <div style="margin-bottom: 10px;">
-                                            <button id="SelectAllSeries" is="emby-button" type="button" class="raised button-submit select-all-btn" onclick="toggleAll('Series')">
-                                                <span>Select All Series</span>
-                                            </button>
-                                        </div>
-                                        <div id="SeriesLibraryCheckboxes" class="library-checkbox-container">
-                                            <p class="loading-text">Loading series libraries...</p>
+                                    <td style="vertical-align: top;">
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="NewsletterOnItemAddedEnabled"
+                                                    name="NewsletterOnItemAddedEnabled" type="checkbox"
+                                                    is="emby-checkbox" />
+                                                <span>Send newsletter when items are added</span>
+                                            </label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div style="margin-bottom: 10px;">
-                                            <button id="SelectAllMovies" is="emby-button" type="button" class="raised button-submit select-all-btn" onclick="toggleAll('Movies')">
-                                                <span>Select All Movies</span>
-                                            </button>
+                                    <td style="vertical-align: top;">
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="NewsletterOnItemDeletedEnabled"
+                                                    name="NewsletterOnItemDeletedEnabled" type="checkbox"
+                                                    is="emby-checkbox" />
+                                                <span>Send newsletter when items are deleted</span>
+                                            </label>
                                         </div>
-                                        <div id="MoviesLibraryCheckboxes" class="library-checkbox-container">
-                                            <p class="loading-text">Loading movies libraries...</p>
+                                    </td>
+                                    <td style="vertical-align: top;">
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="NewsletterOnItemUpdatedEnabled"
+                                                    name="NewsletterOnItemUpdatedEnabled" type="checkbox"
+                                                    is="emby-checkbox" />
+                                                <span>Send newsletter when items are updated</span>
+                                            </label>
+                                            <details style="margin-top: 5px; font-size: 0.85rem; cursor: pointer;">
+                                                <summary style="opacity: 0.7;">How does detection work?</summary>
+                                                <p
+                                                    style="padding: 10px; background: rgba(0,0,0,0.15); border-radius: 4px; margin-top: 5px; line-height: 1.4;">
+                                                    Enable this to receive newsletters when items are updated. The
+                                                    update detection works differently than Jellyfin's built-in update
+                                                    event. This plugin detects updates based on how Radarr/Sonarr handle
+                                                    media upgrades - when a file is upgraded, the old file is deleted
+                                                    and a new one is added. This means an update is detected when a file
+                                                    deletion is immediately followed by a file addition with the same
+                                                    title/season/episode information.
+                                                </p>
+                                            </details>
                                         </div>
                                     </td>
                                 </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="inputContainer" id="NewsletterEventSettings">
-                        <label class="inputLabel inputLabelUnfocused">Newsletter Event Settings:</label>
-                        <table>
-                            <tr>
-                                <td style="vertical-align: top;">
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="NewsletterOnItemAddedEnabled" name="NewsletterOnItemAddedEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Send newsletter when items are added</span>
-                                        </label>
-                                    </div>
-                                </td>
-                                <td style="vertical-align: top;">
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="NewsletterOnItemDeletedEnabled" name="NewsletterOnItemDeletedEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Send newsletter when items are deleted</span>
-                                        </label>
-                                    </div>
-                                </td>
-                                <td style="vertical-align: top;">
-                                    <div class="checkboxContainer checkboxContainer-withDescription">
-                                        <label class="emby-checkbox-label">
-                                            <input id="NewsletterOnItemUpdatedEnabled" name="NewsletterOnItemUpdatedEnabled" type="checkbox" is="emby-checkbox" />
-                                            <span>Send newsletter when items are updated</span>
-                                        </label>
-                                        <details style="margin-top: 5px; font-size: 0.85rem; cursor: pointer;">
-                                            <summary style="opacity: 0.7;">How does detection work?</summary>
-                                            <p style="padding: 10px; background: rgba(0,0,0,0.15); border-radius: 4px; margin-top: 5px; line-height: 1.4;">
-                                                Enable this to receive newsletters when items are updated. The update detection works differently than Jellyfin's built-in update event. This plugin detects updates based on how Radarr/Sonarr handle media upgrades - when a file is upgraded, the old file is deleted and a new one is added. This means an update is detected when a file deletion is immediately followed by a file addition with the same title/season/episode information.
-                                            </p>
-                                        </details>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="inputContainer" id="CommunityRatingDecimals">
-                        <label class="inputLabel inputLabelUnfocused" for="CommunityRatingDecimalPlaces">Community Rating Decimal Places:</label>
-                        <input id="CommunityRatingDecimalPlaces" name="CommunityRatingDecimalPlaces" type="number" is="emby-input" min="0" max="4" />
+                            </table>
+                        </div>
+                        <div class="inputContainer" id="CommunityRatingDecimals">
+                            <label class="inputLabel inputLabelUnfocused" for="CommunityRatingDecimalPlaces">Community
+                                Rating Decimal Places:</label>
+                            <input id="CommunityRatingDecimalPlaces" name="CommunityRatingDecimalPlaces" type="number"
+                                is="emby-input" min="0" max="4" />
+                            <div class="fieldDescription">
+                                Number of decimal places to display for community ratings (0-4). Default: 1
+                            </div>
+                        </div>
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="HostingSelector">Poster Type:</label>
+                            <select is="emby-select" id="HostingSelector" name="HostingSelector"
+                                class="emby-select-withcolor emby-select">
+                                <option id="defaultTmdb" value="tmdb">TMDB Poster (Default)</option>
+                                <option id="localJFHosting" value="attachment">Local Poster Images</option>
+                            </select>
+                        </div>
+                        <hr>
+                        <div id="MaxEmailSizeContainer" name="options" style="display: none;">
+                            <div class="inputContainer" id="MaxEmailSize">
+                                <label class="inputLabel inputLabelUnfocused" for="EmailSize">Maximum Email
+                                    Size:</label>
+                                <input id="EmailSize" name="EmailSize" type="text" type="number" is="emby-input"
+                                    min="5" />
+                                <div class="fieldDescription">
+                                    Enter the maximum email size allowed by your email provider (in MB).
+                                    For reliable delivery, set this value slightly below your provider's official limit
+                                    (e.g., use 20 MB if your provider supports up to 25 MB).
+                                    <b>Default: 15 MB</b>
+                                </div>
+                            </div>
+                        </div>
                         <div class="fieldDescription">
-                            Number of decimal places to display for community ratings (0-4). Default: 1
+                            Choose how newsletter posters should be included in the emails.<br>
+                            <b>TMDB</b>: Uses image URLs from TheMovieDB (default, smallest emails).<br>
+                            <b>Local Attachments</b>: Embeds images directly in the email (larger messages).
                         </div>
                     </div>
 
-                    <!-- <div class="inputContainer" id="BodyTemplate" style="display: none;"> -->
-                    <!-- Newsletter Formatting -->
-                    <!-- Main Body -->
-                    <div id="HiddenDetails" name="HtmlFormatting" class="DropdownSection">
-                        <details>
-                            <summary>Newsletter HTML Format</summary><br>
-                            <div class="inputContainer" id="BodyTemplate">
-                                <label class="inputLabel inputLabelUnfocused" for="Body">Body Html:</label>
-                                <div class="fieldDescription">
-                                    See below for Field Names to use in your custom HTML:<br>
-                                    {Date} - The date of Newsletter generation. <br>
-                                    {EntryData} - This is the insert of the custom HTML from the field EntryData below. If not used, email will have no data. <br>
-                                </div>
-                                <textarea id="Body" name="Body" dataname="Body" style="width: 100%; height: 400px"></textarea>
-                                <div class="fieldDescription">HTML formatting for main Body of email. Defaults to a predefined template</div>
+                    <!-- Email Tab -->
+                    <div id="Email" class="tab-content">
+                        <div class="inputContainer" id="ToAddress">
+                            <label class="inputLabel inputLabelUnfocused" for="VisibleToAddr">To Address:</label>
+                            <input id="VisibleToAddr" name="VisibleToAddr" type="text" is="emby-input" />
+                            <div class="fieldDescription">Recipient's email to recieve newsletter. If more than 1,
+                                seperate with commas</div>
+                        </div>
+                        <div class="inputContainer" id="BCCAddress">
+                            <label class="inputLabel inputLabelUnfocused" for="ToAddr">BCC Address:</label>
+                            <input id="ToAddr" name="ToAddr" type="text" is="emby-input" />
+                            <div class="fieldDescription">Recipient's email to recieve newsletter(in BCC). If more than
+                                1, seperate with commas</div>
+                        </div>
+                        <div class="inputContainer" id="FromAddress">
+                            <label class="inputLabel inputLabelUnfocused" for="FromAddr">From Address:</label>
+                            <input id="FromAddr" name="FromAddr" type="text" is="emby-input" />
+                            <div class="fieldDescription">The address that the newsletter will come from</div>
+                        </div>
+                        <div class="inputContainer" id="SubjectTemplate">
+                            <label class="inputLabel inputLabelUnfocused" for="Subject">Subject:</label>
+                            <input id="Subject" name="Subject" type="text" is="emby-input" />
+                            <div class="fieldDescription">Subject field of the newsletter (Default: 'Jellyfin
+                                Newsletter)</div>
+                        </div>
+                        <div class="inputContainer" id="SMTPServerAddress">
+                            <label class="inputLabel inputLabelUnfocused" for="SMTPServer">SMTP Server Address:</label>
+                            <input id="SMTPServer" name="SMTPServerName" type="text" is="emby-input" />
+                            <div class="fieldDescription">Server address of the SMTP server/service you want to use
+                                (i.e. smtp.gmail.com)</div>
+                        </div>
+                        <div class="inputContainer" id="SMTPPortNum">
+                            <label class="inputLabel inputLabelUnfocused" for="SMTPPort">SMTP Port:</label>
+                            <input id="SMTPPort" name="SMTPPortNum" type="number" is="emby-input" min="0" />
+                            <div class="fieldDescription">SMTP Port that the server/service listed above uses (i.e. 587)
                             </div>
-                            <!-- Entry/Cell Data -->
-                            <div class="inputContainer" id="EntryTemplate">
-                                <label class="inputLabel inputLabelUnfocused" for="Entry">EntryData Html:</label>
-                                <div class="fieldDescription">
-                                    See below for Field Names to use in your custom HTML:<br>
-                                    {ImageURL} - The physical URL for the image to be used. For HTML formatting, should be used within a 'img' tag as it's source. <br>
-                                    {Title} - Title of the Series/Movie for the entry <br>
-                                    {SeasonEpsInfo} - Season-Episode information for a series (Doesn't show for movies) <br>
-                                    {SeriesOverview} - The series/movie overview <br>
-                                </div>
-                                <textarea id="Entry" name="Entry" dataname="Entry" style="width: 100%; height: 400px"></textarea>
-                                <div class="fieldDescription">Html formatting for each Entry (episode, movie, etc.) for the email. Defaults to a predefined template</div>
+                        </div>
+                        <div class="inputContainer" id="SMTPUsername">
+                            <label class="inputLabel inputLabelUnfocused" for="SMTPUser">SMTP Username:</label>
+                            <input id="SMTPUser" name="SMTPUsername" type="text" is="emby-input" />
+                            <div class="fieldDescription">Username/email that will be used to login to the SMTP server
                             </div>
-                        </details>
-                    </div>
-                    <br>
-                    
-                    <!-- Scraper configuration Details -->
-                    <div id="HiddenDetails" name="ScraperConfig" class="DropdownSection">
-                        <details>
-                            <summary>Scraper Config</summary><br>
-                            <div class="selectContainer">
-                                <label class="selectLabel" for="HostingSelector">Poster Type:</label>
-                                <select is="emby-select" id="HostingSelector" name="HostingSelector" class="emby-select-withcolor emby-select">
-                                    <option id="defaultTmdb" value="tmdb">TMDB Poster (Default)</option>
-                                    <option id="localJFHosting" value="attachment">Local Poster Images</option>
-                                </select>
-                            </div>
-                            <hr>
-                            <div id="MaxEmailSizeContainer" name="options" style="display: none;">
-                                <div class="inputContainer" id="MaxEmailSize">
-                                    <label class="inputLabel inputLabelUnfocused" for="EmailSize">Maximum Email Size:</label>
-                                    <input id="EmailSize" name="EmailSize" type="text" type="number" is="emby-input" min="5" />
-                                    <div class="fieldDescription">
-                                        Enter the maximum email size allowed by your email provider (in MB).
-                                        For reliable delivery, set this value slightly below your provider's official limit (e.g., use 20 MB if your provider supports up to 25 MB).
-                                        <b>Default: 15 MB</b>
-                                    </div>
-                                </div>
-                            </div>
+                        </div>
+                        <div class="inputContainer" id="SMTPPassword">
+                            <label class="inputLabel inputLabelUnfocused" for="SMTPPass">SMTP Password:</label>
+                            <input id="SMTPPass" name="SMTPPassword" type="text" is="emby-input" />
+                            <div class="fieldDescription">Password that will be used to login to the SMTP server</div>
+                        </div>
+                        <div class="inputContainer" id="BodyTemplate">
+                            <label class="inputLabel inputLabelUnfocused" for="Body">Body Html:</label>
                             <div class="fieldDescription">
-                                Choose how newsletter posters should be included in the emails.<br>
-                                <b>TMDB</b>: Uses image URLs from TheMovieDB (default, smallest emails).<br>
-                                <b>Local Attachments</b>: Embeds images directly in the email (larger messages).
+                                See below for Field Names to use in your custom HTML:<br>
+                                {Date} - The date of Newsletter generation. <br>
+                                {EntryData} - This is the insert of the custom HTML from the field EntryData below. If
+                                not used, email will have no data. <br>
                             </div>
-                        </details>
-                    </div>
-                    <br>
-                    <!-- SMTP Server Details -->
-                    <div id="HiddenDetails" name="ServerDetails" class="DropdownSection">
-                        <details>
-                            <summary>Email & SMTP Config</summary><br>
-                            <div class="inputContainer" id="ToAddress">
-                                <label class="inputLabel inputLabelUnfocused" for="VisibleToAddr">To Address:</label>
-                                <input id="VisibleToAddr" name="VisibleToAddr" type="text" is="emby-input" />
-                                <div class="fieldDescription">Recipient's email to recieve newsletter. If more than 1, seperate with commas</div>
+                            <textarea id="Body" name="Body" dataname="Body"
+                                style="width: 100%; height: 400px"></textarea>
+                            <div class="fieldDescription">HTML formatting for main Body of email. Defaults to a
+                                predefined template</div>
+                        </div>
+                        <!-- Entry/Cell Data -->
+                        <div class="inputContainer" id="EntryTemplate">
+                            <label class="inputLabel inputLabelUnfocused" for="Entry">EntryData Html:</label>
+                            <div class="fieldDescription">
+                                See below for Field Names to use in your custom HTML:<br>
+                                {ImageURL} - The physical URL for the image to be used. For HTML formatting, should be
+                                used within a 'img' tag as it's source. <br>
+                                {Title} - Title of the Series/Movie for the entry <br>
+                                {SeasonEpsInfo} - Season-Episode information for a series (Doesn't show for movies) <br>
+                                {SeriesOverview} - The series/movie overview <br>
                             </div>
-                            <div class="inputContainer" id="BCCAddress">
-                                <label class="inputLabel inputLabelUnfocused" for="ToAddr">BCC Address:</label>
-                                <input id="ToAddr" name="ToAddr" type="text" is="emby-input" />
-                                <div class="fieldDescription">Recipient's email to recieve newsletter(in BCC). If more than 1, seperate with commas</div>
-                            </div>
-                            <div class="inputContainer" id="FromAddress">
-                                <label class="inputLabel inputLabelUnfocused" for="FromAddr">From Address:</label>
-                                <input id="FromAddr" name="FromAddr" type="text" is="emby-input" />
-                                <div class="fieldDescription">The address that the newsletter will come from</div>
-                            </div>
-                            <div class="inputContainer" id="SubjectTemplate">
-                                <label class="inputLabel inputLabelUnfocused" for="Subject">Subject:</label>
-                                <input id="Subject" name="Subject" type="text" is="emby-input" />
-                                <div class="fieldDescription">Subject field of the newsletter (Default: 'Jellyfin Newsletter)</div>
-                            </div>
-                            <div class="inputContainer" id="SMTPServerAddress">
-                                <label class="inputLabel inputLabelUnfocused" for="SMTPServer">SMTP Server Address:</label>
-                                <input id="SMTPServer" name="SMTPServerName" type="text" is="emby-input" />
-                                <div class="fieldDescription">Server address of the SMTP server/service you want to use (i.e. smtp.gmail.com)</div>
-                            </div>
-                            <div class="inputContainer" id="SMTPPortNum">
-                                <label class="inputLabel inputLabelUnfocused" for="SMTPPort">SMTP Port:</label>
-                                <input id="SMTPPort" name="SMTPPortNum" type="number" is="emby-input" min="0" />
-                                <div class="fieldDescription">SMTP Port that the server/service listed above uses (i.e. 587)</div>
-                            </div>
-                            <div class="inputContainer" id="SMTPUsername">
-                                <label class="inputLabel inputLabelUnfocused" for="SMTPUser">SMTP Username:</label>
-                                <input id="SMTPUser" name="SMTPUsername" type="text" is="emby-input" />
-                                <div class="fieldDescription">Username/email that will be used to login to the SMTP server</div>
-                            </div>
-                            <div class="inputContainer" id="SMTPPassword">
-                                <label class="inputLabel inputLabelUnfocused" for="SMTPPass">SMTP Password:</label>
-                                <input id="SMTPPass" name="SMTPPassword" type="text" is="emby-input" />
-                                <div class="fieldDescription">Password that will be used to login to the SMTP server</div>
-                            </div>
-                            <button id="testButton" is="emby-button" type="button" class="raised block emby-button">
-                                <span>Test</span>
-                            </button>
-                        </details>
+                            <textarea id="Entry" name="Entry" dataname="Entry"
+                                style="width: 100%; height: 400px"></textarea>
+                            <div class="fieldDescription">Html formatting for each Entry (episode, movie, etc.) for the
+                                email. Defaults to a predefined template</div>
+                        </div>
+                        <button id="testButton" is="emby-button" type="button" class="raised block emby-button">
+                            <span>Test Email</span>
+                        </button>
                     </div>
 
-
-                    <br>
-                    <!-- Discord Webhook Details -->
-                    <div id="HiddenDetails" name="WebhookDetails" class="DropdownSection">
-                        <details>
-                            <summary>Discord Config</summary><br>
-                            <div class="inputContainer" id="DiscordWebhookAddress">
-                                <label class="inputLabel inputLabelUnfocused" for="DiscordWebhookURL">Webook URL:</label>
-                                <input id="DiscordWebhookURL" name="DiscordWebhookAddress" type="text" is="emby-input" />
-                                <div class="fieldDescription">Discord webhook URL that you want to use.</div>
-                            </div>
-                            <div class="inputContainer" id="DiscordWKName">
-                                <label class="inputLabel inputLabelUnfocused" for="DiscordWebhookName">Webhook Name:</label>
-                                <input id="DiscordWebhookName" name="DiscordWKName" type="text" is="emby-input" />
-                                <div class="fieldDescription">Name that you want to give to discord webhook. Defaults to "Jellyfin Newsletter"</div>
-                            </div>
-                            <div id="DiscordFieldSelection">
-                                <table>
-                                    <tr>
-                                        <th colspan="2">Select the fields that you want to be part of the message:</th>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="DiscordDescriptionEnabled" name="DiscordDescriptionEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Description</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="DiscordThumbnailEnabled" name="DiscordThumbnailEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Thumbnail</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="DiscordRatingEnabled" name="DiscordRatingEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Rating</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="DiscordPGRatingEnabled" name="DiscordPGRatingEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>PG Rating</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="DiscordDurationEnabled" name="DiscordDurationEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Duration</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="DiscordEpisodesEnabled" name="DiscordEpisodesEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Episodes List (Will only affect in Series)</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <div class="inputContainer">
-                                <table class="color-table">
-                                    <tr>
-                                        <th colspan="2">Series Add Event</th>
-                                        <th colspan="2">Series Delete Event</th>
-                                        <th colspan="2">Series Update Event</th>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="2"><input id="DiscordSeriesAddEmbedColor" name="DiscordSeriesAddEmbedColor" type="color" is="emby-input" /></td>
-                                        <td colspan="2"><input id="DiscordSeriesDeleteEmbedColor" name="DiscordSeriesDeleteEmbedColor" type="color" is="emby-input" /></td>
-                                        <td colspan="2"><input id="DiscordSeriesUpdateEmbedColor" name="DiscordSeriesUpdateEmbedColor" type="color" is="emby-input" /></td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <br>
-                            <div class="inputContainer">
-                                <table class="color-table">
-                                    <tr>
-                                        <th colspan="2">Movies Add Event</th>
-                                        <th colspan="2">Movies Delete Event</th>
-                                        <th colspan="2">Movies Update Event</th>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="2"><input id="DiscordMoviesAddEmbedColor" name="DiscordMoviesAddEmbedColor" type="color" is="emby-input" /></td>
-                                        <td colspan="2"><input id="DiscordMoviesDeleteEmbedColor" name="DiscordMoviesDeleteEmbedColor" type="color" is="emby-input" /></td>
-                                        <td colspan="2"><input id="DiscordMoviesUpdateEmbedColor" name="DiscordMoviesUpdateEmbedColor" type="color" is="emby-input" /></td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <button id="testButtonDiscord" is="emby-button" type="button" class="raised block emby-button">
-                                <span>Test Discord</span>
-                            </button>
-                        </details>
+                    <!-- Discord Tab -->
+                    <div id="Discord" class="tab-content">
+                        <div class="inputContainer" id="DiscordWebhookAddress">
+                            <label class="inputLabel inputLabelUnfocused" for="DiscordWebhookURL">Webook URL:</label>
+                            <input id="DiscordWebhookURL" name="DiscordWebhookAddress" type="text" is="emby-input" />
+                            <div class="fieldDescription">Discord webhook URL that you want to use.</div>
+                        </div>
+                        <div class="inputContainer" id="DiscordWKName">
+                            <label class="inputLabel inputLabelUnfocused" for="DiscordWebhookName">Webhook Name:</label>
+                            <input id="DiscordWebhookName" name="DiscordWKName" type="text" is="emby-input" />
+                            <div class="fieldDescription">Name that you want to give to discord webhook. Defaults to
+                                "Jellyfin Newsletter"</div>
+                        </div>
+                        <div id="DiscordFieldSelection">
+                            <table>
+                                <tr>
+                                    <th colspan="2">Select the fields that you want to be part of the message:</th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="DiscordDescriptionEnabled" name="DiscordDescriptionEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Description</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="DiscordThumbnailEnabled" name="DiscordThumbnailEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Thumbnail</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="DiscordRatingEnabled" name="DiscordRatingEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Rating</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="DiscordPGRatingEnabled" name="DiscordPGRatingEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>PG Rating</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="DiscordDurationEnabled" name="DiscordDurationEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Duration</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="DiscordEpisodesEnabled" name="DiscordEpisodesEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Episodes List (Will only affect in Series)</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="inputContainer">
+                            <table class="color-table">
+                                <tr>
+                                    <th colspan="2">Series Add Event</th>
+                                    <th colspan="2">Series Delete Event</th>
+                                    <th colspan="2">Series Update Event</th>
+                                </tr>
+                                <tr>
+                                    <td colspan="2"><input id="DiscordSeriesAddEmbedColor"
+                                            name="DiscordSeriesAddEmbedColor" type="color" is="emby-input" /></td>
+                                    <td colspan="2"><input id="DiscordSeriesDeleteEmbedColor"
+                                            name="DiscordSeriesDeleteEmbedColor" type="color" is="emby-input" /></td>
+                                    <td colspan="2"><input id="DiscordSeriesUpdateEmbedColor"
+                                            name="DiscordSeriesUpdateEmbedColor" type="color" is="emby-input" /></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <br>
+                        <div class="inputContainer">
+                            <table class="color-table">
+                                <tr>
+                                    <th colspan="2">Movies Add Event</th>
+                                    <th colspan="2">Movies Delete Event</th>
+                                    <th colspan="2">Movies Update Event</th>
+                                </tr>
+                                <tr>
+                                    <td colspan="2"><input id="DiscordMoviesAddEmbedColor"
+                                            name="DiscordMoviesAddEmbedColor" type="color" is="emby-input" /></td>
+                                    <td colspan="2"><input id="DiscordMoviesDeleteEmbedColor"
+                                            name="DiscordMoviesDeleteEmbedColor" type="color" is="emby-input" /></td>
+                                    <td colspan="2"><input id="DiscordMoviesUpdateEmbedColor"
+                                            name="DiscordMoviesUpdateEmbedColor" type="color" is="emby-input" /></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <button id="testButtonDiscord" is="emby-button" type="button" class="raised block emby-button">
+                            <span>Test Discord</span>
+                        </button>
                     </div>
-                    
-                    <br>
-                    <!-- Telegram Bot Details -->
-                    <div id="HiddenDetails" name="TelegramDetails" class="DropdownSection">
-                        <details>
-                            <summary>Telegram Config</summary><br>
-                            <div class="inputContainer" id="TelegramBID">
-                                <label class="inputLabel inputLabelUnfocused" for="TelegramBotToken">Bot Token:</label>
-                                <input id="TelegramBotToken" name="TelegramBID" type="text" is="emby-input" />
-                                <div class="fieldDescription">Telegram bot token from @BotFather. Format: 123456789:ABCdefGhIJKlmnOPQRstuVWXyz123456789</div>
-                            </div>
-                            <div class="inputContainer" id="TelegramCID">
-                                <label class="inputLabel inputLabelUnfocused" for="TelegramChatId">Chat ID:</label>
-                                <input id="TelegramChatId" name="TelegramCID" type="text" is="emby-input" />
-                                <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Can be a user ID, group ID, or channel ID.</div>
-                            </div>
-                            <div id="TelegramFieldSelection">
-                                <table>
-                                    <tr>
-                                        <th colspan="2">Select the fields that you want to be part of the message:</th>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="TelegramDescriptionEnabled" name="TelegramDescriptionEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Description</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="TelegramThumbnailEnabled" name="TelegramThumbnailEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Thumbnail</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="TelegramRatingEnabled" name="TelegramRatingEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Rating</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="TelegramPGRatingEnabled" name="TelegramPGRatingEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>PG Rating</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="TelegramDurationEnabled" name="TelegramDurationEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Duration</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                                <label class="emby-checkbox-label">
-                                                    <input id="TelegramEpisodesEnabled" name="TelegramEpisodesEnabled" type="checkbox" is="emby-checkbox" />
-                                                    <span>Episodes List (Will only affect in Series)</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <button id="testButtonTelegram" is="emby-button" type="button" class="raised block emby-button">
-                                <span>Test Telegram</span>
-                            </button>
-                        </details>
+
+                    <!-- Telegram Tab -->
+                    <div id="Telegram" class="tab-content">
+                        <div class="inputContainer" id="TelegramBID">
+                            <label class="inputLabel inputLabelUnfocused" for="TelegramBotToken">Bot Token:</label>
+                            <input id="TelegramBotToken" name="TelegramBID" type="text" is="emby-input" />
+                            <div class="fieldDescription">Telegram bot token from @BotFather. Format:
+                                123456789:ABCdefGhIJKlmnOPQRstuVWXyz123456789</div>
+                        </div>
+                        <div class="inputContainer" id="TelegramCID">
+                            <label class="inputLabel inputLabelUnfocused" for="TelegramChatId">Chat ID:</label>
+                            <input id="TelegramChatId" name="TelegramCID" type="text" is="emby-input" />
+                            <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Can be a
+                                user ID, group ID, or channel ID.</div>
+                        </div>
+                        <div id="TelegramFieldSelection">
+                            <table>
+                                <tr>
+                                    <th colspan="2">Select the fields that you want to be part of the message:</th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="TelegramDescriptionEnabled" name="TelegramDescriptionEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Description</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="TelegramThumbnailEnabled" name="TelegramThumbnailEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Thumbnail</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="TelegramRatingEnabled" name="TelegramRatingEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Rating</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="TelegramPGRatingEnabled" name="TelegramPGRatingEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>PG Rating</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="TelegramDurationEnabled" name="TelegramDurationEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Duration</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="checkboxContainer checkboxContainer-withDescription">
+                                            <label class="emby-checkbox-label">
+                                                <input id="TelegramEpisodesEnabled" name="TelegramEpisodesEnabled"
+                                                    type="checkbox" is="emby-checkbox" />
+                                                <span>Episodes List (Will only affect in Series)</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <button id="testButtonTelegram" is="emby-button" type="button" class="raised block emby-button">
+                            <span>Test Telegram</span>
+                        </button>
                     </div>
 
                     <!-- buttons -->
-                    <div>
+                    <div style="margin-top: 20px;">
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                             <span>Save</span>
                         </button>
@@ -423,41 +467,129 @@
             </div>
         </div>
         <style>
-            #HiddenDetails {
-                border-width: 2px;
-                border-style: solid;
-                border-color: white;
-                padding: 10px 10px 10px 10px;
-            }
-            #testButton, #testButtonDiscord {
+            #testButton,
+            #testButtonDiscord {
                 background: #C1C1BF;
             }
+
             td {
                 padding: 5px 10px;
             }
-            .DropdownSection {
-                cursor: pointer;
-            }
+
             .select-all-btn.all-selected {
                 background-color: #4CAF50 !important;
                 color: white !important;
             }
+
             .select-all-btn.all-selected span {
                 color: white !important;
             }
-            
+
             /* Inline styles for classes */
-            .library-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-            .library-table th { width: 50%; text-align: center; padding: 10px; border: 1px solid #444; background: rgba(255,255,255,0.1); }
-            .library-table td { vertical-align: top; padding: 10px; border: 1px solid #444; }
-            .library-checkbox-container { max-height: 200px; overflow-y: auto; }
-            .loading-text { text-align: center; opacity: 0.7; }
-            .color-table { width: 100%; table-layout: fixed; }
-            .color-table input { height: 2.2em; width: 100%; }
+            .library-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+            }
+
+            .library-table th {
+                width: 50%;
+                text-align: center;
+                padding: 10px;
+                border: 1px solid #444;
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            .library-table td {
+                vertical-align: top;
+                padding: 10px;
+                border: 1px solid #444;
+            }
+
+            .library-checkbox-container {
+                max-height: 200px;
+                overflow-y: auto;
+            }
+
+            .loading-text {
+                text-align: center;
+                opacity: 0.7;
+            }
+
+            .color-table {
+                width: 100%;
+                table-layout: fixed;
+            }
+
+            .color-table input {
+                height: 2.2em;
+                width: 100%;
+            }
+
+            /* Tab Styles */
+            .tab-bar {
+                display: flex;
+                flex-wrap: wrap;
+                border-bottom: 1px solid #444;
+                margin-bottom: 20px;
+            }
+
+            .tab-link {
+                background-color: transparent;
+                border: none;
+                outline: none;
+                cursor: pointer;
+                padding: 10px 20px;
+                font-size: 1.1em;
+                color: #ccc;
+                border-bottom: 2px solid transparent;
+                transition: 0.3s;
+            }
+
+            .tab-link:hover {
+                color: #fff;
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+
+            .tab-link.active {
+                color: #fff;
+                border-bottom: 2px solid #00a4dc;
+            }
+
+            .tab-content {
+                display: none;
+                padding: 10px 0;
+                animation: fadeEffect 0.5s;
+            }
+
+            @keyframes fadeEffect {
+                from {
+                    opacity: 0;
+                }
+
+                to {
+                    opacity: 1;
+                }
+            }
         </style>
         <script type="text/javascript">
             var NewsletterConfig = {
                 pluginUniqueId: '60f478ab-2dd6-4ea0-af10-04d033f75979'
+            };
+
+            // Tab switching function
+            window.openTab = function (evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tab-content");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tab-link");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
             };
 
             // Configuration fields mapping
@@ -473,23 +605,23 @@
                     maxEmailSizeDiv.style.display = (posterType === "attachment") ? '' : 'none';
                 }
             }
-            
+
             function loadLibraries() {
-                ApiClient.getJSON(ApiClient.getUrl('Library/MediaFolders')).then(function(result) {
+                ApiClient.getJSON(ApiClient.getUrl('Library/MediaFolders')).then(function (result) {
                     renderLibrarySection(result.Items, 'tvshows', 'Series');
                     renderLibrarySection(result.Items, 'movies', 'Movies');
-                }).catch(function(error) {
+                }).catch(function (error) {
                     console.error('Error loading libraries:', error);
                     var seriesBox = document.getElementById('SeriesLibraryCheckboxes');
-                    if(seriesBox) seriesBox.innerHTML = '<p style="text-align: center; color: #ff6b6b;">Error loading series libraries. Check console for details.</p>';
+                    if (seriesBox) seriesBox.innerHTML = '<p style="text-align: center; color: #ff6b6b;">Error loading series libraries. Check console for details.</p>';
                     var moviesBox = document.getElementById('MoviesLibraryCheckboxes');
-                    if(moviesBox) moviesBox.innerHTML = '<p style="text-align: center; color: #ff6b6b;">Error loading movies libraries. Check console for details.</p>';
+                    if (moviesBox) moviesBox.innerHTML = '<p style="text-align: center; color: #ff6b6b;">Error loading movies libraries. Check console for details.</p>';
                 });
             }
 
             function renderLibrarySection(libraries, typeFilter, prefix) {
-                var filtered = libraries.filter(function(l) { 
-                    return (l.CollectionType || '').toLowerCase() === typeFilter; 
+                var filtered = libraries.filter(function (l) {
+                    return (l.CollectionType || '').toLowerCase() === typeFilter;
                 });
                 var container = document.getElementById(prefix + 'LibraryCheckboxes');
 
@@ -502,14 +634,14 @@
 
                 container.innerHTML = '';
 
-                filtered.forEach(function(library) {
+                filtered.forEach(function (library) {
                     var div = document.createElement('div');
                     div.className = 'checkboxContainer checkboxContainer-withDescription';
                     div.style.marginBottom = '8px';
-                    
+
                     var label = document.createElement('label');
                     label.className = 'emby-checkbox-label';
-                    
+
                     var checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.id = prefix + 'Library_' + library.Id;
@@ -518,7 +650,7 @@
                     checkbox.setAttribute('data-library-id', library.Id);
                     checkbox.className = prefix.toLowerCase() + '-library-checkbox';
                     // Event delegation handling via generic update
-                    checkbox.onchange = function() { updateSelectionState(prefix); };
+                    checkbox.onchange = function () { updateSelectionState(prefix); };
 
                     var span = document.createElement('span');
                     span.textContent = library.Name;
@@ -535,19 +667,19 @@
 
             // Load saved series/movies library selections
             function loadLibrarySelections(prefix) {
-                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function(config) {
+                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     var savedIds = config['Selected' + prefix + 'Libraries'] || [];
                     var checkboxes = document.querySelectorAll('.' + prefix.toLowerCase() + '-library-checkbox');
-                    
+
                     // If no libraries are selected and enabled is true, select all by default
                     var enabledCb = document.querySelector('#' + prefix + 'Enabled');
                     var shouldSelectAll = savedIds.length === 0 && enabledCb && enabledCb.checked;
-                    
+
                     for (var i = 0; i < checkboxes.length; i++) {
                         var cb = checkboxes[i];
                         cb.checked = shouldSelectAll || savedIds.indexOf(cb.getAttribute('data-library-id')) !== -1;
                     }
-                    
+
                     // Update button state after loading selections
                     updateSelectionState(prefix);
                 });
@@ -563,10 +695,10 @@
                         break;
                     }
                 }
-                
+
                 // Function to update Enabled based on library selections
                 var enabledCb = document.querySelector('#' + prefix + 'Enabled');
-                if(enabledCb) enabledCb.checked = allChecked;
+                if (enabledCb) enabledCb.checked = allChecked;
 
                 // Helper function to update button state
                 var btn = document.querySelector('#SelectAll' + prefix);
@@ -574,30 +706,30 @@
                     var span = btn.querySelector('span');
                     if (allChecked) {
                         btn.classList.add('all-selected');
-                        if(span) span.textContent = 'Deselect All ' + prefix;
+                        if (span) span.textContent = 'Deselect All ' + prefix;
                     } else {
                         btn.classList.remove('all-selected');
-                        if(span) span.textContent = 'Select All ' + prefix;
+                        if (span) span.textContent = 'Select All ' + prefix;
                     }
                 }
             }
 
             // "Select All" button handler
-            window.toggleAll = function(prefix) {
+            window.toggleAll = function (prefix) {
                 var checkboxes = document.querySelectorAll('.' + prefix.toLowerCase() + '-library-checkbox');
                 var allChecked = true;
-                 for (var i = 0; i < checkboxes.length; i++) {
+                for (var i = 0; i < checkboxes.length; i++) {
                     if (!checkboxes[i].checked) {
                         allChecked = false;
                         break;
                     }
                 }
-                
+
                 // Toggle all library checkboxes
                 for (var i = 0; i < checkboxes.length; i++) {
-                     checkboxes[i].checked = !allChecked;
+                    checkboxes[i].checked = !allChecked;
                 }
-                
+
                 // Update Enabled and button state
                 updateSelectionState(prefix);
             };
@@ -605,15 +737,15 @@
             function saveConfig() {
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     // Loop through mapped fields
-                    FIELDS.checkboxes.forEach(function(id) { 
+                    FIELDS.checkboxes.forEach(function (id) {
                         var el = document.querySelector('#' + id);
-                        if(el) config[id] = el.checked; 
+                        if (el) config[id] = el.checked;
                     });
-                    FIELDS.inputs.forEach(function(id) { 
+                    FIELDS.inputs.forEach(function (id) {
                         var el = document.querySelector('#' + id);
-                        if(!el) return;
+                        if (!el) return;
                         // Handle manual name mapping
-                        if(id === 'HostingSelector') config.PosterType = el.value;
+                        if (id === 'HostingSelector') config.PosterType = el.value;
                         else config[id] = el.value;
                     });
 
@@ -626,7 +758,7 @@
                     var selectedSeriesLibraries = [];
                     var seriesChecked = document.querySelectorAll('.series-library-checkbox:checked');
                     for (var i = 0; i < seriesChecked.length; i++) {
-                         selectedSeriesLibraries.push(seriesChecked[i].getAttribute('data-library-id'));
+                        selectedSeriesLibraries.push(seriesChecked[i].getAttribute('data-library-id'));
                     }
                     config.SelectedSeriesLibraries = selectedSeriesLibraries;
 
@@ -634,7 +766,7 @@
                     var selectedMoviesLibraries = [];
                     var moviesChecked = document.querySelectorAll('.movies-library-checkbox:checked');
                     for (var i = 0; i < moviesChecked.length; i++) {
-                         selectedMoviesLibraries.push(moviesChecked[i].getAttribute('data-library-id'));
+                        selectedMoviesLibraries.push(moviesChecked[i].getAttribute('data-library-id'));
                     }
                     config.SelectedMoviesLibraries = selectedMoviesLibraries;
 
@@ -648,27 +780,27 @@
             function loadConfig() {
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     console.log("Populating Page..");
-                    
+
                     // Loop through mapped fields
-                    FIELDS.checkboxes.forEach(function(id) { 
+                    FIELDS.checkboxes.forEach(function (id) {
                         var el = document.querySelector('#' + id);
-                        if(el) el.checked = config[id]; 
+                        if (el) el.checked = config[id];
                     });
-                    
-                    FIELDS.inputs.forEach(function(id) {
+
+                    FIELDS.inputs.forEach(function (id) {
                         var el = document.querySelector('#' + id);
-                        if(el && config[id] !== undefined) el.value = config[id];
+                        if (el && config[id] !== undefined) el.value = config[id];
                     });
 
                     // Specific Mappings
                     var hostingEl = document.querySelector('#HostingSelector');
-                    if(hostingEl && config.PosterType) hostingEl.value = config.PosterType;
-                    
+                    if (hostingEl && config.PosterType) hostingEl.value = config.PosterType;
+
                     var ratingEl = document.querySelector('#CommunityRatingDecimalPlaces');
-                    if(ratingEl) ratingEl.value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
+                    if (ratingEl) ratingEl.value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
 
                     updateMaxEmailSizeVisibility();
-                    
+
                     loadLibraries();
 
                     Dashboard.hideLoadingMsg();
@@ -676,75 +808,76 @@
             }
 
             document.querySelector('#NewsletterConfigPage')
-                .addEventListener('pageshow', function() {
+                .addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
                     loadConfig();
                 });
 
             document.querySelector('#NewsletterConfigForm')
-                .addEventListener('submit', function(e) {
-                Dashboard.showLoadingMsg();
-                saveConfig();
+                .addEventListener('submit', function (e) {
+                    Dashboard.showLoadingMsg();
+                    saveConfig();
 
-                e.preventDefault();
-                return false;
-            });
+                    e.preventDefault();
+                    return false;
+                });
 
             // button to test SMTP configration
             document.querySelector('#testButton')
-                .addEventListener('click', function(e) {
-                Dashboard.showLoadingMsg();
-                console.log("Test mail button pressed!");
-                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                    console.log("TEST: ", config);
-                    var url = ApiClient.getUrl('SmtpMailer/SendTestMail');
-                    var data = JSON.stringify(config);
-                    ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
+                .addEventListener('click', function (e) {
+                    Dashboard.showLoadingMsg();
+                    console.log("Test mail button pressed!");
+                    ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
+                        console.log("TEST: ", config);
+                        var url = ApiClient.getUrl('SmtpMailer/SendTestMail');
+                        var data = JSON.stringify(config);
+                        ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
+                    });
+                    Dashboard.hideLoadingMsg();
+                    e.preventDefault();
+                    alert("Test email sent! In case email doesn't arrive, check your SMTP configuration and server logs for errors.");
+                    return false;
                 });
-                Dashboard.hideLoadingMsg();
-                e.preventDefault();
-                alert("Test email sent! In case email doesn't arrive, check your SMTP configuration and server logs for errors.");
-                return false;
-            });
 
             document.querySelector('#testButtonDiscord')
-                .addEventListener('click', function(e) {
-                Dashboard.showLoadingMsg();
-                console.log("Test discord message button pressed!");
-                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                    console.log("TEST: ", config);
-                    var url = ApiClient.getUrl('Discord/SendDiscordTestMessage');
-                    var data = JSON.stringify(config);
-                    ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
+                .addEventListener('click', function (e) {
+                    Dashboard.showLoadingMsg();
+                    console.log("Test discord message button pressed!");
+                    ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
+                        console.log("TEST: ", config);
+                        var url = ApiClient.getUrl('Discord/SendDiscordTestMessage');
+                        var data = JSON.stringify(config);
+                        ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
+                    });
+                    Dashboard.hideLoadingMsg();
+                    e.preventDefault();
+                    alert("Test discord message sent! In case message doesn't arrive, check your Discord webhook configuration and server logs for errors.");
+                    return false;
                 });
-                Dashboard.hideLoadingMsg();
-                e.preventDefault();
-                alert("Test discord message sent! In case message doesn't arrive, check your Discord webhook configuration and server logs for errors.");
-                return false;
-            });
 
             document.querySelector('#testButtonTelegram')
-                .addEventListener('click', function(e) {
-                Dashboard.showLoadingMsg();
-                console.log("Test Telegram message button pressed!");
-                ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
-                    console.log("TEST: ", config);
-                    var url = ApiClient.getUrl('Telegram/SendTelegramTestMessage');
-                    var data = JSON.stringify(config);
-                    ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
+                .addEventListener('click', function (e) {
+                    Dashboard.showLoadingMsg();
+                    console.log("Test Telegram message button pressed!");
+                    ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
+                        console.log("TEST: ", config);
+                        var url = ApiClient.getUrl('Telegram/SendTelegramTestMessage');
+                        var data = JSON.stringify(config);
+                        ApiClient.ajax({ type: 'POST', url: url, data: data, contentType: 'application/json' });
+                    });
+                    Dashboard.hideLoadingMsg();
+                    e.preventDefault();
+                    alert("Test Telegram message sent! In case message doesn't arrive, check your Telegram bot configuration and server logs for errors.");
+                    return false;
                 });
-                Dashboard.hideLoadingMsg();
-                e.preventDefault();
-                alert("Test Telegram message sent! In case message doesn't arrive, check your Telegram bot configuration and server logs for errors.");
-                return false;
-            });
-            
+
             // Scrapper config
             document.querySelector('#HostingSelector')
-                .addEventListener('change', function() {
-                updateMaxEmailSizeVisibility();
-            });
+                .addEventListener('change', function () {
+                    updateMaxEmailSizeVisibility();
+                });
         </script>
     </div>
 </body>
+
 </html>
