@@ -66,4 +66,9 @@ public class EmailConfiguration
     /// Gets or sets the entry HTML template.
     /// </summary>
     public string Entry { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the template category (e.g., "Modern").
+    /// </summary>
+    public string TemplateCategory { get; set; } = "Modern";
 }

@@ -53,7 +53,7 @@ public class PluginConfiguration : BasePluginConfiguration
             
             try
             {
-                Body = File.ReadAllText($"{pluginDir}/Templates/template_modern_body.html");
+                Body = File.ReadAllText($"{pluginDir}/Templates/{TemplateCategory}/template_body.html");
                 Console.WriteLine("[NLP] :: Body HTML set from Template file!");
             }
             catch (Exception ex)
@@ -64,7 +64,7 @@ public class PluginConfiguration : BasePluginConfiguration
 
             try
             {
-                Entry = File.ReadAllText($"{pluginDir}/Templates/template_modern_entry.html");
+                Entry = File.ReadAllText($"{pluginDir}/Templates/{TemplateCategory}/template_entry.html");
                 Console.WriteLine("[NLP] :: Entry HTML set from Template file!");
             }
             catch (Exception ex)
@@ -395,6 +395,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the number of decimal places to display for community ratings.
     /// </summary>
     public int CommunityRatingDecimalPlaces { get; set; }
+
+    /// <summary>
+    /// Gets or sets the template category (e.g., "Modern").
+    /// </summary>
+    public string TemplateCategory { get; set; } = "Modern";
 
     // Telegram Bot Details
 

@@ -98,10 +98,10 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return;
             }
 
-            HtmlBuilder hb = new(Logger, Db);
+            HtmlBuilder hb = new(Logger, Db, emailConfig);
 
-            string body = hb.GetDefaultHTMLBody;
-            string builtString = hb.BuildHtmlStringsForTest();
+            string body = hb.GetDefaultHTMLBody(emailConfig);
+            string builtString = hb.BuildHtmlStringsForTest(emailConfig);
             builtString = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
             string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
             builtString = builtString.Replace("{Date}", currDate, StringComparison.Ordinal);
@@ -257,10 +257,10 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return false;
             }
 
-            HtmlBuilder hb = new(Logger, Db);
+            HtmlBuilder hb = new(Logger, Db, emailConfig);
 
-            string body = hb.GetDefaultHTMLBody;
-            ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData(applicationHost.SystemId);
+            string body = hb.GetDefaultHTMLBody(emailConfig);
+            ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData(applicationHost.SystemId, emailConfig);
 
             string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
