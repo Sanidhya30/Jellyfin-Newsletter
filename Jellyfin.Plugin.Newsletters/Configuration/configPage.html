@@ -488,14 +488,14 @@
             function addDiscordConfig() {
                 var newConfig = {
                     Id: generateUUID(),
-                    Name: 'New Discord Webhook',
+                    Name: 'Discord Webhook',
                     WebhookURL: '',
                     WebhookName: 'Jellyfin Newsletter',
                     DescriptionEnabled: true,
                     ThumbnailEnabled: true,
                     RatingEnabled: true,
-                    PGRatingEnabled: false,
-                    DurationEnabled: false,
+                    PGRatingEnabled: true,
+                    DurationEnabled: true,
                     EpisodesEnabled: true,
                     SeriesAddEmbedColor: '#00FF00',
                     SeriesDeleteEmbedColor: '#FF0000',
@@ -595,13 +595,13 @@
                     html += '    <div style="margin: 15px 0;">';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
-                    html += '        <td><label><input id="discord-desc-' + config.Id + '" type="checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Description</label></td>';
-                    html += '        <td><label><input id="discord-thumb-' + config.Id + '" type="checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Thumbnail</label></td>';
-                    html += '        <td><label><input id="discord-rating-' + config.Id + '" type="checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Rating</label></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-desc-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Description</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-thumb-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Thumbnail</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-rating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Rating</span></label></div></td>';
                     html += '      </tr><tr>';
-                    html += '        <td><label><input id="discord-pgrating-' + config.Id + '" type="checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> PG Rating</label></td>';
-                    html += '        <td><label><input id="discord-duration-' + config.Id + '" type="checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Duration</label></td>';
-                    html += '        <td><label><input id="discord-episodes-' + config.Id + '" type="checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"> Episodes</label></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-pgrating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>PG Rating</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-duration-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Duration</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-episodes-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Episodes</span></label></div></td>';
                     html += '      </tr></table>';
                     html += '    </div>';
                     html += '    <div style="margin: 15px 0;">';
@@ -632,14 +632,14 @@
             function addTelegramConfig() {
                 var newConfig = {
                     Id: generateUUID(),
-                    Name: 'New Telegram Bot',
+                    Name: 'Telegram Bot',
                     BotToken: '',
                     ChatId: '',
                     DescriptionEnabled: true,
                     ThumbnailEnabled: true,
                     RatingEnabled: true,
-                    PGRatingEnabled: false,
-                    DurationEnabled: false,
+                    PGRatingEnabled: true,
+                    DurationEnabled: true,
                     EpisodesEnabled: true
                 };
                 telegramConfigs.push(newConfig);
@@ -728,13 +728,13 @@
                     html += '    <div style="margin: 15px 0;">';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
-                    html += '        <td><label><input id="telegram-desc-' + config.Id + '" type="checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Description</label></td>';
-                    html += '        <td><label><input id="telegram-thumb-' + config.Id + '" type="checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Thumbnail</label></td>';
-                    html += '        <td><label><input id="telegram-rating-' + config.Id + '" type="checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Rating</label></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-desc-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Description</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-thumb-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Thumbnail</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-rating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Rating</span></label></div></td>';
                     html += '      </tr><tr>';
-                    html += '        <td><label><input id="telegram-pgrating-' + config.Id + '" type="checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> PG Rating</label></td>';
-                    html += '        <td><label><input id="telegram-duration-' + config.Id + '" type="checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Duration</label></td>';
-                    html += '        <td><label><input id="telegram-episodes-' + config.Id + '" type="checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"> Episodes</label></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-pgrating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>PG Rating</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-duration-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Duration</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-episodes-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Episodes</span></label></div></td>';
                     html += '      </tr></table>';
                     html += '    </div>';
                     html += '  </div>';
@@ -748,14 +748,14 @@
             function addEmailConfig() {
                 var newConfig = {
                     Id: generateUUID(),
-                    Name: 'New Email Configuration',
-                    SMTPServer: '',
+                    Name: 'Email Configuration',
+                    SMTPServer: 'smtp.gmail.com',
                     SMTPPort: 587,
                     SMTPUser: '',
                     SMTPPass: '',
                     VisibleToAddr: '',
                     ToAddr: '',
-                    FromAddr: '',
+                    FromAddr: 'JellyfinNewsletter@donotreply.com',
                     Subject: 'Jellyfin Newsletter',
                     Body: '',
                     Entry: ''
