@@ -93,9 +93,7 @@ public class PluginConfiguration : BasePluginConfiguration
         LogDirectoryPath = string.Empty;
 
         // default newsletter paths
-        NewsletterFileName = string.Empty;
         NewsletterDir = string.Empty;
-
         // default libraries
         MoviesEnabled = true;
         SeriesEnabled = true;
@@ -345,11 +343,6 @@ public class PluginConfiguration : BasePluginConfiguration
     // -----------------------------------
 
     // Newsletter Paths
-
-    /// <summary>
-    /// Gets or sets a string setting.
-    /// </summary>
-    public string NewsletterFileName { get; set; }
 
     /// <summary>
     /// Gets or sets a string setting.

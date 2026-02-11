@@ -47,17 +47,12 @@ public class HtmlBuilder : ClientBuilder
         newslettersDir = Config.NewsletterDir; // newsletterdir
         Directory.CreateDirectory(newslettersDir);
 
-        // if no newsletter filename is saved or the file doesn't exist
-        if (Config.NewsletterFileName.Length == 0 || File.Exists(newslettersDir + Config.NewsletterFileName))
-        {
-            // use date to create filename
-            string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-            newsletterHTMLFile = newslettersDir + currDate + "_Newsletter.html";
-        }
-        else
-        {
-            newsletterHTMLFile = newslettersDir + Config.NewsletterFileName;
-        }
+        // Always generate a unique filename
+        string currDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss", System.Globalization.CultureInfo.InvariantCulture);
+        string configName = emailConfig?.Name ?? "Default";
+        // Sanitize config name for filename
+        configName = string.Join("_", configName.Split(Path.GetInvalidFileNameChars()));
+        newsletterHTMLFile = Path.Combine(newslettersDir, $"{currDate}_{configName}_Newsletter.html");
 
         Logger.Info("Newsletter will be saved to: " + newsletterHTMLFile);
     }
