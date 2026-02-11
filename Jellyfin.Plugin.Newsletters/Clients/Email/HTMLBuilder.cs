@@ -26,7 +26,8 @@ public class HtmlBuilder : ClientBuilder
 
     // private readonly string[] itemJsonKeys = 
 
-    private string emailBody;
+    private string emailBody = string.Empty;
+    private string emailEntry = string.Empty;
     // private List<string> fileList;
 
     /// <summary>
@@ -42,8 +43,6 @@ public class HtmlBuilder : ClientBuilder
         : base(loggerInstance, dbInstance)
     {
         DefaultBodyAndEntry(emailConfig); // set default body and entry HTML from template file if not set in config
-
-        emailBody = emailConfig?.Body ?? Config.Body;
 
         newslettersDir = Config.NewsletterDir; // newsletterdir
         Directory.CreateDirectory(newslettersDir);
@@ -70,7 +69,6 @@ public class HtmlBuilder : ClientBuilder
     /// <returns>The default HTML body string.</returns>
     public string GetDefaultHTMLBody(EmailConfiguration? emailConfig)
     {
-        emailBody = emailConfig?.Body ?? Config.Body;
         return emailBody;
     }
 
@@ -316,7 +314,7 @@ public class HtmlBuilder : ClientBuilder
                 seaEpsHtml += GetSeasonEpisodeHTML(parsedInfoList);
             }
 
-            var tmp_entry = emailConfig?.Entry ?? Config.Entry;
+            var tmp_entry = emailEntry;
 
             // Track image size if needed
             int entryImageBytes = 0;
@@ -447,7 +445,7 @@ public class HtmlBuilder : ClientBuilder
 
                 string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10";
 
-                string tmp_entry = emailConfig?.Entry ?? Config.Entry;
+                string tmp_entry = emailEntry;
 
                 foreach (KeyValuePair<string, object?> ele in item.GetReplaceDict())
                 {
@@ -524,78 +522,50 @@ public class HtmlBuilder : ClientBuilder
     private void DefaultBodyAndEntry(EmailConfiguration? emailConfig)
     {
         Logger.Debug("Checking for default Body and Entry HTML from Template file..");
+        
+        // Initialize fields based on config
+        this.emailBody = emailConfig?.Body ?? string.Empty;
+        this.emailEntry = emailConfig?.Entry ?? string.Empty;
+
         try
         {
             var pluginDir = Path.GetDirectoryName(typeof(HtmlBuilder).Assembly.Location);
             if (pluginDir == null)
             {
                 Logger.Error("Failed to locate plugin directory.");
+                return;
             }
             
-            if (emailConfig != null)
-            {
-                if (string.IsNullOrWhiteSpace(emailConfig.Body))
-                {
-                    try
-                    {
-                        var category = !string.IsNullOrEmpty(emailConfig.TemplateCategory) ? emailConfig.TemplateCategory : "Modern";
-                        string bodyTemplate = File.ReadAllText($"{pluginDir}/Templates/{category}/template_body.html");
-                        emailConfig.Body = bodyTemplate;
-                        Logger.Debug($"Body HTML set from Template file for config '{emailConfig.Name}'!");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"Failed to set default Body HTML from Template file for config '{emailConfig.Name}'");
-                        Logger.Error(ex);
-                    }
-                }
+            // Determine category
+            string category = !string.IsNullOrEmpty(emailConfig?.TemplateCategory) ? emailConfig.TemplateCategory : "Modern";
 
-                if (string.IsNullOrWhiteSpace(emailConfig.Entry))
+            if (string.IsNullOrWhiteSpace(this.emailBody))
+            {
+                try
                 {
-                    try
-                    {
-                        var category = !string.IsNullOrEmpty(emailConfig.TemplateCategory) ? emailConfig.TemplateCategory : "Modern";
-                        string entryTemplate = File.ReadAllText($"{pluginDir}/Templates/{category}/template_entry.html");
-                        emailConfig.Entry = entryTemplate;
-                        Logger.Debug($"Entry HTML set from Template file for config '{emailConfig.Name}'!");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"Failed to set default Entry HTML from Template file for config '{emailConfig.Name}'");
-                        Logger.Error(ex);
-                    }
+                    string bodyTemplate = File.ReadAllText($"{pluginDir}/Templates/{category}/template_body.html");
+                    this.emailBody = bodyTemplate;
+                    Logger.Debug($"Body HTML set from Template file ({category}) internally!");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to set default Body HTML from Template file");
+                    Logger.Error(ex);
                 }
             }
-            else // Fallback for global config/backward compatibility or if no config passed
-            {
-                if (string.IsNullOrWhiteSpace(Config.Body)) 
-                {
-                    try
-                    {
-                        string bodyTemplate = File.ReadAllText($"{pluginDir}/Templates/{Config.TemplateCategory}/template_body.html");
-                        Config.Body = bodyTemplate;
-                        Logger.Debug("Global Body HTML set from Template file!");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error("Failed to set default Global Body HTML from Template file");
-                        Logger.Error(ex);
-                    }
-                }
 
-                if (string.IsNullOrWhiteSpace(Config.Entry))
+            if (string.IsNullOrWhiteSpace(this.emailEntry))
+            {
+                try
                 {
-                    try
-                    {
-                        string entryTemplate = File.ReadAllText($"{pluginDir}/Templates/{Config.TemplateCategory}/template_entry.html");
-                        Config.Entry = entryTemplate;
-                        Logger.Debug("Global Entry HTML set from Template file!");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error("Failed to set default Global Entry HTML from Template file");
-                        Logger.Error(ex);
-                    }
+                    string entryTemplate = File.ReadAllText($"{pluginDir}/Templates/{category}/template_entry.html");
+                    this.emailEntry = entryTemplate;
+                    Logger.Debug($"Entry HTML set from Template file ({category}) internally!");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to set default Entry HTML from Template file");
+                    Logger.Error(ex);
                 }
             }
         }
