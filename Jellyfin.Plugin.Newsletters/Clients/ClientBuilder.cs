@@ -361,4 +361,55 @@ public class ClientBuilder(Logger loggerInstance,
             _ => "🎬 Added to Library"
         };
     }
+    
+    /// <summary>
+    /// Determines whether an item should be included in the newsletter based on the configuration.
+    /// </summary>
+    /// <param name="item">The item to check.</param>
+    /// <param name="config">The configuration to use for filtering.</param>
+    /// <param name="clientName">The name of the client (e.g., "Email", "Discord") for logging purposes.</param>
+    /// <returns>True if the item should be included; otherwise, false.</returns>
+    protected bool ShouldIncludeItem(JsonFileObj item, INewsletterConfiguration config, string clientName)
+    {
+        string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+
+        // Check event type
+        if (eventType == "add" && !config.NewsletterOnItemAddedEnabled)
+        {
+            Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (Event: {eventType}) - 'Item Added' notifications disabled.");
+            return false;
+        }
+        else if (eventType == "update" && !config.NewsletterOnItemUpdatedEnabled)
+        {
+            Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (Event: {eventType}) - 'Item Updated' notifications disabled.");
+            return false;
+        }
+        else if (eventType == "delete" && !config.NewsletterOnItemDeletedEnabled)
+        {
+            Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (Event: {eventType}) - 'Item Deleted' notifications disabled.");
+            return false;
+        }
+
+        // Check library selection
+        if (!string.IsNullOrEmpty(item.LibraryId))
+        {
+            if (item.Type == "Series" && !config.SelectedSeriesLibraries.Contains(item.LibraryId))
+            {
+                Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (LibraryId: {item.LibraryId}) - Series library not selected.");
+                return false;
+            }
+            else if (item.Type == "Movie" && !config.SelectedMoviesLibraries.Contains(item.LibraryId))
+            {
+                Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (LibraryId: {item.LibraryId}) - Movie library not selected.");
+                return false;
+            }
+        }
+        else
+        {
+            Logger.Debug($"[{clientName}] Skipping item '{item.Title}' LibraryId is null.");
+            return false;
+        }
+
+        return true;
+    }
 }

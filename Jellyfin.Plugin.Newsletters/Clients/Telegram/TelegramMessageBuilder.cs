@@ -63,18 +63,10 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                 if (row is not null)
                 {
                     JsonFileObj item = JsonFileObj.ConvertToObj(row);
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
 
                     // Check if the event type should be included based on configuration
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled)
-                    {
-                        continue;
-                    }
-                    else if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled)
-                    {
-                        continue;
-                    }
-                    else if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled)
+                    if (!ShouldIncludeItem(item, telegramConfig, "Telegram"))
                     {
                         continue;
                     }

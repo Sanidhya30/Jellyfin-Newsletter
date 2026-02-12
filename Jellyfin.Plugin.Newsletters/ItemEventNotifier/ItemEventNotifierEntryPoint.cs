@@ -34,63 +34,6 @@ public class ItemEventNotifierEntryPoint(
     /// </summary>
     private PluginConfiguration Config => Plugin.Instance!.Configuration;
 
-    private string? GetLibraryId(BaseItem item)
-    {
-        try
-        {
-            // Get all virtual folders (libraries)
-            var virtualFolders = libManager.GetVirtualFolders();
-            
-            if (string.IsNullOrEmpty(item.Path))
-            {
-                // logger.Debug($"Item {item.Name} has no path");
-                return null;
-            }
-            
-            logger.Debug($"Looking for library containing path: {item.Path}");
-            
-            foreach (var folder in virtualFolders)
-            {
-                foreach (var location in folder.Locations)
-                {
-                    if (item.Path.StartsWith(location, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // logger.Debug($"Found library: {folder.Name} (ItemId: {folder.ItemId})");
-                        return folder.ItemId;
-                    }
-                }
-            }
-            
-            logger.Debug($"No library found for item {item.Name}");
-        }
-        catch (Exception ex)
-        {
-            logger.Error($"Error getting library ID for {item.Name}: {ex.Message}");
-        }
-
-        return null;
-    }
-
-    private bool IsLibrarySelected(BaseItem item)
-    {
-        var libraryId = GetLibraryId(item);
-        if (libraryId == null)
-        {
-            return false;
-        }
-
-        if (item is Movie)
-        {
-            return Config.SelectedMoviesLibraries.Contains(libraryId);
-        }
-        else if (item is Episode)
-        {
-            return Config.SelectedSeriesLibraries.Contains(libraryId);
-        }
-
-        return false;
-    }
-
     private void ItemAddedHandler(object? sender, ItemChangeEventArgs itemChangeEventArgs)
     {
         HandleItemChange(itemChangeEventArgs, "add", itemManager.AddItem);
@@ -111,11 +54,11 @@ public class ItemEventNotifierEntryPoint(
 
         string? itemTypeName = null;
 
-        if ((item is Movie) && (Config.MoviesEnabled || IsLibrarySelected(item)))
+        if (item is Movie)
         {
             itemTypeName = "movie";
         }
-        else if ((item is Episode) && (Config.SeriesEnabled || IsLibrarySelected(item)))
+        else if (item is Episode)
         {
             itemTypeName = "episode";
         }

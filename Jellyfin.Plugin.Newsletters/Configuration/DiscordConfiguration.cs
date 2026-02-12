@@ -1,11 +1,12 @@
 using System;
+using System.Collections.ObjectModel;
 
 namespace Jellyfin.Plugin.Newsletters.Configuration;
 
 /// <summary>
 /// Represents a single Discord webhook configuration.
 /// </summary>
-public class DiscordConfiguration
+public class DiscordConfiguration : INewsletterConfiguration
 {
     /// <summary>
     /// Gets or sets the unique identifier for this configuration.
@@ -86,4 +87,29 @@ public class DiscordConfiguration
     /// Gets or sets the embed color for movies update events.
     /// </summary>
     public string MoviesUpdateEmbedColor { get; set; } = "#0000ff";
+
+    /// <summary>
+    /// Gets or sets the collection of selected series libraries.
+    /// </summary>
+    public Collection<string> SelectedSeriesLibraries { get; set; } = new Collection<string>();
+
+    /// <summary>
+    /// Gets or sets the collection of selected movies libraries.
+    /// </summary>
+    public Collection<string> SelectedMoviesLibraries { get; set; } = new Collection<string>();
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item added.
+    /// </summary>
+    public bool NewsletterOnItemAddedEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item updated.
+    /// </summary>
+    public bool NewsletterOnItemUpdatedEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item deleted.
+    /// </summary>
+    public bool NewsletterOnItemDeletedEnabled { get; set; } = true;
 }

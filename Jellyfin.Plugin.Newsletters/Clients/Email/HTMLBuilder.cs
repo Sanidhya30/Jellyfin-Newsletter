@@ -39,7 +39,7 @@ public class HtmlBuilder : ClientBuilder
     public HtmlBuilder(
         Logger loggerInstance,
         SQLiteDatabase dbInstance,
-        EmailConfiguration? emailConfig = null)
+        EmailConfiguration emailConfig)
         : base(loggerInstance, dbInstance)
     {
         DefaultBodyAndEntry(emailConfig); // set default body and entry HTML from template file if not set in config
@@ -49,7 +49,7 @@ public class HtmlBuilder : ClientBuilder
 
         // Always generate a unique filename
         string currDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss", System.Globalization.CultureInfo.InvariantCulture);
-        string configName = emailConfig?.Name ?? "Default";
+        string configName = emailConfig.Name;
         // Sanitize config name for filename
         configName = string.Join("_", configName.Split(Path.GetInvalidFileNameChars()));
         newsletterHTMLFile = Path.Combine(newslettersDir, $"{currDate}_{configName}_Newsletter.html");
@@ -62,7 +62,7 @@ public class HtmlBuilder : ClientBuilder
     /// </summary>
     /// <param name="emailConfig">The email configuration to use for templates.</param>
     /// <returns>The default HTML body string.</returns>
-    public string GetDefaultHTMLBody(EmailConfiguration? emailConfig)
+    public string GetDefaultHTMLBody(EmailConfiguration emailConfig)
     {
         return emailBody;
     }
@@ -110,7 +110,7 @@ public class HtmlBuilder : ClientBuilder
     /// <param name="serverId">The Jellyfin server ID to include in item URLs.</param>
     /// <param name="emailConfig">The email configuration to use for templates.</param>
     /// <returns>A collection of tuples containing HTML strings and associated image streams with content IDs.</returns>
-    public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData(string serverId, EmailConfiguration? emailConfig)
+    public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData(string serverId, EmailConfiguration emailConfig)
     {
         // Group items by event type
         var addItems = new List<JsonFileObj>();
@@ -128,19 +128,10 @@ public class HtmlBuilder : ClientBuilder
                 if (row is not null)
                 {
                     JsonFileObj item = JsonFileObj.ConvertToObj(row);
-                    
                     string eventType = item.EventType?.ToLowerInvariant() ?? "add";
                     
                     // Check if the event type should be included based on configuration
-                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled)
-                    {
-                        continue;
-                    }
-                    else if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled)
-                    {
-                        continue;
-                    }
-                    else if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled)
+                    if (!ShouldIncludeItem(item, emailConfig, "Email"))
                     {
                         continue;
                     }
@@ -298,7 +289,7 @@ public class HtmlBuilder : ClientBuilder
         int overheadPerMail,
         List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> chunks,
         string serverId,
-        EmailConfiguration? emailConfig)
+        EmailConfiguration emailConfig)
     {
         foreach (var item in items)
         {
@@ -415,7 +406,7 @@ public class HtmlBuilder : ClientBuilder
     /// </summary>
     /// <returns>A string containing the HTML for test newsletter entries with all event types.</returns>
     /// <param name="emailConfig">The email configuration to use for templates.</param>
-    public string BuildHtmlStringsForTest(EmailConfiguration? emailConfig)
+    public string BuildHtmlStringsForTest(EmailConfiguration emailConfig)
     {
         StringBuilder testHTML = new StringBuilder();
 
@@ -514,13 +505,13 @@ public class HtmlBuilder : ClientBuilder
         }
     }
 
-    private void DefaultBodyAndEntry(EmailConfiguration? emailConfig)
+    private void DefaultBodyAndEntry(EmailConfiguration emailConfig)
     {
         Logger.Debug("Checking for default Body and Entry HTML from Template file..");
         
         // Initialize fields based on config
-        this.emailBody = emailConfig?.Body ?? string.Empty;
-        this.emailEntry = emailConfig?.Entry ?? string.Empty;
+        this.emailBody = emailConfig.Body ?? string.Empty;
+        this.emailEntry = emailConfig.Entry ?? string.Empty;
 
         try
         {
@@ -532,7 +523,7 @@ public class HtmlBuilder : ClientBuilder
             }
             
             // Determine category
-            string category = !string.IsNullOrEmpty(emailConfig?.TemplateCategory) ? emailConfig.TemplateCategory : "Modern";
+            string category = !string.IsNullOrEmpty(emailConfig.TemplateCategory) ? emailConfig.TemplateCategory : "Modern";
 
             if (string.IsNullOrWhiteSpace(this.emailBody))
             {

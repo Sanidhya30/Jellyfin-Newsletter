@@ -479,7 +479,12 @@ public class PluginConfiguration : BasePluginConfiguration
                 SeriesUpdateEmbedColor = DiscordSeriesUpdateEmbedColor,
                 MoviesAddEmbedColor = DiscordMoviesAddEmbedColor,
                 MoviesDeleteEmbedColor = DiscordMoviesDeleteEmbedColor,
-                MoviesUpdateEmbedColor = DiscordMoviesUpdateEmbedColor
+                MoviesUpdateEmbedColor = DiscordMoviesUpdateEmbedColor,
+                SelectedSeriesLibraries = SelectedSeriesLibraries,
+                SelectedMoviesLibraries = SelectedMoviesLibraries,
+                NewsletterOnItemAddedEnabled = NewsletterOnItemAddedEnabled,
+                NewsletterOnItemUpdatedEnabled = NewsletterOnItemUpdatedEnabled,
+                NewsletterOnItemDeletedEnabled = NewsletterOnItemDeletedEnabled
             });
         }
 
@@ -496,7 +501,12 @@ public class PluginConfiguration : BasePluginConfiguration
                 RatingEnabled = TelegramRatingEnabled,
                 PGRatingEnabled = TelegramPGRatingEnabled,
                 DurationEnabled = TelegramDurationEnabled,
-                EpisodesEnabled = TelegramEpisodesEnabled
+                EpisodesEnabled = TelegramEpisodesEnabled,
+                SelectedSeriesLibraries = SelectedSeriesLibraries,
+                SelectedMoviesLibraries = SelectedMoviesLibraries,
+                NewsletterOnItemAddedEnabled = NewsletterOnItemAddedEnabled,
+                NewsletterOnItemUpdatedEnabled = NewsletterOnItemUpdatedEnabled,
+                NewsletterOnItemDeletedEnabled = NewsletterOnItemDeletedEnabled
             });
         }
 
@@ -515,7 +525,12 @@ public class PluginConfiguration : BasePluginConfiguration
                 FromAddr = FromAddr,
                 Subject = Subject,
                 Body = Body,
-                Entry = Entry
+                Entry = Entry,
+                SelectedSeriesLibraries = SelectedSeriesLibraries,
+                SelectedMoviesLibraries = SelectedMoviesLibraries,
+                NewsletterOnItemAddedEnabled = NewsletterOnItemAddedEnabled,
+                NewsletterOnItemUpdatedEnabled = NewsletterOnItemUpdatedEnabled,
+                NewsletterOnItemDeletedEnabled = NewsletterOnItemDeletedEnabled
             });
         }
     }

@@ -1,11 +1,12 @@
 using System;
+using System.Collections.ObjectModel;
 
 namespace Jellyfin.Plugin.Newsletters.Configuration;
 
 /// <summary>
 /// Represents a single Telegram bot/chat configuration.
 /// </summary>
-public class TelegramConfiguration
+public class TelegramConfiguration : INewsletterConfiguration
 {
     /// <summary>
     /// Gets or sets the unique identifier for this configuration.
@@ -56,4 +57,29 @@ public class TelegramConfiguration
     /// Gets or sets a value indicating whether episodes list should be visible in Telegram messages.
     /// </summary>
     public bool EpisodesEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the collection of selected series libraries.
+    /// </summary>
+    public Collection<string> SelectedSeriesLibraries { get; set; } = new Collection<string>();
+
+    /// <summary>
+    /// Gets or sets the collection of selected movies libraries.
+    /// </summary>
+    public Collection<string> SelectedMoviesLibraries { get; set; } = new Collection<string>();
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item added.
+    /// </summary>
+    public bool NewsletterOnItemAddedEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item updated.
+    /// </summary>
+    public bool NewsletterOnItemUpdatedEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item deleted.
+    /// </summary>
+    public bool NewsletterOnItemDeletedEnabled { get; set; } = true;
 }
