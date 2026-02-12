@@ -78,36 +78,63 @@ public class TelegramClient(IServerApplicationHost appHost,
             return;
         }
 
+        // Split ChatId by comma
+        var chatIds = telegramConfig.ChatId.Split(',')
+                                     .Select(id => id.Trim())
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .ToList();
+
+        if (chatIds.Count == 0)
+        {
+             Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no valid chat IDs. Aborting test message.");
+             return;
+        }
+
         try
         {
             TelegramMessageBuilder builder = new(Logger, Db);
             var (testMessage, imageUrl) = builder.BuildTestMessage(telegramConfig);
-            bool messageSent = false;
-
+            
             if (string.IsNullOrEmpty(testMessage))
             {
                 Logger.Error("Failed to build test message.");
                 return;
             }
 
-            if (telegramConfig.ThumbnailEnabled && !string.IsNullOrEmpty(imageUrl))
+            bool anySuccess = false;
+
+            foreach (var chatId in chatIds)
             {
-                // Send using external URL
-                messageSent = SendPhotoWithUrl(telegramConfig.BotToken, telegramConfig.ChatId, imageUrl, testMessage);
-            }
-            else
-            {
-                // Otherwise send text message
-                messageSent = SendTextMessage(telegramConfig.BotToken, telegramConfig.ChatId, testMessage);
+                bool messageSent = false;
+                if (telegramConfig.ThumbnailEnabled && !string.IsNullOrEmpty(imageUrl))
+                {
+                    // Send using external URL
+                    messageSent = SendPhotoWithUrl(telegramConfig.BotToken, chatId, imageUrl, testMessage);
+                }
+                else
+                {
+                    // Otherwise send text message
+                    messageSent = SendTextMessage(telegramConfig.BotToken, chatId, testMessage);
+                }
+
+                if (messageSent)
+                {
+                    Logger.Info($"Telegram test message sent successfully to '{telegramConfig.Name}' (ChatID: {chatId})");
+                    anySuccess = true;
+                }
+                else
+                {
+                    Logger.Error($"Failed to send Telegram test message to '{telegramConfig.Name}' (ChatID: {chatId})");
+                }
             }
 
-            if (messageSent)
+            if (anySuccess)
             {
-                Logger.Info($"Telegram test message sent successfully to '{telegramConfig.Name}'");
+                Logger.Info($"Telegram test message process completed for '{telegramConfig.Name}'. At least one message verified.");
             }
             else
             {
-                Logger.Error($"Failed to send Telegram test message to '{telegramConfig.Name}'");
+                Logger.Error($"Telegram test message process failed for all Chat IDs in '{telegramConfig.Name}'.");
             }
         }
         catch (Exception e)
@@ -170,9 +197,19 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     private bool SendToBot(TelegramConfiguration telegramConfig)
     {
-        bool result = false;
+        bool anyResult = false;
         string botToken = telegramConfig.BotToken;
-        string chatId = telegramConfig.ChatId;
+
+        var chatIds = telegramConfig.ChatId.Split(',')
+                                     .Select(id => id.Trim())
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .ToList();
+
+        if (chatIds.Count == 0)
+        {
+            Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no valid chat IDs. Skipping.");
+            return false;
+        }
 
         try
         {
@@ -181,43 +218,54 @@ public class TelegramClient(IServerApplicationHost appHost,
 
             // Telegram has a 4096 character limit per message
             // We'll send each item as a separate message
-            foreach (var (messageText, imageUrl, imageStream, uniqueImageName) in messageTuples)
+
+            foreach (var chatId in chatIds)
             {
-                bool messageSent = false;
-
-                // If image is enabled and available, send photo with caption
-                if (telegramConfig.ThumbnailEnabled)
+                bool thisChatResult = true;
+                Logger.Debug($"Sending Telegram newsletter to '{telegramConfig.Name}' (ChatID: {chatId})");
+                
+                foreach (var (messageText, imageUrl, imageStream, uniqueImageName) in messageTuples)
                 {
-                    if (imageStream != null)
-                    {
-                        // Reset stream position before reading
-                        imageStream.Position = 0;
+                    bool messageSent = false;
 
-                        // Send as multipart file upload
-                        messageSent = SendPhotoMessage(botToken, chatId, imageStream, messageText, uniqueImageName);
+                    // If image is enabled and available, send photo with caption
+                    if (telegramConfig.ThumbnailEnabled)
+                    {
+                        if (imageStream != null)
+                        {
+                            // Reset stream position before reading
+                            imageStream.Position = 0;
+
+                            // Send as multipart file upload
+                            messageSent = SendPhotoMessage(botToken, chatId, imageStream, messageText, uniqueImageName);
+                        }
+                        else if (!string.IsNullOrEmpty(imageUrl))
+                        {
+                            // Send using external URL
+                            messageSent = SendPhotoWithUrl(botToken, chatId, imageUrl, messageText);
+                        } 
                     }
-                    else if (!string.IsNullOrEmpty(imageUrl))
+                    else
                     {
-                        // Send using external URL
-                        messageSent = SendPhotoWithUrl(botToken, chatId, imageUrl, messageText);
-                    } 
-                }
-                else
-                {
-                    // Otherwise send text message
-                    messageSent = SendTextMessage(botToken, chatId, messageText);
+                        // Otherwise send text message
+                        messageSent = SendTextMessage(botToken, chatId, messageText);
+                    }
+
+                    if (messageSent)
+                    {
+                        // Add small delay between messages to avoid rate limiting
+                        Thread.Sleep(100);
+                    }
+                    else
+                    {
+                        thisChatResult = false;
+                        break;
+                    }
                 }
 
-                if (messageSent)
+                if (thisChatResult)
                 {
-                    result = true;
-                    // Add small delay between messages to avoid rate limiting
-                    Thread.Sleep(100);
-                }
-                else
-                {
-                    result = false;
-                    break;
+                    anyResult = true;
                 }
             }
         }
@@ -226,7 +274,7 @@ public class TelegramClient(IServerApplicationHost appHost,
             Logger.Error($"An error has occured while sending to '{telegramConfig.Name}': " + e);
         }
 
-        return result;
+        return anyResult;
     }
 
     /// <summary>

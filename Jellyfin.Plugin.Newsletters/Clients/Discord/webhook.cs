@@ -71,42 +71,63 @@ public class DiscordWebhook(IServerApplicationHost appHost,
             return;
         }
 
-        if (string.IsNullOrEmpty(discordConfig.WebhookURL))
+        // Split the Webhook URL by comma to support multiple webhooks
+        var webhookUrls = discordConfig.WebhookURL.Split(',')
+                                       .Select(url => url.Trim())
+                                       .Where(url => !string.IsNullOrEmpty(url))
+                                       .ToList();
+
+        if (webhookUrls.Count == 0)
         {
-            Logger.Info($"Discord configuration '{discordConfig.Name}' has no webhook URL. Aborting test message.");
+            Logger.Info($"Discord configuration '{discordConfig.Name}' has no valid webhook URLs. Aborting test message.");
             return;
         }
 
-        try
+        bool anySuccess = false;
+
+        foreach (var webhookUrl in webhookUrls)
         {
-            EmbedBuilder builder = new(Logger, Db);
-            var embedList = builder.BuildEmbedForTest(discordConfig);
-
-            var payload = new DiscordPayload
+            try
             {
-                Username = discordConfig.WebhookName,
-                Embeds = embedList
-            };
+                EmbedBuilder builder = new(Logger, Db);
+                var embedList = builder.BuildEmbedForTest(discordConfig);
 
-            var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
-            Logger.Debug($"Sending Discord test message to '{discordConfig.Name}': " + jsonPayload);
+                var payload = new DiscordPayload
+                {
+                    Username = discordConfig.WebhookName,
+                    Embeds = embedList
+                };
 
-            using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-            var response = _httpClient.PostAsync(discordConfig.WebhookURL, content).GetAwaiter().GetResult();
+                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+                Logger.Debug($"Sending Discord test message to '{discordConfig.Name}' (URL: {webhookUrl}): " + jsonPayload);
 
-            if (response.IsSuccessStatusCode)
-            {
-                Logger.Debug($"Discord test message sent successfully to '{discordConfig.Name}'");
+                using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                var response = _httpClient.PostAsync(webhookUrl, content).GetAwaiter().GetResult();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Logger.Debug($"Discord test message sent successfully to '{discordConfig.Name}' (URL: {webhookUrl})");
+                    anySuccess = true;
+                }
+                else
+                {
+                    var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    Logger.Error($"Discord test message failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error}");
+                }
             }
-            else
+            catch (Exception e)
             {
-                var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                Logger.Error($"Discord test message failed for '{discordConfig.Name}': {response.StatusCode} - {error}");
+                Logger.Error($"An error occurred while sending Discord test message to '{discordConfig.Name}' (URL: {webhookUrl}): " + e);
             }
         }
-        catch (Exception e)
+
+        if (anySuccess)
         {
-            Logger.Error($"An error occurred while sending Discord test message to '{discordConfig.Name}': " + e);
+            Logger.Info($"Discord test message process completed for '{discordConfig.Name}'. At least one message verified.");
+        }
+        else
+        {
+            Logger.Error($"Discord test message process failed for all webhooks in '{discordConfig.Name}'.");
         }
     }
 
@@ -164,8 +185,19 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     private bool SendToWebhook(DiscordConfiguration discordConfig)
     {
-        bool result = false;
-        string webhookUrl = discordConfig.WebhookURL;
+        bool anyResult = false;
+        
+        // Split the Webhook URL by comma to support multiple webhooks
+        var webhookUrls = discordConfig.WebhookURL.Split(',')
+                                       .Select(url => url.Trim())
+                                       .Where(url => !string.IsNullOrEmpty(url))
+                                       .ToList();
+
+        if (webhookUrls.Count == 0)
+        {
+            Logger.Info($"Discord configuration '{discordConfig.Name}' has no valid webhook URLs. Skipping.");
+            return false;
+        }
 
         try
         {
@@ -179,7 +211,10 @@ public class DiscordWebhook(IServerApplicationHost appHost,
             long maxTotalImageSize = 10 * 1024 * 1024; // 10MB
 
             int index = 0;
+            var chunks = new List<List<(Embed, MemoryStream?, string)>>();
 
+            // Pre-calculate chunks based on embeds and size limits
+            // This is done once for the newsletter data
             while (index < embedTuples.Count)
             {
                 var chunk = new List<(Embed, MemoryStream?, string)>();
@@ -188,12 +223,9 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                 while (index < embedTuples.Count && chunk.Count < maxEmbedsPerMessage)
                 {
                     var tuple = embedTuples[index];
-                    long imageSize = 0;
+                    long imageSize = tuple.ResizedImageStream?.Length ?? 0;
 
-                    // TODO: Can make this better, but even in case of tmdb url this will work as the ResizedImageStream will be null
-                    imageSize = tuple.ResizedImageStream?.Length ?? 0;
-
-                    if (currentTotalSize + imageSize > maxTotalImageSize)
+                    if (currentTotalSize + imageSize > maxTotalImageSize && chunk.Count > 0)
                     {
                         break; // Stop adding to the chunk if it exceeds the max size
                     }
@@ -203,54 +235,81 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                     index++;
                 }
 
-                var payload = new DiscordPayload
+                chunks.Add(chunk);
+            }
+
+            // Iterate over each webhook URL and send the pre-calculated chunks
+            foreach (var webhookUrl in webhookUrls)
+            {
+                bool thisWebhookResult = true;
+                Logger.Debug($"Sending Discord newsletter to '{discordConfig.Name}' (URL: {webhookUrl})");
+
+                foreach (var chunk in chunks)
                 {
-                    Username = discordConfig.WebhookName,
-                    Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly()
-                };
-
-                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
-                Logger.Debug($"Sending discord message to '{discordConfig.Name}' with payload: " + jsonPayload);
-
-                using var multipartContent = new MultipartFormDataContent();
-                using var payloadContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                multipartContent.Add(payloadContent, "payload_json");
-
-                if (Config.PosterType == "attachment")
-                {
-                    foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
+                    try 
                     {
-                        if (resizedImageStream != null)
+                        var payload = new DiscordPayload
                         {
-                            var fileContent = new ByteArrayContent(resizedImageStream.ToArray());
-                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-                            multipartContent.Add(fileContent, uniqueImageName, uniqueImageName);
+                            Username = discordConfig.WebhookName,
+                            Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly()
+                        };
+
+                        var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+                        Logger.Debug($"Sending discord message chunk to '{discordConfig.Name}' (URL: {webhookUrl})");
+
+                        using var multipartContent = new MultipartFormDataContent();
+                        using var payloadContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                        multipartContent.Add(payloadContent, "payload_json");
+
+                        if (Config.PosterType == "attachment")
+                        {
+                            foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
+                            {
+                                if (resizedImageStream != null)
+                                {
+                                    // MemoryStream is reusable if position is reset, but ByteArrayContent takes a copy or byte array.
+                                    // We used 'resizedImageStream.ToArray()' effectively creating a copy.
+                                    var fileContent = new ByteArrayContent(resizedImageStream.ToArray());
+                                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                                    multipartContent.Add(fileContent, uniqueImageName, uniqueImageName);
+                                }
+                            }
                         }
+
+                        var response = _httpClient.PostAsync(webhookUrl, multipartContent).GetAwaiter().GetResult();
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            Logger.Debug($"Discord message chunk sent successfully to '{discordConfig.Name}' (URL: {webhookUrl})");
+                        }
+                        else
+                        {
+                            var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                            Logger.Error($"Discord webhook failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error}");
+                            thisWebhookResult = false;
+                            break; 
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                         Logger.Error($"Error sending chunk to '{discordConfig.Name}' (URL: {webhookUrl}): {ex.Message}");
+                         thisWebhookResult = false;
+                         break;
                     }
                 }
 
-                var response = _httpClient.PostAsync(webhookUrl, multipartContent).GetAwaiter().GetResult();
-
-                if (response.IsSuccessStatusCode)
+                if (thisWebhookResult)
                 {
-                    Logger.Debug($"Discord message sent successfully to '{discordConfig.Name}'");
-                    result = true;
-                }
-                else
-                {
-                    var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    Logger.Error($"Discord webhook failed for '{discordConfig.Name}': {response.StatusCode} - {error}");
-                    result = false;
-                    break;
+                    anyResult = true;
                 }
             }
         }
         catch (Exception e)
         {
-            Logger.Error($"An error has occured while sending to '{discordConfig.Name}': " + e);
+            Logger.Error($"An error has occured while preparing/sending to '{discordConfig.Name}': " + e);
         }
 
-        return result;
+        return anyResult;
     }
 
     /// <summary>

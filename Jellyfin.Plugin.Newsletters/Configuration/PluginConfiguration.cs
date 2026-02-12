@@ -94,6 +94,7 @@ public class PluginConfiguration : BasePluginConfiguration
 
         // default newsletter paths
         NewsletterDir = string.Empty;
+
         // default libraries
         MoviesEnabled = true;
         SeriesEnabled = true;

@@ -587,6 +587,7 @@
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">Webhook URL:</label>';
                     html += '      <input id="discord-url-' + config.Id + '" type="text" is="emby-input" value="' + (config.WebhookURL || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Separate multiple webhook URLs with commas.</div>';
                     html += '    </div>';
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">Webhook Display Name:</label>';
@@ -723,7 +724,7 @@
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">Chat ID:</label>';
                     html += '      <input id="telegram-chatid-' + config.Id + '" type="text" is="emby-input" value="' + (config.ChatId || '') + '" onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')" />';
-                    html += '      <div class="fieldDescription">Telegram chat ID or group ID to send messages to.</div>';
+                    html += '      <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Separate multiple IDs with commas.</div>';
                     html += '    </div>';
                     html += '    <div style="margin: 15px 0;">';
                     html += '      <label class="inputLabel">Message Fields:</label>';
