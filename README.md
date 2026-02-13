@@ -8,28 +8,51 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 
 * Discord Webhook Support
 * Telegram Support
+* Multiple Client Instances (Discord, Telegram, Email)
+* Multiple Email Templates (Modern/Classic)
 * Removal of Imgur and Local Hosted Image Dependencies
 * TMDB Integration
 * Local Poster images support as attachments
 * Event-Based item detection and notifications (Add/Update/Delete)
-* Per-library selection for series and movies
+* Per-library selection for series and movies per client
 * Multiple Bug Fixes, Enhancements and much more!!!
 
 # Description
 
-This plugin uses event-driven notifications with scheduled processing. When library changes occur (additions, or deletions), they are detected in real-time and stored in the database. A hidden background task processes these events every 30 seconds, and the main Newsletter task generates and sends newsletters containing all accumulated events.
+This plugin uses event-driven notifications with scheduled processing. When library changes occur (additions or deletions), they are detected in real-time and stored in the database. A hidden background task processes these events every 30 seconds, and the main Newsletter task generates and sends newsletters containing all accumulated events.
 
-<h2 align="center">Email Screenshots</h2>
+# Screenshots
+
+<details>
+<summary><big>Email Screenshots</big></summary>
+
+### Classic Template
+
 <p align="center">
-    <img src="images/Newsletter_Added_Email_Example.png"
+    <img src="images/Newsletter_Added_Email_Classic_Example.png"
          alt="Added Email Screenshot"
          height="630"/>
-    <img src="images/Newsletter_Removed_Email_Example.png"
+    <img src="images/Newsletter_Removed_Email_Classic_Example.png"
          alt="Removed Email Screenshot"
          height="300"/>
 </p>
 
-<h2 align="center">Discord Screenshots</h2>
+### Modern Template
+
+<p align="center">
+    <img src="images/Newsletter_Added_Email_Modern_Example.png"
+         alt="Added Email Modern Screenshot"
+         height="600"/>
+    <img src="images/Newsletter_Removed_Email_Modern_Example.png"
+         alt="Removed Email Modern Screenshot"
+         height="600"/>
+</p>
+
+</details>
+
+<details>
+<summary><big>Discord Screenshots</big></summary>
+
 <p align="center">
     <img src="images/Newsletter_Added_Discord_Example.png"
          alt="Added Discord Screenshot"
@@ -40,6 +63,24 @@ This plugin uses event-driven notifications with scheduled processing. When libr
          height="300"
          width="49%"/>
 </p>
+
+</details>
+
+<details>
+<summary><big>Telegram Screenshots</big></summary>
+
+<p align="center">
+    <img src="images/Newsletter_Added_Telegram_Example.png"
+         alt="Added Telegram Screenshot"
+         height="600"
+         width="49%"/>
+    <img src="images/Newsletter_Removed_Telegram_Example.png"
+         alt="Removed Telegram Screenshot"
+         height="600"
+         width="49%"/>
+</p>
+
+</details>
 
 # File Structure
 
@@ -110,60 +151,28 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 
 # Configuration
 
-## General Config
+<details>
+<summary>General Configuration</summary>
 
 ### Server URL
 
 - The server url of your jellyfin. This will be used for direct link in discord webhook.
 
-### Library Selection
-
-- Choose specific libraries within each item type(Movies/Series) to include in newsletters
-  - Allows fine-grained control over which libraries trigger notifications
-
-### Newsletter Event Settings
-
-Configure which library events should be the part of newsletters:
-
-#### Send newsletter when items are added
-
-- Enable newly added items section in the newsletter (default: enabled).
-
-#### Send newsletter when items are updated
-
-- Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
-
-#### Send newsletter when items are deleted
-
-- Enable deleted items section in the newsletter (default: enabled).
-
 ### Community Rating Decimal Places
 
 - Configure the number of decimal places to display for community ratings in newsletters (0-4 places, default: 1)
-
-## Newsletter HTML Format
-
-Allows for use of custom HTML formatting for emails! Defaults to original formatting, but can be modified now!
-
-For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
-
-### Body HTML
-
-- The main body of your email
-
-### EntryData HTML
-
-- The formatting for each individual entry/series/movie that was found and will be sent out
-
-## Scrapper Config
 
 ### Poster Type
 
 * TMDB Poster - Uses image URLs from TheMovieDB (default, smallest emails).
 * Local Poster Images - Embeds local poster images directly in the email/discord embed (larger messages).
-  * Maximum Email Size: Maximum email size allowed by your email provider (in MB). **Default: 15 MB.**
 
-## Email & SMTP Config
+</details>
+
+<details>
+<summary>Email Configuration</summary>
+
+> ***You can configure Multiple Email Clients. Each client instance has its own SMTP settings, recipients, library selection, event triggers, and template settings.***
 
 ### To Addresses:
 
@@ -199,22 +208,68 @@ For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
   - I'm not sure about other email servers, but Google requires a Dev password to be created.
     - For gmail specific instructions, you can visit https://support.google.com/mail/answer/185833?hl=en for details
 
-## Discord Config
+### Library Selection
 
-### Webhook URL:
+- Choose specific libraries within each item type (Movies/Series) to include in newsletters for this email client.
 
-- Your discord webhook url
+### Newsletter Event Settings
+
+- Configure which library events (Add/Update/Delete) should trigger the newsletters for this email client:
+  - **Add**: Enable newly added items section in the newsletter (default: enabled).
+  - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
+  - **Delete**: Enable deleted items section in the newsletter (default: enabled).
+
+### Newsletter Template Category
+
+You can select between different email templates:
+- **Modern**: A sleek, card-based design. Fully compatible for mobile view.
+- **Classic**: A more traditional list-based layout.
+
+### Body HTML
+
+- Define custom HTML structure for the main email body. If left empty, the default HTML from the selected **Newsletter Template Category** will be used.
+
+### EntryData HTML
+
+- Define custom HTML formatting for each individual media item (Movies/Series) in the newsletter. If left empty, the default HTML from the selected **Newsletter Template Category** will be used.
+
+</details>
+
+<details>
+<summary>Discord Configuration</summary>
+
+> ***You can now configure Multiple Discord Clients. Each client instance can have its own Webhook URL(s), library selection, and event triggers.***
+
+### Webhook URL
+
+- Your discord webhook url. **Supports multiple webhooks**: You can enter multiple webhook URLs separated by commas `,` to send the same notification to multiple channels.
 
 ### Webhook Name
 
 - Name for your discord webhook, defaults to "Jellyfin Newsletter"
+
+### Library Selection
+
+- Choose specific libraries within each item type (Movies/Series) to include in newsletters for this Discord client.
+
+### Newsletter Event Settings
+
+- Configure which library events (Add/Update/Delete) should trigger Discord notifications:
+  - **Add**: Enable newly added items section in the newsletter (default: enabled).
+  - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
+  - **Delete**: Enable deleted items section in the newsletter (default: enabled).
 
 ### Fields & Color selection
 
 - Select the fields that you want as part of your embed.
 - Select the embed color for each event type (Add, Update, Delete) and item type (Series, Movies).
 
-## Telegram Config
+</details>
+
+<details>
+<summary>Telegram Configuration</summary>
+
+> ***You can now configure Multiple Telegram Clients. Each client instance can have its own Bot Token/Chat IDs, library selection and event configurations.***
 
 ### Bot Token:
 
@@ -222,11 +277,23 @@ For defaults, see `Jellyfin.Plugin.Newsletters/Templates/`
 
 ### Chat ID:
 
-- The chat ID(can be a user ID, group ID, or channel ID) where you want to send the newsletters
+- The chat ID(can be a user ID, group ID, or channel ID) where you want to send the newsletters. **Supports multiple Chat IDs**: You can enter multiple Chat IDs separated by commas `,`.
+
+### Library Selection
+
+- Choose specific libraries within each item type (Movies/Series) to include in newsletters for this Telegram client.
+
+### Newsletter Event Settings
+
+- Configure which library events (Add/Update/Delete) should trigger Telegram notifications:
+  - **Add**: Enable newly added items section in the newsletter (default: enabled).
+  - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
+  - **Delete**: Enable deleted items section in the newsletter (default: enabled).
 
 ### Fields selection
 
 - Select the fields that you want as part of your message.
+</details>
 
 # Issues
 
@@ -258,7 +325,6 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 - {RunTime} - Movie/Episode Duration (for Series, gives first found duration. Will fix for only single episode or average in future update)
 - {OfficialRating} - TV-PG, TV-13, TV-14, etc.
 - {CommunityRating} - Numerical rating stored in Jellyfin's metadata
-- {EventBadge} - Visual badge indicating the event type (NEW, UPDATED, REMOVED)
 ```
 
 ## Non-Recommended Tags
@@ -271,6 +337,7 @@ These tags are ***available*** but not recommended to use. Untested behavior usi
 - {Episode} - Episode number (NOT RECOMMENDED TO USE)
 - {ItemID} - Jellyfin's assigned ItemID (NOT RECOMMENDED TO USE)
 - {PosterPath} - Jellyfin's assigned Poster Path (NOT RECOMMENDED TO USE)
+- {EventBadge} - Visual badge indicating the event type (NEW, UPDATED, REMOVED) (NOT RECOMMENDED TO USE)
 ```
 
 ## Known Issues
@@ -293,7 +360,7 @@ The following features are planned for future releases:
   - Extend newsletter functionality to music libraries
   - Include album art, artist information, and track details
 
-- [ ] **Multiple webhook/telegram ID/email support with configurable parameters**
+- [x] **Multiple webhook/telegram ID/email support with configurable parameters**
   - Support for multiple notification endpoints per event type
   - Individual configuration options for each recipient/channel
   - Granular control over which events trigger newsletter for each endpoint
