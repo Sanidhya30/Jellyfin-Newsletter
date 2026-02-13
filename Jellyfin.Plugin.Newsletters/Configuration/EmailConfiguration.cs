@@ -91,7 +91,7 @@ public class EmailConfiguration : INewsletterConfiguration
     /// <summary>
     /// Gets or sets a value indicating whether to send newsletter on item updated.
     /// </summary>
-    public bool NewsletterOnItemUpdatedEnabled { get; set; } = true;
+    public bool NewsletterOnItemUpdatedEnabled { get; set; } = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether to send newsletter on item deleted.

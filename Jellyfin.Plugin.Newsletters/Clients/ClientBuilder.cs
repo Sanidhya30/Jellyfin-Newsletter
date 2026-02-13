@@ -361,7 +361,7 @@ public class ClientBuilder(Logger loggerInstance,
             _ => "🎬 Added to Library"
         };
     }
-    
+
     /// <summary>
     /// Determines whether an item should be included in the newsletter based on the configuration.
     /// </summary>
@@ -391,6 +391,7 @@ public class ClientBuilder(Logger loggerInstance,
         }
 
         // Check library selection
+        // If libraryId is null or empty for some reason, it's better to add it in the newsletter
         if (!string.IsNullOrEmpty(item.LibraryId))
         {
             if (item.Type == "Series" && !config.SelectedSeriesLibraries.Contains(item.LibraryId))
@@ -403,11 +404,6 @@ public class ClientBuilder(Logger loggerInstance,
                 Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (LibraryId: {item.LibraryId}) - Movie library not selected.");
                 return false;
             }
-        }
-        else
-        {
-            Logger.Debug($"[{clientName}] Skipping item '{item.Title}' LibraryId is null.");
-            return false;
         }
 
         return true;

@@ -436,21 +436,24 @@
             }
 
             function getEventTogglesHtml(clientId, configType, added, updated, deleted) {
-                var html = '<div style="margin: 15px 0;"><label class="inputLabel">Events to Notify:</label><div style="display: flex; gap: 20px; flex-wrap: wrap;">';
+                var html = '<div>';
+                html += '  <label class="inputLabel">Events to Notify:</label>';
+                html += '  <table><tr>';
 
-                html += '<div class="checkboxContainer"><label class="emby-checkbox-label">';
-                html += '<input type="checkbox" is="emby-checkbox" id="' + configType + '-event-add-' + clientId + '" ' + (added !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
-                html += '<span>Item Added</span></label></div>';
+                html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
+                html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-add-' + clientId + '" ' + (added !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
+                html += '    <span>Item Added</span></label></div></td>';
 
-                html += '<div class="checkboxContainer"><label class="emby-checkbox-label">';
-                html += '<input type="checkbox" is="emby-checkbox" id="' + configType + '-event-update-' + clientId + '" ' + (updated !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
-                html += '<span>Item Updated</span></label></div>';
+                html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
+                html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-update-' + clientId + '" ' + (updated !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
+                html += '    <span>Item Updated</span></label></div></td>';
 
-                html += '<div class="checkboxContainer"><label class="emby-checkbox-label">';
-                html += '<input type="checkbox" is="emby-checkbox" id="' + configType + '-event-delete-' + clientId + '" ' + (deleted !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
-                html += '<span>Item Deleted</span></label></div>';
+                html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
+                html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-delete-' + clientId + '" ' + (deleted !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
+                html += '    <span>Item Deleted</span></label></div></td>';
 
-                html += '</div></div>';
+                html += '  </tr></table>';
+                html += '</div>';
                 return html;
             }
 
@@ -477,7 +480,7 @@
                     SelectedSeriesLibraries: [],
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
-                    NewsletterOnItemUpdatedEnabled: true,
+                    NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true
                 };
                 discordConfigs.push(newConfig);
@@ -583,7 +586,7 @@
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'discord', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled);
-                    html += '    <div style="margin: 15px 0;">';
+                    html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-desc-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Description</span></label></div></td>';
@@ -595,7 +598,7 @@
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-episodes-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Episodes</span></label></div></td>';
                     html += '      </tr></table>';
                     html += '    </div>';
-                    html += '    <div style="margin: 15px 0;">';
+                    html += '    <div>';
                     html += '      <label class="inputLabel">Embed Colors:</label>';
                     html += '      <table class="color-table">';
                     html += '        <tr><th>Series Add</th><th>Series Delete</th><th>Series Update</th></tr>';
@@ -635,7 +638,7 @@
                     SelectedSeriesLibraries: [],
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
-                    NewsletterOnItemUpdatedEnabled: true,
+                    NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true
                 };
                 telegramConfigs.push(newConfig);
@@ -735,7 +738,7 @@
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'telegram', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled);
-                    html += '    <div style="margin: 15px 0;">';
+                    html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-desc-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Description</span></label></div></td>';
@@ -773,7 +776,7 @@
                     SelectedSeriesLibraries: [],
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
-                    NewsletterOnItemUpdatedEnabled: true,
+                    NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true
                 };
                 emailConfigs.push(newConfig);
@@ -902,6 +905,8 @@
                     html += '      <label class="inputLabel inputLabelUnfocused">Subject:</label>';
                     html += '      <input id="email-subject-' + config.Id + '" type="text" is="emby-input" value="' + (config.Subject || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
+                    html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
+                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="email-category-' + config.Id + '">Template Category:</label>';
                     html += '      <select id="email-category-' + config.Id + '" is="emby-select" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';
@@ -910,8 +915,6 @@
                     html += '      </select>';
                     html += '      <div class="fieldDescription">Select the template style (e.g., \'Modern\' or \'Classic\'). Clear the Body/Entry HTML fields below to use the template category.</div>';
                     html += '    </div>';
-                    html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">Body HTML:</label>';
                     html += '      <textarea id="email-body-' + config.Id + '" style="width: 100%; height: 200px;" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')">' + (config.Body || '') + '</textarea>';
