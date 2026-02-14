@@ -101,7 +101,7 @@ public class SQLiteDatabase
             // ExecuteSQL("ALTER TABLE " + table + " ADD COLUMN Type TEXT;");
             // logger.Debug("Altering Table not needed since V0.6.2.0");
             // continue;
-            logger.Info($"Altering DB table: {table}");
+            logger.Debug($"Altering DB table: {table}");
             // <TABLE_NAME, DATA_TYPE>
             Dictionary<string, string> new_cols = new Dictionary<string, string>();
             new_cols.Add("PremiereYear", "TEXT");
@@ -109,6 +109,7 @@ public class SQLiteDatabase
             new_cols.Add("OfficialRating", "TEXT");
             new_cols.Add("CommunityRating", "REAL");
             new_cols.Add("EventType", "TEXT");
+            new_cols.Add("LibraryId", "TEXT");
 
             var existingColumns = GetTableColumns(table);
 
@@ -133,10 +134,6 @@ public class SQLiteDatabase
                     {
                         logger.Warn(sle);
                     }
-                }
-                else
-                {
-                    logger.Debug($"Column {col.Key} already exists in table {table}, skipping.");
                 }
             }
         }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
@@ -49,148 +50,119 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     }
 
     /// <summary>
-    /// Sends a test message to the configured Discord webhook to verify connectivity and configuration.
+    /// Sends a test message to a specific Discord webhook configuration to verify connectivity.
     /// </summary>
+    /// <param name="configurationId">The ID of the Discord configuration to test.</param>
     [HttpPost("SendDiscordTestMessage")]
-    public void SendDiscordTestMessage()
+    public void SendDiscordTestMessage([FromQuery] string configurationId)
     {
-        string webhookUrl = Config.DiscordWebhookURL;
-
-        if (string.IsNullOrEmpty(webhookUrl))
+        if (string.IsNullOrEmpty(configurationId))
         {
-            Logger.Info("Discord webhook URL is not set. Aborting test message.");
+            Logger.Error("Configuration ID is required for testing.");
             return;
         }
 
-        try
+        var discordConfig = Config.DiscordConfigurations
+            .FirstOrDefault(c => c.Id == configurationId);
+
+        if (discordConfig == null)
         {
-            EmbedBuilder builder = new(Logger, Db);
-            var embedList = builder.BuildEmbedForTest();
+            Logger.Error($"Discord configuration with ID '{configurationId}' not found.");
+            return;
+        }
 
-            var payload = new DiscordPayload
+        // Split the Webhook URL by comma to support multiple webhooks
+        var webhookUrls = discordConfig.WebhookURL.Split(',')
+                                       .Select(url => url.Trim())
+                                       .Where(url => !string.IsNullOrEmpty(url))
+                                       .ToList();
+
+        if (webhookUrls.Count == 0)
+        {
+            Logger.Info($"Discord configuration '{discordConfig.Name}' has no valid webhook URLs. Aborting test message.");
+            return;
+        }
+
+        bool anySuccess = false;
+
+        foreach (var webhookUrl in webhookUrls)
+        {
+            try
             {
-                Username = Config.DiscordWebhookName,
-                Embeds = embedList
-            };
+                EmbedBuilder builder = new(Logger, Db);
+                var embedList = builder.BuildEmbedForTest(discordConfig);
 
-            var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
-            Logger.Debug("Sending Discord test message: " + jsonPayload);
+                var payload = new DiscordPayload
+                {
+                    Username = discordConfig.WebhookName,
+                    Embeds = embedList
+                };
 
-            using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-            var response = _httpClient.PostAsync(webhookUrl, content).GetAwaiter().GetResult();
+                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+                Logger.Debug($"Sending Discord test message to '{discordConfig.Name}' (URL: {webhookUrl}): " + jsonPayload);
 
-            if (response.IsSuccessStatusCode)
-            {
-                Logger.Debug("Discord test message sent successfully");
+                using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                var response = _httpClient.PostAsync(webhookUrl, content).GetAwaiter().GetResult();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Logger.Debug($"Discord test message sent successfully to '{discordConfig.Name}' (URL: {webhookUrl})");
+                    anySuccess = true;
+                }
+                else
+                {
+                    var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    Logger.Error($"Discord test message failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error}");
+                }
             }
-            else
+            catch (Exception e)
             {
-                var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                Logger.Error($"Discord test message failed: {response.StatusCode} - {error}");
+                Logger.Error($"An error occurred while sending Discord test message to '{discordConfig.Name}' (URL: {webhookUrl}): " + e);
             }
         }
-        catch (Exception e)
+
+        if (anySuccess)
         {
-            Logger.Error("An error occurred while sending Discord test message: " + e);
+            Logger.Info($"Discord test message process completed for '{discordConfig.Name}'. At least one message verified.");
+        }
+        else
+        {
+            Logger.Error($"Discord test message process failed for all webhooks in '{discordConfig.Name}'.");
         }
     }
 
     /// <summary>
-    /// Sends a message to the configured Discord webhook using newsletter data.
+    /// Sends a message to all configured Discord webhooks using newsletter data.
     /// </summary>
-    /// <returns>True if the message was sent successfully; otherwise, false.</returns>
+    /// <returns>True if at least one message was sent successfully; otherwise, false.</returns>
     [HttpPost("SendDiscordMessage")]
     public bool SendDiscordMessage()
     {
-        bool result = false;
+        bool anySuccess = false;
 
-        string webhookUrl = Config.DiscordWebhookURL;
-        if (string.IsNullOrEmpty(webhookUrl))
+        if (Config.DiscordConfigurations.Count == 0)
         {
-            Logger.Info("Discord webhook URL is not set. Aborting sending messages.");
-            return result;
+            Logger.Info("No Discord configurations found. Aborting sending messages.");
+            return false;
         }
 
         try
         {
             if (NewsletterDbIsPopulated())
             {
-                Logger.Debug("Sending out Discord message!");
-
-                EmbedBuilder builder = new(Logger, Db);
-                var embedTuples = builder.BuildEmbedsFromNewsletterData(applicationHost.SystemId);
-
-                // Discord webhook does not support more than 10 embeds per message
-                // Therefore, we're sending in chunks with atmost 10 embed in a payload.
-                // For attachmenents, we will also send in chunks to avoid exceeding the limit i.e. 10 MB per message.
-                int maxEmbedsPerMessage = 10;
-                long maxTotalImageSize = 10 * 1024 * 1024; // 10MB
-
-                int index = 0;
-
-                while (index < embedTuples.Count)
+                // Iterate over all Discord configurations
+                foreach (var discordConfig in Config.DiscordConfigurations)
                 {
-                    var chunk = new List<(Embed, MemoryStream?, string)>();
-                    long currentTotalSize = 0;
-
-                    while (index < embedTuples.Count && chunk.Count < maxEmbedsPerMessage)
+                    if (string.IsNullOrEmpty(discordConfig.WebhookURL))
                     {
-                        var tuple = embedTuples[index];
-                        long imageSize = 0;
-
-                        // TODO: Can make this better, but even in case of tmdb url this will work as the ResizedImageStream will be null
-                        imageSize = tuple.ResizedImageStream?.Length ?? 0;
-
-                        if (currentTotalSize + imageSize > maxTotalImageSize)
-                        {
-                            break; // Stop adding to the chunk if it exceeds the max size
-                        }
-
-                        chunk.Add(tuple);
-                        currentTotalSize += imageSize;
-                        index++;
+                        Logger.Info($"Discord configuration '{discordConfig.Name}' has no webhook URL. Skipping.");
+                        continue;
                     }
 
-                    var payload = new DiscordPayload
-                    {
-                        Username = Config.DiscordWebhookName,
-                        Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly()
-                    };
+                    Logger.Debug($"Sending Discord message to '{discordConfig.Name}'!");
 
-                    var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
-                    Logger.Debug("Sending discord message with payload: " + jsonPayload);
-
-                    using var multipartContent = new MultipartFormDataContent();
-                    using var payloadContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                    multipartContent.Add(payloadContent, "payload_json");
-
-                    if (Config.PosterType == "attachment")
-                    {
-                        foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
-                        {
-                            if (resizedImageStream != null)
-                            {
-                                var fileContent = new ByteArrayContent(resizedImageStream.ToArray());
-                                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-                                multipartContent.Add(fileContent, uniqueImageName, uniqueImageName);
-                            }
-                        }
-                    }
-
-                    var response = _httpClient.PostAsync(webhookUrl, multipartContent).GetAwaiter().GetResult();
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        Logger.Debug("Discord message sent successfully");
-                        result = true;
-                    }
-                    else
-                    {
-                        var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                        Logger.Error($"Discord webhook failed: {response.StatusCode} - {error}");
-                        result = false;
-                        break;
-                    }
+                    bool result = SendToWebhook(discordConfig);
+                    anySuccess |= result;
                 }
             }
             else
@@ -203,13 +175,147 @@ public class DiscordWebhook(IServerApplicationHost appHost,
             Logger.Error("An error has occured: " + e);
         }
 
-        return result;
+        return anySuccess;
     }
 
     /// <summary>
-    /// Sends a Discord message using the configured webhook and newsletter data.
+    /// Sends newsletter data to a specific Discord webhook configuration.
     /// </summary>
+    /// <param name="discordConfig">The Discord configuration to use.</param>
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
+    private bool SendToWebhook(DiscordConfiguration discordConfig)
+    {
+        bool anyResult = false;
+        
+        // Split the Webhook URL by comma to support multiple webhooks
+        var webhookUrls = discordConfig.WebhookURL.Split(',')
+                                       .Select(url => url.Trim())
+                                       .Where(url => !string.IsNullOrEmpty(url))
+                                       .ToList();
+
+        if (webhookUrls.Count == 0)
+        {
+            Logger.Info($"Discord configuration '{discordConfig.Name}' has no valid webhook URLs. Skipping.");
+            return false;
+        }
+
+        try
+        {
+            EmbedBuilder builder = new(Logger, Db);
+            var embedTuples = builder.BuildEmbedsFromNewsletterData(applicationHost.SystemId, discordConfig);
+
+            // Discord webhook does not support more than 10 embeds per message
+            // Therefore, we're sending in chunks with atmost 10 embed in a payload.
+            // For attachmenents, we will also send in chunks to avoid exceeding the limit i.e. 10 MB per message.
+            int maxEmbedsPerMessage = 10;
+            long maxTotalImageSize = 10 * 1024 * 1024; // 10MB
+
+            int index = 0;
+            var chunks = new List<List<(Embed, MemoryStream?, string)>>();
+
+            // Pre-calculate chunks based on embeds and size limits
+            // This is done once for the newsletter data
+            while (index < embedTuples.Count)
+            {
+                var chunk = new List<(Embed, MemoryStream?, string)>();
+                long currentTotalSize = 0;
+
+                while (index < embedTuples.Count && chunk.Count < maxEmbedsPerMessage)
+                {
+                    var tuple = embedTuples[index];
+                    long imageSize = tuple.ResizedImageStream?.Length ?? 0;
+
+                    if (currentTotalSize + imageSize > maxTotalImageSize && chunk.Count > 0)
+                    {
+                        break; // Stop adding to the chunk if it exceeds the max size
+                    }
+
+                    chunk.Add(tuple);
+                    currentTotalSize += imageSize;
+                    index++;
+                }
+
+                chunks.Add(chunk);
+            }
+
+            // Iterate over each webhook URL and send the pre-calculated chunks
+            foreach (var webhookUrl in webhookUrls)
+            {
+                bool thisWebhookResult = true;
+                Logger.Debug($"Sending Discord newsletter to '{discordConfig.Name}' (URL: {webhookUrl})");
+
+                foreach (var chunk in chunks)
+                {
+                    try 
+                    {
+                        var payload = new DiscordPayload
+                        {
+                            Username = discordConfig.WebhookName,
+                            Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly()
+                        };
+
+                        var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+                        Logger.Debug($"Sending discord message chunk to '{discordConfig.Name}' (URL: {webhookUrl})");
+
+                        using var multipartContent = new MultipartFormDataContent();
+                        using var payloadContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                        multipartContent.Add(payloadContent, "payload_json");
+
+                        if (Config.PosterType == "attachment")
+                        {
+                            foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
+                            {
+                                if (resizedImageStream != null)
+                                {
+                                    // MemoryStream is reusable if position is reset, but ByteArrayContent takes a copy or byte array.
+                                    // We used 'resizedImageStream.ToArray()' effectively creating a copy.
+                                    var fileContent = new ByteArrayContent(resizedImageStream.ToArray());
+                                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                                    multipartContent.Add(fileContent, uniqueImageName, uniqueImageName);
+                                }
+                            }
+                        }
+
+                        var response = _httpClient.PostAsync(webhookUrl, multipartContent).GetAwaiter().GetResult();
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            Logger.Debug($"Discord message chunk sent successfully to '{discordConfig.Name}' (URL: {webhookUrl})");
+                        }
+                        else
+                        {
+                            var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                            Logger.Error($"Discord webhook failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error}");
+                            thisWebhookResult = false;
+                            break; 
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                         Logger.Error($"Error sending chunk to '{discordConfig.Name}' (URL: {webhookUrl}): {ex.Message}");
+                         thisWebhookResult = false;
+                         break;
+                    }
+                }
+
+                if (thisWebhookResult)
+                {
+                    anyResult = true;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"An error has occured while preparing/sending to '{discordConfig.Name}': " + e);
+        }
+
+        return anyResult;
+    }
+
+    /// <summary>
+    /// Sends a Discord message using the configured webhooks and newsletter data.
+    /// </summary>
+    /// <returns>True if at least one message was sent successfully; otherwise, false.</returns>
     public bool Send()
     {
         return SendDiscordMessage();

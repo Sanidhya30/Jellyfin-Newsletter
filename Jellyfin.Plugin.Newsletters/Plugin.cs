@@ -42,6 +42,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         }
 
         SetConfigPaths(applicationPaths);
+
+        // Migrate legacy single-value configuration to new collection-based format
+        Configuration.MigrateFromLegacy();
     }
 
     /// <inheritdoc />
@@ -63,7 +66,8 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             new PluginPageInfo
             {
                 Name = this.Name,
-                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace)
+                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace),
+                EnableInMainMenu = true
             }
         };
     }

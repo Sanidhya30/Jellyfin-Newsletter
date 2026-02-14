@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -50,93 +51,185 @@ public class TelegramClient(IServerApplicationHost appHost,
     }
 
     /// <summary>
-    /// Sends a test message to the configured Telegram bot to verify connectivity and configuration.
+    /// Sends a test message to a specific Telegram configuration to verify connectivity.
     /// </summary>
+    /// <param name="configurationId">The ID of the Telegram configuration to test.</param>
     [HttpPost("SendTelegramTestMessage")]
-    public void SendTelegramTestMessage()
+    public void SendTelegramTestMessage([FromQuery] string configurationId)
     {
-        string botToken = Config.TelegramBotToken;
-        string chatId = Config.TelegramChatId;
-
-        if (string.IsNullOrEmpty(botToken) || string.IsNullOrEmpty(chatId))
+        if (string.IsNullOrEmpty(configurationId))
         {
-            Logger.Info("Telegram bot token or chat ID is not set. Aborting test message.");
+            Logger.Error("Configuration ID is required for testing.");
             return;
+        }
+
+        var telegramConfig = Config.TelegramConfigurations
+            .FirstOrDefault(c => c.Id == configurationId);
+
+        if (telegramConfig == null)
+        {
+            Logger.Error($"Telegram configuration with ID '{configurationId}' not found.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(telegramConfig.BotToken) || string.IsNullOrEmpty(telegramConfig.ChatId))
+        {
+            Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no bot token or chat ID. Aborting test message.");
+            return;
+        }
+
+        // Split ChatId by comma
+        var chatIds = telegramConfig.ChatId.Split(',')
+                                     .Select(id => id.Trim())
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .ToList();
+
+        if (chatIds.Count == 0)
+        {
+             Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no valid chat IDs. Aborting test message.");
+             return;
         }
 
         try
         {
             TelegramMessageBuilder builder = new(Logger, Db);
-            var (testMessage, imageUrl) = builder.BuildTestMessage();
-            bool messageSent = false;
-
+            var (testMessage, imageUrl) = builder.BuildTestMessage(telegramConfig);
+            
             if (string.IsNullOrEmpty(testMessage))
             {
                 Logger.Error("Failed to build test message.");
                 return;
             }
 
-            if (Config.TelegramThumbnailEnabled && !string.IsNullOrEmpty(imageUrl))
+            bool anySuccess = false;
+
+            foreach (var chatId in chatIds)
             {
-                // Send using external URL
-                messageSent = SendPhotoWithUrl(botToken, chatId, imageUrl, testMessage);
-            }
-            else
-            {
-                // Otherwise send text message
-                messageSent = SendTextMessage(botToken, chatId, testMessage);
+                bool messageSent = false;
+                if (telegramConfig.ThumbnailEnabled && !string.IsNullOrEmpty(imageUrl))
+                {
+                    // Send using external URL
+                    messageSent = SendPhotoWithUrl(telegramConfig.BotToken, chatId, imageUrl, testMessage);
+                }
+                else
+                {
+                    // Otherwise send text message
+                    messageSent = SendTextMessage(telegramConfig.BotToken, chatId, testMessage);
+                }
+
+                if (messageSent)
+                {
+                    Logger.Info($"Telegram test message sent successfully to '{telegramConfig.Name}' (ChatID: {chatId})");
+                    anySuccess = true;
+                }
+                else
+                {
+                    Logger.Error($"Failed to send Telegram test message to '{telegramConfig.Name}' (ChatID: {chatId})");
+                }
             }
 
-            if (messageSent)
+            if (anySuccess)
             {
-                Logger.Info("Telegram test message sent successfully");
+                Logger.Info($"Telegram test message process completed for '{telegramConfig.Name}'. At least one message verified.");
             }
             else
             {
-                Logger.Error("Failed to send Telegram test message");
+                Logger.Error($"Telegram test message process failed for all Chat IDs in '{telegramConfig.Name}'.");
             }
         }
         catch (Exception e)
         {
-            Logger.Error("An error occurred while sending Telegram test message: " + e);
+            Logger.Error($"An error occurred while sending Telegram test message to '{telegramConfig.Name}': " + e);
         }
     }
 
     /// <summary>
-    /// Sends messages to the configured Telegram bot using newsletter data.
+    /// Sends messages to all configured Telegram bots using newsletter data.
     /// </summary>
-    /// <returns>True if the messages were sent successfully; otherwise, false.</returns>
+    /// <returns>True if at least one message was sent successfully; otherwise, false.</returns>
     [HttpPost("SendTelegramMessage")]
     public bool SendTelegramMessage()
     {
-        bool result = false;
+        bool anySuccess = false;
 
-        string botToken = Config.TelegramBotToken;
-        string chatId = Config.TelegramChatId;
-
-        if (string.IsNullOrEmpty(botToken) || string.IsNullOrEmpty(chatId))
+        if (Config.TelegramConfigurations.Count == 0)
         {
-            Logger.Info("Telegram bot token or chat ID is not set. Aborting sending messages.");
-            return result;
+            Logger.Info("No Telegram configurations found. Aborting sending messages.");
+            return false;
         }
 
         try
         {
             if (NewsletterDbIsPopulated())
             {
-                Logger.Debug("Sending out Telegram message!");
+                // Iterate over all Telegram configurations
+                foreach (var telegramConfig in Config.TelegramConfigurations)
+                {
+                    if (string.IsNullOrEmpty(telegramConfig.BotToken) || string.IsNullOrEmpty(telegramConfig.ChatId))
+                    {
+                        Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no bot token or chat ID. Skipping.");
+                        continue;
+                    }
 
-                TelegramMessageBuilder builder = new(Logger, Db);
-                var messageTuples = builder.BuildMessagesFromNewsletterData(applicationHost.SystemId);
+                    Logger.Debug($"Sending Telegram message to '{telegramConfig.Name}'!");
 
-                // Telegram has a 4096 character limit per message
-                // We'll send each item as a separate message
+                    bool result = SendToBot(telegramConfig);
+                    anySuccess |= result;
+                }
+            }
+            else
+            {
+                Logger.Info("There is no Newsletter data.. Have I scanned or sent out a Telegram newsletter recently?");
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Error("An error has occured: " + e);
+        }
+
+        return anySuccess;
+    }
+
+    /// <summary>
+    /// Sends newsletter data to a specific Telegram bot configuration.
+    /// </summary>
+    /// <param name="telegramConfig">The Telegram configuration to use.</param>
+    /// <returns>True if the message was sent successfully; otherwise, false.</returns>
+    private bool SendToBot(TelegramConfiguration telegramConfig)
+    {
+        bool anyResult = false;
+        string botToken = telegramConfig.BotToken;
+
+        var chatIds = telegramConfig.ChatId.Split(',')
+                                     .Select(id => id.Trim())
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .ToList();
+
+        if (chatIds.Count == 0)
+        {
+            Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no valid chat IDs. Skipping.");
+            return false;
+        }
+
+        try
+        {
+            TelegramMessageBuilder builder = new(Logger, Db);
+            var messageTuples = builder.BuildMessagesFromNewsletterData(applicationHost.SystemId, telegramConfig);
+
+            // Telegram has a 4096 character limit per message
+            // We'll send each item as a separate message
+
+            foreach (var chatId in chatIds)
+            {
+                bool thisChatResult = true;
+                Logger.Debug($"Sending Telegram newsletter to '{telegramConfig.Name}' (ChatID: {chatId})");
+                
                 foreach (var (messageText, imageUrl, imageStream, uniqueImageName) in messageTuples)
                 {
                     bool messageSent = false;
 
                     // If image is enabled and available, send photo with caption
-                    if (Config.TelegramThumbnailEnabled)
+                    if (telegramConfig.ThumbnailEnabled)
                     {
                         if (imageStream != null)
                         {
@@ -160,28 +253,28 @@ public class TelegramClient(IServerApplicationHost appHost,
 
                     if (messageSent)
                     {
-                        result = true;
                         // Add small delay between messages to avoid rate limiting
                         Thread.Sleep(100);
                     }
                     else
                     {
-                        result = false;
+                        thisChatResult = false;
                         break;
                     }
                 }
-            }
-            else
-            {
-                Logger.Info("There is no Newsletter data.. Have I scanned or sent out a Telegram newsletter recently?");
+
+                if (thisChatResult)
+                {
+                    anyResult = true;
+                }
             }
         }
         catch (Exception e)
         {
-            Logger.Error("An error has occured: " + e);
+            Logger.Error($"An error has occured while sending to '{telegramConfig.Name}': " + e);
         }
 
-        return result;
+        return anyResult;
     }
 
     /// <summary>

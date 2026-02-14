@@ -10,6 +10,7 @@ using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 
 namespace Jellyfin.Plugin.Newsletters.Scanner;
 
@@ -23,6 +24,7 @@ public class Scraper
     private readonly PosterImageHandler imageHandler;
     private readonly SQLiteDatabase db;
     private readonly Logger logger;
+    private readonly ILibraryManager libraryManager;
     private int totalLibCount;
 
     // private List<JsonFileObj> archiveObj;
@@ -33,10 +35,12 @@ public class Scraper
     /// <param name="loggerInstance">The logger instance to use for logging.</param>
     /// <param name="dbInstance">The SQLite database instance to use for data storage.</param>
     /// <param name="imageHandlerInstance">The poster image handler instance to use for image processing.</param>
-    public Scraper(Logger loggerInstance, SQLiteDatabase dbInstance, PosterImageHandler imageHandlerInstance)
+    /// <param name="libraryManagerInstance">The library manager instance.</param>
+    public Scraper(Logger loggerInstance, SQLiteDatabase dbInstance, PosterImageHandler imageHandlerInstance, ILibraryManager libraryManagerInstance)
     {
         logger = loggerInstance;
         db = dbInstance;
+        libraryManager = libraryManagerInstance;
 
         totalLibCount = 0;
 
@@ -244,6 +248,7 @@ public class Scraper
                 currFileObj.OfficialRating = series.OfficialRating;
                 currFileObj.CommunityRating = series.CommunityRating;
                 currFileObj.ItemID = series.Id.ToString("N");
+                currFileObj.LibraryId = GetLibraryId(episode);
                 
                 if (episode.IndexNumber is int && episode.IndexNumber is not null)
                 {
@@ -446,7 +451,7 @@ public class Scraper
     private void AddItemToDatabase(JsonFileObj item, string eventType)
     {
         item = NoNull(item);
-        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType) " +
+        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType, LibraryId) " +
                 "VALUES (" +
                     SanitizeDbItem(item.Filename) +
                     "," + SanitizeDbItem(item.Title) +
@@ -462,6 +467,7 @@ public class Scraper
                     "," + SanitizeDbItem(item!.OfficialRating) +
                     "," + (item.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
                     "," + SanitizeDbItem(eventType) +
+                    "," + SanitizeDbItem(item!.LibraryId) +
                 ");");
     }
 
@@ -631,5 +637,47 @@ public class Scraper
 
         db.ExecuteSQL("DELETE FROM " + tableName + " WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + ";");
         logger.Debug($"Removed item from {tableName}");
+    }
+
+    /// <summary>
+    /// Gets the library ID for the given item.
+    /// </summary>
+    /// <param name="item">The item.</param>
+    /// <returns>The library ID.</returns>
+    private string GetLibraryId(BaseItem item)
+    {
+        try
+        {
+            // Get all virtual folders (libraries)
+            var virtualFolders = libraryManager.GetVirtualFolders();
+            
+            if (string.IsNullOrEmpty(item.Path))
+            {
+                logger.Debug($"Item {item.Name} has no path");
+                return string.Empty;
+            }
+            
+            logger.Debug($"Looking for library containing path: {item.Path}");
+            
+            foreach (var folder in virtualFolders)
+            {
+                foreach (var location in folder.Locations)
+                {
+                    if (item.Path.StartsWith(location, StringComparison.OrdinalIgnoreCase))
+                    {
+                        logger.Debug($"Found library: {folder.Name} (ItemId: {folder.ItemId})");
+                        return folder.ItemId;
+                    }
+                }
+            }
+            
+            logger.Debug($"No library found for item {item.Name}");
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Error getting library ID for {item.Name}: {ex.Message}");
+        }
+
+        return string.Empty;
     }
 }

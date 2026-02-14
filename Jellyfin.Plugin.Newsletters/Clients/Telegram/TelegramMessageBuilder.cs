@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 
@@ -17,15 +18,16 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     /// <summary>
     /// Builds a test message for Telegram.
     /// </summary>
+    /// <param name="telegramConfig">The Telegram configuration to use.</param>
     /// <returns>A tuple containing the formatted test message string and the image URL.</returns>
-    public (string MessageText, string? ImageUrl) BuildTestMessage()
+    public (string MessageText, string? ImageUrl) BuildTestMessage(TelegramConfiguration telegramConfig)
     {
         JsonFileObj item = JsonFileObj.GetTestObj();
         
         try
         {
             Db.CreateConnection();
-            string messageText = BuildMessageText(item, "newsletter-test");
+            string messageText = BuildMessageText(item, "newsletter-test", telegramConfig);
             string? imageUrl = item.ImageURL;
             
             return (messageText, imageUrl);
@@ -45,8 +47,9 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     /// Builds Telegram messages from newsletter data.
     /// </summary>
     /// <param name="systemId">The Jellyfin system ID.</param>
+    /// <param name="telegramConfig">The Telegram configuration to use.</param>
     /// <returns>A collection of message tuples containing text and optional image data.</returns>
-    public ReadOnlyCollection<(string MessageText, string? ImageUrl, MemoryStream? ImageStream, string UniqueImageName)> BuildMessagesFromNewsletterData(string systemId)
+    public ReadOnlyCollection<(string MessageText, string? ImageUrl, MemoryStream? ImageStream, string UniqueImageName)> BuildMessagesFromNewsletterData(string systemId, TelegramConfiguration telegramConfig)
     {
         var completed = new HashSet<string>(); // Store "Title_EventType"
         var result = new List<(string, string?, MemoryStream?, string)>();
@@ -60,18 +63,10 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                 if (row is not null)
                 {
                     JsonFileObj item = JsonFileObj.ConvertToObj(row);
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
 
                     // Check if the event type should be included based on configuration
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                    if (eventType == "add" && !Config.NewsletterOnItemAddedEnabled)
-                    {
-                        continue;
-                    }
-                    else if (eventType == "update" && !Config.NewsletterOnItemUpdatedEnabled)
-                    {
-                        continue;
-                    }
-                    else if (eventType == "delete" && !Config.NewsletterOnItemDeletedEnabled)
+                    if (!ShouldIncludeItem(item, telegramConfig, "Telegram"))
                     {
                         continue;
                     }
@@ -83,13 +78,13 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                         continue;
                     }
 
-                    var messageText = BuildMessageText(item, systemId);
+                    var messageText = BuildMessageText(item, systemId, telegramConfig);
                     
                     string? imageUrl = null;
                     MemoryStream? resizedImageStream = null;
                     string uniqueImageName = string.Empty;
 
-                    if (Config.TelegramThumbnailEnabled)
+                    if (telegramConfig.ThumbnailEnabled)
                     {
                         if (Config.PosterType == "attachment")
                         {
@@ -125,8 +120,9 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     /// </summary>
     /// <param name="item">The newsletter item.</param>
     /// <param name="systemId">The Jellyfin system ID.</param>
+    /// <param name="telegramConfig">The Telegram configuration to use.</param>
     /// <returns>The formatted message text.</returns>
-    private string BuildMessageText(JsonFileObj item, string systemId)
+    private string BuildMessageText(JsonFileObj item, string systemId, TelegramConfiguration telegramConfig)
     {
         var messageBuilder = new System.Text.StringBuilder();
 
@@ -158,7 +154,7 @@ public class TelegramMessageBuilder(Logger loggerInstance,
         messageBuilder.AppendLine();
         
         // Add description if enabled
-        if (Config.TelegramDescriptionEnabled && !string.IsNullOrEmpty(item.SeriesOverview))
+        if (telegramConfig.DescriptionEnabled && !string.IsNullOrEmpty(item.SeriesOverview))
         {
             messageBuilder.AppendLine(EscapeMarkdown(item.SeriesOverview));
         }
@@ -166,7 +162,7 @@ public class TelegramMessageBuilder(Logger loggerInstance,
         messageBuilder.AppendLine();
 
         // Add series/episode information if available
-        if (item.Type == "Series" && Config.TelegramEpisodesEnabled)
+        if (item.Type == "Series" && telegramConfig.EpisodesEnabled)
         {
             string seaEps;
             if (item.Title == "Newsletter-Test")
@@ -195,18 +191,18 @@ public class TelegramMessageBuilder(Logger loggerInstance,
         // Add metadata fields
         var metadataParts = new List<string>();
 
-        if (Config.TelegramRatingEnabled)
+        if (telegramConfig.RatingEnabled)
         {
             // var ratingString = item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A";
             messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Rating: {EscapeMarkdown(item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A")}");
         }
 
-        if (Config.TelegramPGRatingEnabled)
+        if (telegramConfig.PGRatingEnabled)
         {
             messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"PG Rating: {EscapeMarkdown(item.OfficialRating ?? "N/A")}");
         }
 
-        if (Config.TelegramDurationEnabled)
+        if (telegramConfig.DurationEnabled)
         {
             messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Duration: {item.RunTime} min");
         }
