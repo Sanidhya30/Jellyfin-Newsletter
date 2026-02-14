@@ -17,7 +17,7 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Telegram client support for the newsletters
-  - Disabled CRL check in smtp
-  - Minor bug fix
+  - Multiple instance support for Email, Discord, Telegram clients with per-client library/event settings
+  - New "Modern" Email Template
+  - UI Improvements (Collapsible sections, cleaner layout)
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

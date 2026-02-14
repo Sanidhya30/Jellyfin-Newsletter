@@ -1,3 +1,10 @@
+# 1.4.0.0
+
+- **Multiple Client Support**: Configure multiple instances of Discord webhooks, Telegram bots, and Email configurations
+- **Per-Client Configuration**: Granular control over Library selection and Event triggers (Add/Update/Delete) for each client
+- **Modern Email Templates**: Introduced a new "Modern" card-based email template alongside the "Classic" list view
+- **UI Refactoring**: Improved configuration page with collapsible sections and cleaner layout
+
 # 1.3.0.0
 
 - Telegram client support for the newsletters 
