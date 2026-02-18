@@ -10,6 +10,7 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MimeKit;
@@ -27,7 +28,8 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Email;
 [Route("SmtpMailer")]
 public class SmtpMailer(IServerApplicationHost appHost,
     Logger loggerInstance,
-    SQLiteDatabase dbInstance) : Client(loggerInstance, dbInstance), IClient
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManager) : Client(loggerInstance, dbInstance, libraryManager), IClient
 {
     private readonly IServerApplicationHost applicationHost = appHost;
 
@@ -98,7 +100,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return;
             }
 
-            HtmlBuilder hb = new(Logger, Db, emailConfig);
+            HtmlBuilder hb = new(Logger, Db, emailConfig, LibraryManager);
 
             string body = hb.GetDefaultHTMLBody(emailConfig);
             string builtString = hb.BuildHtmlStringsForTest(emailConfig);
@@ -257,7 +259,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return false;
             }
 
-            HtmlBuilder hb = new(Logger, Db, emailConfig);
+            HtmlBuilder hb = new(Logger, Db, emailConfig, LibraryManager);
 
             string body = hb.GetDefaultHTMLBody(emailConfig);
             ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData(applicationHost.SystemId, emailConfig);

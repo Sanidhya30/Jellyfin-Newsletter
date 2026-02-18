@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Mvc;
 
 // using System.Net.NetworkCredential;
@@ -12,7 +13,8 @@ namespace Jellyfin.Plugin.Newsletters.Clients;
 /// Represents a base client for handling newsletter-related operations.
 /// </summary>
 public class Client(Logger loggerInstance,
-    SQLiteDatabase dbInstance) : ControllerBase
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManagerInstance) : ControllerBase
 {
     /// <summary>
     /// Gets the current plugin configuration.
@@ -28,6 +30,11 @@ public class Client(Logger loggerInstance,
     /// Gets the logger instance.
     /// </summary>
     protected Logger Logger { get; } = loggerInstance;
+
+    /// <summary>
+    /// Gets the library manager instance.
+    /// </summary>
+    protected ILibraryManager LibraryManager { get; } = libraryManagerInstance;
 
     /// <summary>
     /// Copies the current newsletter data to the archive and clears the current data.

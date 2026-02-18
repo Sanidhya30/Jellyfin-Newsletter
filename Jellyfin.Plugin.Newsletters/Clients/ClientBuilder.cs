@@ -8,6 +8,7 @@ using System.Threading;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using MediaBrowser.Controller.Library;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
@@ -19,7 +20,8 @@ namespace Jellyfin.Plugin.Newsletters.Clients;
 /// Provides methods for building newsletter clients and processing newsletter data.
 /// </summary>
 public class ClientBuilder(Logger loggerInstance,
-    SQLiteDatabase dbInstance)
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManagerInstance)
 {
     /// <summary>
     /// Gets the plugin configuration instance.
@@ -35,6 +37,54 @@ public class ClientBuilder(Logger loggerInstance,
     /// Gets the logger.
     /// </summary>
     protected Logger Logger { get; } = loggerInstance;
+
+    /// <summary>
+    /// Gets the library manager instance.
+    /// </summary>
+    protected ILibraryManager LibraryManager { get; } = libraryManagerInstance;
+
+    /// <summary>
+    /// Builds a dictionary mapping LibraryId to LibraryName using the Jellyfin library manager.
+    /// </summary>
+    /// <returns>A dictionary mapping library IDs to library names.</returns>
+    protected Dictionary<string, string> BuildLibraryNameMap()
+    {
+        var map = new Dictionary<string, string>();
+        try
+        {
+            var virtualFolders = LibraryManager.GetVirtualFolders();
+            foreach (var folder in virtualFolders)
+            {
+                if (!string.IsNullOrEmpty(folder.ItemId) && !map.ContainsKey(folder.ItemId))
+                {
+                    map[folder.ItemId] = folder.Name;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error building library name map: {ex.Message}");
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Gets the library name for a given library ID using the provided map.
+    /// Falls back to "Library" if the ID is not found.
+    /// </summary>
+    /// <param name="libraryId">The library ID to look up.</param>
+    /// <param name="libraryNameMap">The dictionary mapping library IDs to names.</param>
+    /// <returns>The library name, or "Library" if not found.</returns>
+    protected static string GetLibraryName(string? libraryId, Dictionary<string, string> libraryNameMap)
+    {
+        if (!string.IsNullOrEmpty(libraryId) && libraryNameMap.TryGetValue(libraryId, out var name))
+        {
+            return name;
+        }
+
+        return "Library";
+    }
 
     /// <summary>
     /// Parses series information from the given JsonFileObj and returns a collection of NlDetailsJson.
@@ -345,20 +395,23 @@ public class ClientBuilder(Logger loggerInstance,
     /// This is the base implementation shared across all clients.
     /// </summary>
     /// <param name="eventType">The event type (add, delete, update).</param>
+    /// <param name="libraryName">Optional library name to include in the prefix.</param>
     /// <returns>The formatted description prefix with emoji.</returns>
-    protected string GetEventDescriptionPrefixBase(string? eventType)
+    protected string GetEventDescriptionPrefixBase(string? eventType, string? libraryName = null)
     {
+        string libDisplay = string.IsNullOrEmpty(libraryName) ? "Library" : libraryName;
+
         if (string.IsNullOrEmpty(eventType))
         {
-            return "🎬 Added to Library";
+            return $"🎬 Added to {libDisplay}";
         }
 
         return eventType.ToLowerInvariant() switch
         {
-            "add" => "🎬 Added to Library",
-            "delete" => "🗑️ Removed from Library",
-            "update" => "🔄 Updated in Library",
-            _ => "🎬 Added to Library"
+            "add" => $"🎬 Added to {libDisplay}",
+            "delete" => $"🗑️ Removed from {libDisplay}",
+            "update" => $"🔄 Updated in {libDisplay}",
+            _ => $"🎬 Added to {libDisplay}"
         };
     }
 
