@@ -10,6 +10,7 @@ using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,8 +24,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Telegram;
 [Route("Telegram")]
 public class TelegramClient(IServerApplicationHost appHost,
     Logger loggerInstance,
-    SQLiteDatabase dbInstance)
-    : Client(loggerInstance, dbInstance), IClient, IDisposable
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManager)
+    : Client(loggerInstance, dbInstance, libraryManager), IClient, IDisposable
 {
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
@@ -92,7 +94,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            TelegramMessageBuilder builder = new(Logger, Db);
+            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager);
             var (testMessage, imageUrl) = builder.BuildTestMessage(telegramConfig);
             
             if (string.IsNullOrEmpty(testMessage))
@@ -213,7 +215,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            TelegramMessageBuilder builder = new(Logger, Db);
+            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager);
             var messageTuples = builder.BuildMessagesFromNewsletterData(applicationHost.SystemId, telegramConfig);
 
             // Telegram has a 4096 character limit per message

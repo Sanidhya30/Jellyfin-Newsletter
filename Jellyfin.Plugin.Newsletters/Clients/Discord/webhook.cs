@@ -9,6 +9,7 @@ using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,8 +23,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 [Route("Discord")]
 public class DiscordWebhook(IServerApplicationHost appHost,
     Logger loggerInstance,
-    SQLiteDatabase dbInstance)
-    : Client(loggerInstance, dbInstance), IClient, IDisposable
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManager)
+    : Client(loggerInstance, dbInstance, libraryManager), IClient, IDisposable
 {
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
@@ -89,7 +91,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         {
             try
             {
-                EmbedBuilder builder = new(Logger, Db);
+                EmbedBuilder builder = new(Logger, Db, LibraryManager);
                 var embedList = builder.BuildEmbedForTest(discordConfig);
 
                 var payload = new DiscordPayload
@@ -201,7 +203,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
         try
         {
-            EmbedBuilder builder = new(Logger, Db);
+            EmbedBuilder builder = new(Logger, Db, LibraryManager);
             var embedTuples = builder.BuildEmbedsFromNewsletterData(applicationHost.SystemId, discordConfig);
 
             // Discord webhook does not support more than 10 embeds per message

@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using MediaBrowser.Controller.Library;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Telegram;
 
@@ -13,7 +15,8 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Telegram;
 /// Builds Telegram messages from newsletter data.
 /// </summary>
 public class TelegramMessageBuilder(Logger loggerInstance,
-    SQLiteDatabase dbInstance) : ClientBuilder(loggerInstance, dbInstance)
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManager) : ClientBuilder(loggerInstance, dbInstance, libraryManager)
 {
     /// <summary>
     /// Builds a test message for Telegram.
@@ -45,14 +48,18 @@ public class TelegramMessageBuilder(Logger loggerInstance,
 
     /// <summary>
     /// Builds Telegram messages from newsletter data.
+    /// Groups and sorts entries by event type (Add, Update, Delete), then by library name (Movies first, then Series).
     /// </summary>
     /// <param name="systemId">The Jellyfin system ID.</param>
     /// <param name="telegramConfig">The Telegram configuration to use.</param>
     /// <returns>A collection of message tuples containing text and optional image data.</returns>
     public ReadOnlyCollection<(string MessageText, string? ImageUrl, MemoryStream? ImageStream, string UniqueImageName)> BuildMessagesFromNewsletterData(string systemId, TelegramConfiguration telegramConfig)
     {
-        var completed = new HashSet<string>(); // Store "Title_EventType"
+        var itemsByKey = new Dictionary<string, JsonFileObj>(); // Key: "Title_EventType", deduplicates and collects
         var result = new List<(string, string?, MemoryStream?, string)>();
+
+        // Build library name map
+        var libraryNameMap = BuildLibraryNameMap();
 
         try
         {
@@ -73,34 +80,48 @@ public class TelegramMessageBuilder(Logger loggerInstance,
 
                     // Create a unique key combining title and event type
                     string uniqueKey = $"{item.Title}_{eventType}";
-                    if (completed.Contains(uniqueKey))
+                    if (itemsByKey.ContainsKey(uniqueKey))
                     {
                         continue;
                     }
 
-                    var messageText = BuildMessageText(item, systemId, telegramConfig);
-                    
-                    string? imageUrl = null;
-                    MemoryStream? resizedImageStream = null;
-                    string uniqueImageName = string.Empty;
-
-                    if (telegramConfig.ThumbnailEnabled)
-                    {
-                        if (Config.PosterType == "attachment")
-                        {
-                            // Upload as multipart file
-                            (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
-                        }
-                        else
-                        {
-                            // Use external URL directly
-                            imageUrl = item.ImageURL;
-                        }
-                    }
-
-                    result.Add((messageText, imageUrl, resizedImageStream, uniqueImageName));
-                    completed.Add(uniqueKey);
+                    itemsByKey[uniqueKey] = item;
                 }
+            }
+
+            // Sort items: event type (add -> update -> delete), then Movie libraries first, then by library name
+            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 } };
+            var sortedItems = itemsByKey.Values
+                .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
+                .ThenBy(i => i.Type == "Movie" ? 0 : 1)
+                .ThenBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+                .ToList();
+
+            // Build messages from sorted items
+            foreach (var item in sortedItems)
+            {
+                string libraryName = GetLibraryName(item.LibraryId, libraryNameMap);
+                var messageText = BuildMessageText(item, systemId, telegramConfig, libraryName);
+                    
+                string? imageUrl = null;
+                MemoryStream? resizedImageStream = null;
+                string uniqueImageName = string.Empty;
+
+                if (telegramConfig.ThumbnailEnabled)
+                {
+                    if (Config.PosterType == "attachment")
+                    {
+                        // Upload as multipart file
+                        (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
+                    }
+                    else
+                    {
+                        // Use external URL directly
+                        imageUrl = item.ImageURL;
+                    }
+                }
+
+                result.Add((messageText, imageUrl, resizedImageStream, uniqueImageName));
             }
         }
         catch (Exception e)
@@ -121,14 +142,15 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     /// <param name="item">The newsletter item.</param>
     /// <param name="systemId">The Jellyfin system ID.</param>
     /// <param name="telegramConfig">The Telegram configuration to use.</param>
+    /// <param name="libraryName">Optional library name to include in the event prefix.</param>
     /// <returns>The formatted message text.</returns>
-    private string BuildMessageText(JsonFileObj item, string systemId, TelegramConfiguration telegramConfig)
+    private string BuildMessageText(JsonFileObj item, string systemId, TelegramConfiguration telegramConfig, string? libraryName = null)
     {
         var messageBuilder = new System.Text.StringBuilder();
 
         // Get event type prefix
         string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-        string eventPrefix = GetEventDescriptionPrefix(eventType);
+        string eventPrefix = GetEventDescriptionPrefix(eventType, libraryName);
         
         // Add title with Jellyfin link if hostname is configured
         if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID))
@@ -216,13 +238,14 @@ public class TelegramMessageBuilder(Logger loggerInstance,
     }
 
     /// <summary>
-    /// Gets the description prefix for the message based on the event type.
+    /// Gets the description prefix for the message based on the event type and library name.
     /// </summary>
     /// <param name="eventType">The event type (add, delete, update).</param>
+    /// <param name="libraryName">Optional library name to include in the prefix.</param>
     /// <returns>The formatted description prefix with emoji.</returns>
-    private string GetEventDescriptionPrefix(string? eventType)
+    private string GetEventDescriptionPrefix(string? eventType, string? libraryName = null)
     {
-        return GetEventDescriptionPrefixBase(eventType);
+        return GetEventDescriptionPrefixBase(eventType, libraryName);
     }
 
     /// <summary>
