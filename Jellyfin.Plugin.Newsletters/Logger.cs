@@ -24,13 +24,13 @@ public class Logger
     /// <summary>
     /// Initializes a new instance of the <see cref="Debug"/> class.
     /// </summary>
-    /// <param name="msg">The message to log as info.</param>
+    /// <param name="msg">The message to log as debug.</param>
     public void Debug(object msg)
     {
         PluginConfiguration config = Plugin.Instance!.Configuration;
         if (config.DebugMode)
         {
-            Info(msg);
+            Inform(msg, "DEBUG");
         }
     }
 
@@ -58,7 +58,7 @@ public class Logger
     /// <param name="msg">The message to log as info.</param>
     public void Error(object msg)
     {
-        Inform(msg, "ERR");
+        Inform(msg, "ERROR");
     }
 
     /// <summary>
