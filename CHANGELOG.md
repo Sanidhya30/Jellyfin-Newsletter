@@ -1,3 +1,8 @@
+# 1.4.1.0
+
+- **Library Grouping**: Newsletters now grouped by Library
+- **Enhanced Deletion Logic**: Improved handling of added/deleted items
+
 # 1.4.0.0
 
 - **Multiple Client Support**: Configure multiple instances of Discord webhooks, Telegram bots, and Email configurations
