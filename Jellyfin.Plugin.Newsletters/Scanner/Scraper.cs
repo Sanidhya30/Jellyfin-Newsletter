@@ -418,23 +418,43 @@ public class Scraper
         int season = item.Season;
         int episode = item.Episode;
 
-        // Check if there's already event(Add/Update) for this item in either CurrRunData or CurrNewsletterData
-        // if there are any remove them from the table as we don't want to send the newsletter for that event
-        // (newsletter hasn't been sent yet, so CurrNewsletterData items are still pending)
-        bool hasExistingRunData = InDatabase("CurrRunData", filename, title, season, episode);
-        bool hasExistingNewsletterData = InDatabase("CurrNewsletterData", filename, title, season, episode);
+        // Check if there is already a pending event (Add/Update) for this item in either CurrRunData or CurrNewsletterData.
+        // If pending events exist, remove them, as we don't want to send a newsletter for an obsolete event
+        // (since the newsletter hasn't been sent yet, events in CurrNewsletterData are still pending).
 
-        if (hasExistingRunData || hasExistingNewsletterData)
+        // Case 1: Item has a pending 'Add' event.
+        // Action: Delete the pending 'Add' entry and do not add the 'Delete' event.
+        // Reason: The item was added and then deleted before a newsletter was sent. To the user, it never existed.
+        //         Sending a 'Delete' notification would be confusing. Additionally, if the item is re-added later,
+        //         we want it to register as a new 'Add', not an 'Update'.
+
+        // Case 2: Item has a pending 'Update' event.
+        // Action: Delete the pending 'Update' entry and proceed to add the 'Delete' event.
+        // Reason: The item was already known (from a previous newsletter), updated, and now deleted.
+        //         We should inform the user of the deletion, but skip the intermediate 'Update' notification
+        //         since the item is now gone.
+        bool wasAddedInCurrRunData = InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Add");
+        bool wasUpdatedInCurrRunData = InDatabaseWithEventType("CurrRunData", filename, title, season, episode, "Update");
+        bool wasAddedInCurrNewsletterData = InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Add");
+        bool wasUpdatedInCurrNewsletterData = InDatabaseWithEventType("CurrNewsletterData", filename, title, season, episode, "Update");
+
+        if (wasAddedInCurrRunData || wasUpdatedInCurrRunData || wasAddedInCurrNewsletterData || wasUpdatedInCurrNewsletterData)
         {
-            logger.Debug("Found existing Add/Update event for deleted item - removing it since item was never really added");
-            if (hasExistingRunData)
+            logger.Debug("Found existing pending Add/Update event for deleted item - removing pending event");
+            if (wasAddedInCurrRunData || wasUpdatedInCurrRunData)
             {
                 RemoveFromDatabase("CurrRunData", filename, title, season, episode);
             }
 
-            if (hasExistingNewsletterData)
+            if (wasAddedInCurrNewsletterData || wasUpdatedInCurrNewsletterData)
             {
                 RemoveFromDatabase("CurrNewsletterData", filename, title, season, episode);
+            }
+
+            if (wasAddedInCurrRunData || wasAddedInCurrNewsletterData)
+            {
+                logger.Debug("Found existing Add event for deleted item - not adding delete event");
+                return;
             }
         }
 
@@ -486,33 +506,6 @@ public class Scraper
         currFileObj.PosterPath ??= string.Empty;
 
         return currFileObj;
-    }
-
-    // Check the filename or the Title of the item in the database, we can't just rely on either the filename or the title,
-    // because during the media upgrade the filename might change and during the metadata refresh the title might change.
-    // itemId is not used here because it is not reliable, as it can change if the item is upgraded.
-    // In case of series we check the season and episode number as well.
-    // There are cases in which file names might change due to upgrade of the library.
-    private bool InDatabase(string tableName, string fileName, string title, int season = 0, int episode = 0)
-    {
-        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(title) || string.IsNullOrEmpty(tableName))
-        {
-            return false;
-        }
-
-        foreach (var row in db.Query("SELECT COUNT(*) FROM " + tableName + " WHERE (Filename='" + fileName + "' OR Title='" + title + "') AND Season=" + season + " AND Episode=" + episode + ";"))
-        {
-            if (row is not null)
-            {
-                if (int.Parse(row[0].ToString(), CultureInfo.CurrentCulture) > 0)
-                {
-                    logger.Debug(tableName + " Size: " + row[0].ToString());
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     private string SetImageURL(JsonFileObj currObj)
@@ -591,6 +584,12 @@ public class Scraper
     /// <summary>
     /// Checks if an item exists in the specified database table with a specific EventType.
     /// </summary>
+    /// <remarks>
+    /// Check the filename or the Title of the item in the database, we can't just rely on either the filename or the title,
+    /// because during the media upgrade the filename might change and during the metadata refresh the title might change.
+    /// ItemID is not used here because it is not reliable, as it can change if the item is upgraded.
+    /// In case of series we check the season and episode number as well.
+    /// </remarks>
     /// <param name="tableName">The name of the table to check.</param>
     /// <param name="fileName">The filename of the item.</param>
     /// <param name="title">The title of the item.</param>
