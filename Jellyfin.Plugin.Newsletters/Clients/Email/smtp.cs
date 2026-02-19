@@ -188,8 +188,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending email to '{emailConfig.Name}'!");
 
-                    bool result = SendToSmtp(emailConfig);
-                    anySuccess |= result;
+                    bool anyResult = SendToSmtp(emailConfig);
+                    anySuccess |= anyResult;
                 }
             }
             else
@@ -212,7 +212,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
     /// <returns>True if the email was sent successfully; otherwise, false.</returns>
     private bool SendToSmtp(EmailConfiguration emailConfig)
     {
-        bool result = false;
+        bool anyResult = false;
         try
         {
             Logger.Debug($"Sending out mail for '{emailConfig.Name}'!");
@@ -269,86 +269,95 @@ public class SmtpMailer(IServerApplicationHost appHost,
             int partNum = 1; // for multi-part email subjects if needed
             foreach (var (builtString, inlineImages) in chunks)
             {
-                result = false;
-                Logger.Debug($"Email part {partNum} for '{emailConfig.Name}' image count: {inlineImages.Count}");
-                // Add template substitutions
-                string finalBody = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
-                                    .Replace("{Date}", currDate, StringComparison.Ordinal);
-
-                var mail = new MimeMessage();
-                mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));
-
-                if (!string.IsNullOrWhiteSpace(emailToAddress))
+                try
                 {
-                    foreach (string email in emailToAddress.Split(','))
+                    Logger.Debug($"Email part {partNum} for '{emailConfig.Name}' image count: {inlineImages.Count}");
+                    // Add template substitutions
+                    string finalBody = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
+                                        .Replace("{Date}", currDate, StringComparison.Ordinal);
+
+                    var mail = new MimeMessage();
+                    mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));
+
+                    if (!string.IsNullOrWhiteSpace(emailToAddress))
                     {
-                        if (!string.IsNullOrWhiteSpace(email))
+                        foreach (string email in emailToAddress.Split(','))
                         {
-                            mail.To.Add(MailboxAddress.Parse(email.Trim()));
+                            if (!string.IsNullOrWhiteSpace(email))
+                            {
+                                mail.To.Add(MailboxAddress.Parse(email.Trim()));
+                            }
                         }
                     }
-                }
 
-                if (!string.IsNullOrWhiteSpace(emailBccAddress))
-                {
-                    foreach (string email in emailBccAddress.Split(','))
+                    if (!string.IsNullOrWhiteSpace(emailBccAddress))
                     {
-                        if (!string.IsNullOrWhiteSpace(email))
+                        foreach (string email in emailBccAddress.Split(','))
                         {
-                            mail.Bcc.Add(MailboxAddress.Parse(email.Trim()));
+                            if (!string.IsNullOrWhiteSpace(email))
+                            {
+                                mail.Bcc.Add(MailboxAddress.Parse(email.Trim()));
+                            }
                         }
                     }
-                }
 
-                // Multi-part subject (optional, for clarity)
-                mail.Subject = (chunks.Count > 1)
-                    ? $"{subject} (Part {partNum} of {chunks.Count})"
-                    : subject;
+                    // Multi-part subject (optional, for clarity)
+                    mail.Subject = (chunks.Count > 1)
+                        ? $"{subject} (Part {partNum} of {chunks.Count})"
+                        : subject;
 
-                var bodyBuilder = new BodyBuilder();
+                    var bodyBuilder = new BodyBuilder();
 
-                if (Config.PosterType == "attachment")
-                {
-                    bodyBuilder.HtmlBody = finalBody;
-
-                    foreach (var (stream, cid) in inlineImages)
+                    if (Config.PosterType == "attachment")
                     {
-                        if (stream == null)
+                        bodyBuilder.HtmlBody = finalBody;
+
+                        foreach (var (stream, cid) in inlineImages)
                         {
-                            Logger.Warn($"Skipped LinkedResource creation for cid {cid}: stream is null.");
-                            continue;
+                            if (stream == null)
+                            {
+                                Logger.Warn($"Skipped LinkedResource creation for cid {cid}: stream is null.");
+                                continue;
+                            }
+
+                            stream.Position = 0;
+                            var image = bodyBuilder.LinkedResources.Add(cid, stream.ToArray(), new ContentType("image", "jpeg"));
+                            image.ContentId = cid;
                         }
 
-                        stream.Position = 0;
-                        var image = bodyBuilder.LinkedResources.Add(cid, stream.ToArray(), new ContentType("image", "jpeg"));
-                        image.ContentId = cid;
+                        // Increase timeout for larger attachments
+                        smtpTimeout = 300000; // 5 minutes timeout
+                    }
+                    else
+                    {
+                        bodyBuilder.HtmlBody = Regex.Replace(finalBody, "{[A-za-z]*}", " ");
                     }
 
-                    // Increase timeout for larger attachments
-                    smtpTimeout = 300000; // 5 minutes timeout
+                    mail.Body = bodyBuilder.ToMessageBody();
+
+                    using (var client = new SmtpClient())
+                    {
+                        client.Timeout = smtpTimeout;
+                        client.CheckCertificateRevocation = false;
+                        var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+                        client.Connect(smtpAddress, portNumber, secureOptions);
+                        client.Authenticate(username, password);
+                        Logger.Debug($"Sending email part {partNum} for '{emailConfig.Name}' with finalBody: {finalBody}");
+                        client.Send(mail);
+                        client.Disconnect(true);
+                    }
+
+                    Logger.Debug($"Email part {partNum} for '{emailConfig.Name}' sent successfully.");
+                    hb.CleanUp(finalBody); // or as appropriate for the chunk
+                    
+                    // Track any successful send
+                    anyResult |= true;
                 }
-                else
+                catch (Exception ex)
                 {
-                    bodyBuilder.HtmlBody = Regex.Replace(finalBody, "{[A-za-z]*}", " ");
+                    Logger.Error($"Failed to send email part {partNum} for '{emailConfig.Name}': {ex.Message} - Continuing to next part.");
                 }
-
-                mail.Body = bodyBuilder.ToMessageBody();
-
-                using (var client = new SmtpClient())
-                {
-                    client.Timeout = smtpTimeout;
-                    client.CheckCertificateRevocation = false;
-                    var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
-                    client.Connect(smtpAddress, portNumber, secureOptions);
-                    client.Authenticate(username, password);
-                    Logger.Debug($"Sending email part {partNum} for '{emailConfig.Name}' with finalBody: {finalBody}");
-                    client.Send(mail);
-                    client.Disconnect(true);
-                }
-
-                Logger.Debug($"Email part {partNum} for '{emailConfig.Name}' sent successfully.");
-                hb.CleanUp(finalBody); // or as appropriate for the chunk
-                result = true;
+                
                 partNum++;
             }
         }
@@ -357,7 +366,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
             Logger.Error($"An error has occured while sending to '{emailConfig.Name}': " + e);
         }
 
-        return result;
+        return anyResult;
     }
 
     /// <summary>

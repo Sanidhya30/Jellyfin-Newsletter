@@ -18,5 +18,6 @@ artifacts:
   - "BouncyCastle.Cryptography.dll"
 changelog: |
   - Library based grouping for the newsletter.
-  - Improved deletion logic.
+  - Minor bug fix - Improved deletion logic.
+  - Minor bug fix - Clients continue sending remaining messages/chunks if an individual part fails, instead of aborting.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md
