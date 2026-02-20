@@ -1,3 +1,9 @@
+# 1.4.1.0
+
+- **Library Grouping**: Newsletters now grouped by Library
+- **Enhanced Deletion Logic**: Improved handling of added/deleted items
+- **Minor Bug Fix**: All clients (Email, Discord, Telegram) now continue sending remaining messages/chunks if an individual part fails, instead of aborting
+
 # 1.4.0.0
 
 - **Multiple Client Support**: Configure multiple instances of Discord webhooks, Telegram bots, and Email configurations

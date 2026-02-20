@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using MediaBrowser.Controller.Library;
 using Newtonsoft.Json;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Email;
@@ -36,11 +38,13 @@ public class HtmlBuilder : ClientBuilder
     /// <param name="loggerInstance">The logger instance to use for logging.</param>
     /// <param name="dbInstance">The SQLite database instance to use for data access.</param>
     /// <param name="emailConfig">The email configuration to use for templates.</param>
+    /// <param name="libraryManager">The library manager for resolving library names.</param>
     public HtmlBuilder(
         Logger loggerInstance,
         SQLiteDatabase dbInstance,
-        EmailConfiguration emailConfig)
-        : base(loggerInstance, dbInstance)
+        EmailConfiguration emailConfig,
+        ILibraryManager libraryManager)
+        : base(loggerInstance, dbInstance, libraryManager)
     {
         DefaultBodyAndEntry(emailConfig); // set default body and entry HTML from template file if not set in config
 
@@ -105,19 +109,17 @@ public class HtmlBuilder : ClientBuilder
 
     /// <summary>
     /// Builds chunked HTML strings from newsletter data, splitting entries into chunks based on configured email size.
-    /// Groups entries by event type (Add, Update, Delete).
+    /// Groups entries by event type (Add, Update, Delete), then by library name (Movies first, then Series).
     /// </summary>
     /// <param name="serverId">The Jellyfin server ID to include in item URLs.</param>
     /// <param name="emailConfig">The email configuration to use for templates.</param>
     /// <returns>A collection of tuples containing HTML strings and associated image streams with content IDs.</returns>
     public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData(string serverId, EmailConfiguration emailConfig)
     {
-        // Group items by event type
-        var addItems = new List<JsonFileObj>();
-        var updateItems = new List<JsonFileObj>();
-        var deleteItems = new List<JsonFileObj>();
-        
-        var completed = new HashSet<string>(); // Store "Title_EventType"
+        // Build library name map for resolving LibraryId -> LibraryName
+        var libraryNameMap = BuildLibraryNameMap();
+
+        var itemsByKey = new Dictionary<string, JsonFileObj>(); // Key: "Title_EventType", deduplicates and collects
 
         try
         {
@@ -138,29 +140,12 @@ public class HtmlBuilder : ClientBuilder
 
                     // Create a unique key combining title and event type
                     string uniqueKey = $"{item.Title}_{eventType}";
-                    if (completed.Contains(uniqueKey))
+                    if (itemsByKey.ContainsKey(uniqueKey))
                     {
                         continue;
                     }
 
-                    // Group by event type
-                    switch (eventType)
-                    {
-                        case "add":
-                            addItems.Add(item);
-                            break;
-                        case "update":
-                            updateItems.Add(item);
-                            break;
-                        case "delete":
-                            deleteItems.Add(item);
-                            break;
-                        default:
-                            addItems.Add(item); // Default to add if event type is unknown
-                            break;
-                    }
-
-                    completed.Add(uniqueKey);
+                    itemsByKey[uniqueKey] = item;
                 }
             }
         }
@@ -173,6 +158,25 @@ public class HtmlBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
+        // Sort items: event type (add -> update -> delete), then Movie libraries first, then by library name
+        var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 } };
+        var sortedItems = itemsByKey.Values
+            .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
+            .ThenBy(i => i.Type == "Movie" ? 0 : 1)
+            .ThenBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+            .ToList();
+
+        // Group sorted items by event type, then by library name (order is preserved from sort)
+        var groupedItems = sortedItems
+            .GroupBy(i => i.EventType?.ToLowerInvariant() ?? "add")
+            .Select(eventGroup => new
+            {
+                EventType = eventGroup.Key,
+                Libraries = eventGroup
+                    .GroupBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+                    .Select(libGroup => new { LibraryName = libGroup.Key, Items = libGroup.ToList() })
+            });
+
         // Build HTML for each category
         var chunks = new List<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)>();
         StringBuilder currentChunkBuilder = new();
@@ -182,88 +186,44 @@ public class HtmlBuilder : ClientBuilder
         int maxChunkSizeBytes = Config.EmailSize * 1024 * 1024; // Convert MB to bytes
         Logger.Debug($"Max email size set to {maxChunkSizeBytes} bytes");
 
-        // Process Add items
-        if (addItems.Count > 0)
+        foreach (var eventGroup in groupedItems)
         {
-            string sectionHeader = GetEventSectionHeader("add");
-            currentChunkBuilder.Append(sectionHeader);
-            currentChunkBytes += Encoding.UTF8.GetByteCount(sectionHeader);
-            
-            ProcessItemsForChunks(
-                addItems,
-                "add",
-                currentChunkBuilder,
-                currentChunkImages,
-                ref currentChunkBytes,
-                maxChunkSizeBytes,
-                overheadPerMail,
-                chunks,
-                serverId,
-                emailConfig);
-        }
-
-        // Process Update items
-        if (updateItems.Count > 0)
-        {
-            string sectionHeader = GetEventSectionHeader("update");
-            int headerBytes = Encoding.UTF8.GetByteCount(sectionHeader);
-            
-            // Check if we need a new chunk for the update section
-            if (currentChunkBuilder.Length > 0 && (currentChunkBytes + headerBytes + overheadPerMail) > maxChunkSizeBytes)
+            foreach (var library in eventGroup.Libraries)
             {
-                Logger.Debug($"Email size exceeded before update section, finalizing current chunk. Size : {currentChunkBytes} bytes");
-                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream? ImageStream, string ContentId)>(currentChunkImages)));
-                currentChunkBuilder.Clear();
-                currentChunkImages.Clear();
-                currentChunkBytes = 0;
-            }
-            
-            currentChunkBuilder.Append(sectionHeader);
-            currentChunkBytes += headerBytes;
-            
-            ProcessItemsForChunks(
-                updateItems,
-                "update",
-                currentChunkBuilder,
-                currentChunkImages,
-                ref currentChunkBytes,
-                maxChunkSizeBytes,
-                overheadPerMail,
-                chunks,
-                serverId,
-                emailConfig);
-        }
+                if (library.Items.Count == 0)
+                {
+                    continue;
+                }
 
-        // Process Delete items
-        if (deleteItems.Count > 0)
-        {
-            string sectionHeader = GetEventSectionHeader("delete");
-            int headerBytes = Encoding.UTF8.GetByteCount(sectionHeader);
-            
-            // Check if we need a new chunk for the delete section
-            if (currentChunkBuilder.Length > 0 && (currentChunkBytes + headerBytes + overheadPerMail) > maxChunkSizeBytes)
-            {
-                Logger.Debug($"Email size exceeded before delete section, finalizing current chunk. Size : {currentChunkBytes} bytes");
-                chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream? ImageStream, string ContentId)>(currentChunkImages)));
-                currentChunkBuilder.Clear();
-                currentChunkImages.Clear();
-                currentChunkBytes = 0;
+                string sectionHeader = GetEventSectionHeader(eventGroup.EventType, library.LibraryName);
+                int headerBytes = Encoding.UTF8.GetByteCount(sectionHeader);
+
+                // Check if we need a new chunk for this section
+                if (currentChunkBuilder.Length > 0 && (currentChunkBytes + headerBytes + overheadPerMail) > maxChunkSizeBytes)
+                {
+                    Logger.Debug($"Email size exceeded before {eventGroup.EventType}/{library.LibraryName} section, finalizing current chunk. Size : {currentChunkBytes} bytes");
+                    chunks.Add((currentChunkBuilder.ToString(), new List<(MemoryStream? ImageStream, string ContentId)>(currentChunkImages)));
+                    currentChunkBuilder.Clear();
+                    currentChunkImages.Clear();
+                    currentChunkBytes = 0;
+                }
+
+                currentChunkBuilder.Append(sectionHeader);
+                currentChunkBytes += headerBytes;
+
+                ProcessItemsForChunks(
+                    library.Items,
+                    eventGroup.EventType,
+                    library.LibraryName,
+                    currentChunkBuilder,
+                    currentChunkImages,
+                    ref currentChunkBytes,
+                    maxChunkSizeBytes,
+                    overheadPerMail,
+                    chunks,
+                    serverId,
+                    emailConfig);
             }
-            
-            currentChunkBuilder.Append(sectionHeader);
-            currentChunkBytes += headerBytes;
-            
-            ProcessItemsForChunks(
-                deleteItems,
-                "delete",
-                currentChunkBuilder,
-                currentChunkImages,
-                ref currentChunkBytes,
-                maxChunkSizeBytes,
-                overheadPerMail,
-                chunks,
-                serverId,
-                emailConfig);
         }
 
         // Add final chunk if any
@@ -282,6 +242,7 @@ public class HtmlBuilder : ClientBuilder
     private void ProcessItemsForChunks(
         List<JsonFileObj> items,
         string eventType,
+        string libraryName,
         StringBuilder currentChunkBuilder,
         List<(MemoryStream? ImageStream, string ContentId)> currentChunkImages,
         ref int currentChunkBytes,
@@ -339,7 +300,7 @@ public class HtmlBuilder : ClientBuilder
 
             int entryBytes = Encoding.UTF8.GetByteCount(entryHTML) + entryImageBytes;
 
-            Logger.Debug($"Processing item: {item.Title}, Event: {eventType}, Size: {entryBytes} bytes, Current Chunk Size: {currentChunkBytes} bytes");
+            Logger.Debug($"Processing item: {item.Title}, Event: {eventType}, Library: {libraryName}, Size: {entryBytes} bytes, Current Chunk Size: {currentChunkBytes} bytes");
             if (currentChunkBuilder.Length > 0 && (currentChunkBytes + entryBytes + overheadPerMail) > maxChunkSizeBytes)
             {
                 // finalize current chunk as one part (HTML fragment)
@@ -350,7 +311,7 @@ public class HtmlBuilder : ClientBuilder
                 currentChunkBytes = 0;
 
                 // Add section header again in new chunk if we're continuing this category
-                string sectionHeader = GetEventSectionHeader(eventType);
+                string sectionHeader = GetEventSectionHeader(eventType, libraryName);
                 currentChunkBuilder.Append(sectionHeader);
                 currentChunkBytes += Encoding.UTF8.GetByteCount(sectionHeader);
             }
@@ -362,16 +323,16 @@ public class HtmlBuilder : ClientBuilder
     }
 
     /// <summary>
-    /// Gets the HTML section header for an event type.
+    /// Gets the HTML section header for an event type and library name.
     /// </summary>
-    private string GetEventSectionHeader(string eventType)
+    private string GetEventSectionHeader(string eventType, string libraryName = "Library")
     {
         var (title, emoji, color) = eventType.ToLowerInvariant() switch
         {
-            "add" => ("Added to Library", "🎬", "#4CAF50"),
-            "update" => ("Updated in Library", "🔄", "#2196F3"),
-            "delete" => ("Removed from Library", "🗑️", "#F44336"),
-            _ => ("Added to Library", "🎬", "#4CAF50")
+            "add" => ($"Added to {libraryName}", "🎬", "#4CAF50"),
+            "update" => ($"Updated in {libraryName}", "🔄", "#2196F3"),
+            "delete" => ($"Removed from {libraryName}", "🗑️", "#F44336"),
+            _ => ($"Added to {libraryName}", "🎬", "#4CAF50")
         };
 
         return $@"

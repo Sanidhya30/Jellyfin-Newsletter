@@ -10,6 +10,7 @@ using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,8 +24,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Telegram;
 [Route("Telegram")]
 public class TelegramClient(IServerApplicationHost appHost,
     Logger loggerInstance,
-    SQLiteDatabase dbInstance)
-    : Client(loggerInstance, dbInstance), IClient, IDisposable
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManager)
+    : Client(loggerInstance, dbInstance, libraryManager), IClient, IDisposable
 {
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
@@ -92,7 +94,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            TelegramMessageBuilder builder = new(Logger, Db);
+            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager);
             var (testMessage, imageUrl) = builder.BuildTestMessage(telegramConfig);
             
             if (string.IsNullOrEmpty(testMessage))
@@ -197,7 +199,7 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     private bool SendToBot(TelegramConfiguration telegramConfig)
     {
-        bool anyResult = false;
+        bool anyResult = false; // true if at least one message was sent successfully across all chat IDs
         string botToken = telegramConfig.BotToken;
 
         var chatIds = telegramConfig.ChatId.Split(',')
@@ -213,7 +215,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            TelegramMessageBuilder builder = new(Logger, Db);
+            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager);
             var messageTuples = builder.BuildMessagesFromNewsletterData(applicationHost.SystemId, telegramConfig);
 
             // Telegram has a 4096 character limit per message
@@ -221,7 +223,6 @@ public class TelegramClient(IServerApplicationHost appHost,
 
             foreach (var chatId in chatIds)
             {
-                bool thisChatResult = true;
                 Logger.Debug($"Sending Telegram newsletter to '{telegramConfig.Name}' (ChatID: {chatId})");
                 
                 foreach (var (messageText, imageUrl, imageStream, uniqueImageName) in messageTuples)
@@ -253,19 +254,15 @@ public class TelegramClient(IServerApplicationHost appHost,
 
                     if (messageSent)
                     {
+                        // Track any successful send
+                        anyResult = true;
                         // Add small delay between messages to avoid rate limiting
                         Thread.Sleep(100);
                     }
                     else
                     {
-                        thisChatResult = false;
-                        break;
+                        Logger.Error($"Failed to send message part to '{telegramConfig.Name}' (ChatID: {chatId}). Continuing to next part.");
                     }
-                }
-
-                if (thisChatResult)
-                {
-                    anyResult = true;
                 }
             }
         }

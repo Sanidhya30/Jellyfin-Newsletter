@@ -9,6 +9,7 @@ using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,8 +23,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 [Route("Discord")]
 public class DiscordWebhook(IServerApplicationHost appHost,
     Logger loggerInstance,
-    SQLiteDatabase dbInstance)
-    : Client(loggerInstance, dbInstance), IClient, IDisposable
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManager)
+    : Client(loggerInstance, dbInstance, libraryManager), IClient, IDisposable
 {
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
@@ -89,7 +91,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         {
             try
             {
-                EmbedBuilder builder = new(Logger, Db);
+                EmbedBuilder builder = new(Logger, Db, LibraryManager);
                 var embedList = builder.BuildEmbedForTest(discordConfig);
 
                 var payload = new DiscordPayload
@@ -185,7 +187,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
     private bool SendToWebhook(DiscordConfiguration discordConfig)
     {
-        bool anyResult = false;
+        bool anyResult = false; // true if at least one chunk was sent successfully across all webhooks
         
         // Split the Webhook URL by comma to support multiple webhooks
         var webhookUrls = discordConfig.WebhookURL.Split(',')
@@ -201,7 +203,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
         try
         {
-            EmbedBuilder builder = new(Logger, Db);
+            EmbedBuilder builder = new(Logger, Db, LibraryManager);
             var embedTuples = builder.BuildEmbedsFromNewsletterData(applicationHost.SystemId, discordConfig);
 
             // Discord webhook does not support more than 10 embeds per message
@@ -241,7 +243,6 @@ public class DiscordWebhook(IServerApplicationHost appHost,
             // Iterate over each webhook URL and send the pre-calculated chunks
             foreach (var webhookUrl in webhookUrls)
             {
-                bool thisWebhookResult = true;
                 Logger.Debug($"Sending Discord newsletter to '{discordConfig.Name}' (URL: {webhookUrl})");
 
                 foreach (var chunk in chunks)
@@ -280,27 +281,20 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
                         if (response.IsSuccessStatusCode)
                         {
+                            // Track any successful chunk
+                            anyResult = true;
                             Logger.Debug($"Discord message chunk sent successfully to '{discordConfig.Name}' (URL: {webhookUrl})");
                         }
                         else
                         {
                             var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                            Logger.Error($"Discord webhook failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error}");
-                            thisWebhookResult = false;
-                            break; 
+                            Logger.Error($"Discord webhook failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error} - Continuing to next chunk.");
                         }
                     }
                     catch (Exception ex)
                     {
-                         Logger.Error($"Error sending chunk to '{discordConfig.Name}' (URL: {webhookUrl}): {ex.Message}");
-                         thisWebhookResult = false;
-                         break;
+                         Logger.Error($"Error sending chunk to '{discordConfig.Name}' (URL: {webhookUrl}): {ex.Message} - Continuing to next chunk.");
                     }
-                }
-
-                if (thisWebhookResult)
-                {
-                    anyResult = true;
                 }
             }
         }

@@ -2,11 +2,11 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.4.0.0"
+version: "1.4.1.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated media"
-description: "This plugin populates a list of recently added/deleted/updated media, sends out the messages to configured clients(email, discord webhook & telegram)."
+description: "This plugin populates a list of recently added/deleted/updated media, sends out the newsletter to configured clients(email, discord webhook & telegram)."
 category: "General"
 owner: "Sanidhya30"
 artifacts:
@@ -17,7 +17,7 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Multiple instance support for Email, Discord, Telegram clients with per-client library/event settings
-  - New "Modern" Email Template
-  - UI Improvements (Collapsible sections, cleaner layout)
+  - Library based grouping for the newsletter.
+  - Minor bug fix - Improved deletion logic.
+  - Minor bug fix - Clients continue sending remaining messages/chunks if an individual part fails, instead of aborting.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

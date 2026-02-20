@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using MediaBrowser.Controller.Library;
 using Newtonsoft.Json;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
@@ -16,20 +18,26 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 /// </summary>
 /// <param name="loggerInstance">The logger instance for logging operations.</param>
 /// <param name="dbInstance">The database instance for data access.</param>
+/// <param name="libraryManager">The library manager for resolving library names.</param>
 public class EmbedBuilder(Logger loggerInstance,
-    SQLiteDatabase dbInstance)
-    : ClientBuilder(loggerInstance, dbInstance)
+    SQLiteDatabase dbInstance,
+    ILibraryManager libraryManager)
+    : ClientBuilder(loggerInstance, dbInstance, libraryManager)
 {
      /// <summary>
     /// Builds Discord embeds from newsletter data stored in the database.
+    /// Groups entries by event type (Add, Update, Delete), then by library name (Movies first, then Series).
     /// </summary>
     /// <param name="serverId">The Jellyfin server ID to include in embed URLs.</param>
     /// <param name="discordConfig">The Discord configuration to use for building embeds.</param>
     /// <returns>A read-only collection of tuples containing Discord embeds, image streams, and unique image names.</returns>
     public ReadOnlyCollection<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId, DiscordConfiguration discordConfig)
     {
-        var completed = new HashSet<string>(); // Store "Title_EventType"
+        var itemsByKey = new Dictionary<string, JsonFileObj>(); // Key: "Title_EventType", deduplicates and collects
         var result = new List<(Embed, MemoryStream?, string)>();
+
+        // Build library name map
+        var libraryNameMap = BuildLibraryNameMap();
 
         try
         {
@@ -50,82 +58,98 @@ public class EmbedBuilder(Logger loggerInstance,
 
                     // Create a unique key combining title and event type
                     string uniqueKey = $"{item.Title}_{eventType}";
-                    if (completed.Contains(uniqueKey))
+                    if (itemsByKey.ContainsKey(uniqueKey))
                     {
                         continue;
                     }
 
-                    int embedColor = GetEventColor(item.EventType, item.Type, discordConfig);
-                    string seaEps = string.Empty;
-                    if (item.Type == "Series")
-                    {
-                        // for series only
-                        ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
-                        seaEps += GetSeasonEpisode(parsedInfoList);
-                    }
-
-                    var fieldsList = new Collection<EmbedField>();
-
-                    AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
-                    AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
-                    AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", $"{item.RunTime} min");
-                    AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);
-
-                    // Add event type query otherwise discord deduplicate the embed with same url
-                    // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
-                    // Adding event type query should not cause issue
-                    string embedUrl = string.IsNullOrEmpty(Config.Hostname) 
-                        ? string.Empty 
-                        : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
-                    var embed = new Embed
-                    {
-                        Title = item.Title,
-                        Url = embedUrl,
-                        Color = embedColor,
-                        Timestamp = DateTime.UtcNow.ToString("o"),
-                        Fields = fieldsList.AsReadOnly(),
-                    };
-
-                    // Check if DiscordDescriptionEnabled is true
-                    if (discordConfig.DescriptionEnabled)
-                    {
-                        embed.Description = GetEventDescriptionPrefix(item.EventType) + "\n" + item.SeriesOverview;
-                    }
-                    else
-                    {
-                        // If description is disabled, still show the event type prefix
-                        embed.Description = GetEventDescriptionPrefix(item.EventType);
-                    }
-
-                    MemoryStream? resizedImageStream = null;
-                    string uniqueImageName = string.Empty;
-
-                    // Check if DiscordThumbnailEnabled is true
-                    if (discordConfig.ThumbnailEnabled)
-                    {
-                        if (Config.PosterType == "attachment")
-                        {
-                            (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
-
-                            string thumbnailUrl = success ? $"attachment://{uniqueImageName}" : item.ImageURL;
-                            embed.Thumbnail = new Thumbnail
-                            {
-                                Url = thumbnailUrl
-                            };
-                        }
-                        else 
-                        {
-                            // If PosterType is not "attachment", use the image URL
-                            embed.Thumbnail = new Thumbnail
-                            {
-                                Url = item.ImageURL
-                            };
-                        }
-                    }
-
-                    result.Add((embed, resizedImageStream, uniqueImageName));
-                    completed.Add(uniqueKey);
+                    itemsByKey[uniqueKey] = item;
                 }
+            }
+
+            // Sort items: event type (add -> update -> delete), then Movie libraries first, then by library name
+            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 } };
+            var sortedItems = itemsByKey.Values
+                .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
+                .ThenBy(i => i.Type == "Movie" ? 0 : 1)
+                .ThenBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+                .ToList();
+
+            // Build embeds from sorted items
+            foreach (var item in sortedItems)
+            {
+                string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                string libraryName = GetLibraryName(item.LibraryId, libraryNameMap);
+
+                int embedColor = GetEventColor(item.EventType, item.Type, discordConfig);
+                string seaEps = string.Empty;
+                if (item.Type == "Series")
+                {
+                    // for series only
+                    ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
+                    seaEps += GetSeasonEpisode(parsedInfoList);
+                }
+
+                var fieldsList = new Collection<EmbedField>();
+
+                AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
+                AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
+                AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", $"{item.RunTime} min");
+                AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);
+
+                // Add event type query otherwise discord deduplicate the embed with same url
+                // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
+                // Adding event type query should not cause issue
+                string embedUrl = string.IsNullOrEmpty(Config.Hostname) 
+                    ? string.Empty 
+                    : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
+                var embed = new Embed
+                {
+                    Title = item.Title,
+                    Url = embedUrl,
+                    Color = embedColor,
+                    Timestamp = DateTime.UtcNow.ToString("o"),
+                    Fields = fieldsList.AsReadOnly(),
+                };
+
+                // Check if DiscordDescriptionEnabled is true
+                if (discordConfig.DescriptionEnabled)
+                {
+                    embed.Description = GetEventDescriptionPrefix(item.EventType, libraryName) + "\n" + item.SeriesOverview;
+                }
+                else
+                {
+                    // If description is disabled, still show the event type prefix
+                    embed.Description = GetEventDescriptionPrefix(item.EventType, libraryName);
+                }
+
+                MemoryStream? resizedImageStream = null;
+                string uniqueImageName = string.Empty;
+
+                // Check if DiscordThumbnailEnabled is true
+                if (discordConfig.ThumbnailEnabled)
+                {
+                    if (Config.PosterType == "attachment")
+                    {
+                        (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
+
+                        string thumbnailUrl = success ? $"attachment://{uniqueImageName}" : item.ImageURL;
+                        embed.Thumbnail = new Thumbnail
+                        {
+                            Url = thumbnailUrl
+                        };
+                    }
+                    else 
+                    {
+                        // If PosterType is not "attachment", use the image URL
+                        embed.Thumbnail = new Thumbnail
+                        {
+                            Url = item.ImageURL
+                        };
+                    }
+                }
+
+                result.Add((embed, resizedImageStream, uniqueImageName));
             }
         }
         catch (Exception e)
@@ -266,17 +290,19 @@ public class EmbedBuilder(Logger loggerInstance,
     }
 
     /// <summary>
-    /// Gets the description prefix for the embed based on the event type.
+    /// Gets the description prefix for the embed based on the event type and library name.
     /// </summary>
     /// <param name="eventType">The event type (Add, Delete, Update).</param>
-    /// <returns>The formatted description prefix with emoji.</returns>
-    private string GetEventDescriptionPrefix(string? eventType)
+    /// <param name="libraryName">Optional library name to include in the prefix.</param>
+    /// <returns>The formatted description prefix with emoji and bold formatting.</returns>
+    private string GetEventDescriptionPrefix(string? eventType, string? libraryName = null)
     {
-        string basePrefix = GetEventDescriptionPrefixBase(eventType);
+        string basePrefix = GetEventDescriptionPrefixBase(eventType, libraryName);
+        string libDisplay = string.IsNullOrEmpty(libraryName) ? "Library" : libraryName;
         // Discord uses bold formatting for the description prefix
-        return basePrefix.Replace("Added to Library", "**Added to Library**", StringComparison.Ordinal)
-                        .Replace("Removed from Library", "**Removed from Library**", StringComparison.Ordinal)
-                        .Replace("Updated in Library", "**Updated in Library**", StringComparison.Ordinal);
+        return basePrefix.Replace($"Added to {libDisplay}", $"**Added to {libDisplay}**", StringComparison.Ordinal)
+                        .Replace($"Removed from {libDisplay}", $"**Removed from {libDisplay}**", StringComparison.Ordinal)
+                        .Replace($"Updated in {libDisplay}", $"**Updated in {libDisplay}**", StringComparison.Ordinal);
     }
 }
 
