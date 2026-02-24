@@ -140,6 +140,15 @@ public class PluginConfiguration : BasePluginConfiguration
 
         // default community rating decimal places
         CommunityRatingDecimalPlaces = 1;
+
+        // default Radarr/Sonarr integration settings
+        RadarrEnabled = false;
+        RadarrUrl = string.Empty;
+        RadarrApiKey = string.Empty;
+        SonarrEnabled = false;
+        SonarrUrl = string.Empty;
+        SonarrApiKey = string.Empty;
+        UpcomingDaysAhead = 7;
     }
 
     /// <summary>
@@ -394,6 +403,43 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the template category (e.g., "Modern").
     /// </summary>
     public string TemplateCategory { get; set; } = "Modern";
+
+    // Radarr/Sonarr Integration Settings
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Radarr integration is enabled.
+    /// </summary>
+    public bool RadarrEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Radarr base URL.
+    /// </summary>
+    public string RadarrUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Radarr API key.
+    /// </summary>
+    public string RadarrApiKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Sonarr integration is enabled.
+    /// </summary>
+    public bool SonarrEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Sonarr base URL.
+    /// </summary>
+    public string SonarrUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Sonarr API key.
+    /// </summary>
+    public string SonarrApiKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of days ahead to look for upcoming content.
+    /// </summary>
+    public int UpcomingDaysAhead { get; set; }
 
     // Telegram Bot Details
 

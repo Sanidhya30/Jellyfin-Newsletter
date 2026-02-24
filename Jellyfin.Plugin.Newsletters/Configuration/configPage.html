@@ -60,7 +60,6 @@
                                 <option id="localJFHosting" value="attachment">Local Poster Images</option>
                             </select>
                         </div>
-                        <hr>
                         <div id="MaxEmailSizeContainer" name="options" style="display: none;">
                             <div class="inputContainer" id="MaxEmailSize">
                                 <label class="inputLabel inputLabelUnfocused" for="EmailSize">Maximum Email
@@ -79,6 +78,94 @@
                             Choose how newsletter posters should be included in the emails.<br>
                             <b>TMDB</b>: Uses image URLs from TheMovieDB (default, smallest emails).<br>
                             <b>Local Attachments</b>: Embeds images directly in the email (larger messages).
+                        </div>
+
+                        <hr>
+                        <h3>Upcoming Media Integration</h3>
+                        <div class="fieldDescription" style="margin-bottom: 15px;">
+                            Connect to Radarr and/or Sonarr to include an "Upcoming" section in your newsletters
+                            showing movies and episodes releasing soon.
+                        </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="UpcomingDaysAhead">Days Ahead:</label>
+                            <input id="UpcomingDaysAhead" name="UpcomingDaysAhead" type="number" is="emby-input" min="1"
+                                max="30" />
+                            <div class="fieldDescription">
+                                Number of days ahead to look for upcoming content. <b>Default: 7</b>
+                            </div>
+                        </div>
+
+                        <!-- Radarr Section -->
+                        <div style="border: 1px solid #444; border-radius: 4px; padding: 15px; margin-bottom: 15px;">
+                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                <label class="emby-checkbox-label">
+                                    <input id="RadarrEnabled" name="RadarrEnabled" type="checkbox" is="emby-checkbox"
+                                        onchange="toggleRadarrFields()" />
+                                    <span>Enable Radarr (Upcoming Movies)</span>
+                                </label>
+                            </div>
+                            <div id="RadarrFields" style="display: none;">
+                                <div class="config-field-row">
+                                    <div class="inputContainer">
+                                        <label class="inputLabel inputLabelUnfocused" for="RadarrUrl">Radarr
+                                            URL:</label>
+                                        <input id="RadarrUrl" name="RadarrUrl" type="text" is="emby-input" />
+                                        <div class="fieldDescription">
+                                            Base URL of your Radarr instance. e.g:
+                                            http://localhost:7878
+                                        </div>
+                                    </div>
+                                    <div class="inputContainer">
+                                        <label class="inputLabel inputLabelUnfocused" for="RadarrApiKey">Radarr API
+                                            Key:</label>
+                                        <input id="RadarrApiKey" name="RadarrApiKey" type="password" is="emby-input" />
+                                        <div class="fieldDescription">
+                                            Found in Radarr → Settings → General → API Key
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" is="emby-button" class="raised button-submit"
+                                    onclick="testRadarrConnection()">
+                                    <span>Test Radarr Connection</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sonarr Section -->
+                        <div style="border: 1px solid #444; border-radius: 4px; padding: 15px; margin-bottom: 15px;">
+                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                <label class="emby-checkbox-label">
+                                    <input id="SonarrEnabled" name="SonarrEnabled" type="checkbox" is="emby-checkbox"
+                                        onchange="toggleSonarrFields()" />
+                                    <span>Enable Sonarr (Upcoming Episodes)</span>
+                                </label>
+                            </div>
+                            <div id="SonarrFields" style="display: none;">
+                                <div class="config-field-row">
+                                    <div class="inputContainer">
+                                        <label class="inputLabel inputLabelUnfocused" for="SonarrUrl">Sonarr
+                                            URL:</label>
+                                        <input id="SonarrUrl" name="SonarrUrl" type="text" is="emby-input" />
+                                        <div class="fieldDescription">
+                                            Base URL of your Sonarr instance. e.g:
+                                            http://localhost:8989
+                                        </div>
+                                    </div>
+                                    <div class="inputContainer">
+                                        <label class="inputLabel inputLabelUnfocused" for="SonarrApiKey">Sonarr API
+                                            Key:</label>
+                                        <input id="SonarrApiKey" name="SonarrApiKey" type="password" is="emby-input" />
+                                        <div class="fieldDescription">
+                                            Found in Sonarr → Settings → General → API Key
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" is="emby-button" class="raised button-submit"
+                                    onclick="testSonarrConnection()">
+                                    <span>Test Sonarr Connection</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -376,8 +463,8 @@
 
             // Configuration fields mapping (for General tab only now)
             var FIELDS = {
-                checkboxes: ['DebugMode'],
-                inputs: ['Hostname', 'HostingSelector', 'EmailSize']
+                checkboxes: ['DebugMode', 'RadarrEnabled', 'SonarrEnabled'],
+                inputs: ['Hostname', 'HostingSelector', 'EmailSize', 'RadarrUrl', 'RadarrApiKey', 'SonarrUrl', 'SonarrApiKey', 'UpcomingDaysAhead']
             };
 
             function updateMaxEmailSizeVisibility() {
@@ -387,6 +474,26 @@
                     maxEmailSizeDiv.style.display = (posterType === "attachment") ? '' : 'none';
                 }
             }
+
+            // RADARR/SONARR functions
+
+            window.toggleRadarrFields = function () {
+                var enabled = document.getElementById('RadarrEnabled').checked;
+                document.getElementById('RadarrFields').style.display = enabled ? '' : 'none';
+            };
+
+            window.toggleSonarrFields = function () {
+                var enabled = document.getElementById('SonarrEnabled').checked;
+                document.getElementById('SonarrFields').style.display = enabled ? '' : 'none';
+            };
+
+            window.testRadarrConnection = function () {
+                return;
+            };
+
+            window.testSonarrConnection = function () {
+                return;
+            };
 
             function generateUUID() {
                 return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -964,6 +1071,11 @@
                     var decimalPlaces = decimalPlacesEl ? parseInt(decimalPlacesEl.value) : 1;
                     config.CommunityRatingDecimalPlaces = isNaN(decimalPlaces) ? 1 : decimalPlaces;
 
+                    // Upcoming Media Settings
+                    var daysAheadEl = document.querySelector('#UpcomingDaysAhead');
+                    var daysAhead = daysAheadEl ? parseInt(daysAheadEl.value) : 7;
+                    config.UpcomingDaysAhead = isNaN(daysAhead) ? 7 : daysAhead;
+
                     // Save multi-configurations
                     config.DiscordConfigurations = discordConfigs;
                     config.TelegramConfigurations = telegramConfigs;
@@ -999,6 +1111,12 @@
                     if (ratingEl) ratingEl.value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
 
                     updateMaxEmailSizeVisibility();
+
+                    // Load Radarr/Sonarr fields
+                    var daysAheadEl = document.querySelector('#UpcomingDaysAhead');
+                    if (daysAheadEl) daysAheadEl.value = config.UpcomingDaysAhead !== undefined ? config.UpcomingDaysAhead : 7;
+                    toggleRadarrFields();
+                    toggleSonarrFields();
 
                     // Load multi-configurations
                     discordConfigs = config.DiscordConfigurations || [];
