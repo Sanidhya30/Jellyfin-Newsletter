@@ -96,76 +96,22 @@
                             </div>
                         </div>
 
-                        <!-- Radarr Section -->
-                        <div style="border: 1px solid #444; border-radius: 4px; padding: 15px; margin-bottom: 15px;">
-                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                <label class="emby-checkbox-label">
-                                    <input id="RadarrEnabled" name="RadarrEnabled" type="checkbox" is="emby-checkbox"
-                                        onchange="toggleRadarrFields()" />
-                                    <span>Enable Radarr (Upcoming Movies)</span>
-                                </label>
-                            </div>
-                            <div id="RadarrFields" style="display: none;">
-                                <div class="config-field-row">
-                                    <div class="inputContainer">
-                                        <label class="inputLabel inputLabelUnfocused" for="RadarrUrl">Radarr
-                                            URL:</label>
-                                        <input id="RadarrUrl" name="RadarrUrl" type="text" is="emby-input" />
-                                        <div class="fieldDescription">
-                                            Base URL of your Radarr instance. e.g:
-                                            http://localhost:7878
-                                        </div>
-                                    </div>
-                                    <div class="inputContainer">
-                                        <label class="inputLabel inputLabelUnfocused" for="RadarrApiKey">Radarr API
-                                            Key:</label>
-                                        <input id="RadarrApiKey" name="RadarrApiKey" type="password" is="emby-input" />
-                                        <div class="fieldDescription">
-                                            Found in Radarr → Settings → General → API Key
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="button" is="emby-button" class="raised button-submit"
-                                    onclick="testRadarrConnection()">
-                                    <span>Test Radarr Connection</span>
-                                </button>
-                            </div>
+                        <!-- Radarr Instances -->
+                        <div style="margin-bottom: 15px;">
+                            <h4>Radarr Instances (Upcoming Movies)</h4>
+                            <div id="RadarrConfigList"></div>
+                            <button type="button" is="emby-button" class="raised" onclick="addRadarrConfig()">
+                                <span>+ Add Radarr Instance</span>
+                            </button>
                         </div>
 
-                        <!-- Sonarr Section -->
-                        <div style="border: 1px solid #444; border-radius: 4px; padding: 15px; margin-bottom: 15px;">
-                            <div class="checkboxContainer checkboxContainer-withDescription">
-                                <label class="emby-checkbox-label">
-                                    <input id="SonarrEnabled" name="SonarrEnabled" type="checkbox" is="emby-checkbox"
-                                        onchange="toggleSonarrFields()" />
-                                    <span>Enable Sonarr (Upcoming Episodes)</span>
-                                </label>
-                            </div>
-                            <div id="SonarrFields" style="display: none;">
-                                <div class="config-field-row">
-                                    <div class="inputContainer">
-                                        <label class="inputLabel inputLabelUnfocused" for="SonarrUrl">Sonarr
-                                            URL:</label>
-                                        <input id="SonarrUrl" name="SonarrUrl" type="text" is="emby-input" />
-                                        <div class="fieldDescription">
-                                            Base URL of your Sonarr instance. e.g:
-                                            http://localhost:8989
-                                        </div>
-                                    </div>
-                                    <div class="inputContainer">
-                                        <label class="inputLabel inputLabelUnfocused" for="SonarrApiKey">Sonarr API
-                                            Key:</label>
-                                        <input id="SonarrApiKey" name="SonarrApiKey" type="password" is="emby-input" />
-                                        <div class="fieldDescription">
-                                            Found in Sonarr → Settings → General → API Key
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="button" is="emby-button" class="raised button-submit"
-                                    onclick="testSonarrConnection()">
-                                    <span>Test Sonarr Connection</span>
-                                </button>
-                            </div>
+                        <!-- Sonarr Instances -->
+                        <div style="margin-bottom: 15px;">
+                            <h4>Sonarr Instances (Upcoming Episodes)</h4>
+                            <div id="SonarrConfigList"></div>
+                            <button type="button" is="emby-button" class="raised" onclick="addSonarrConfig()">
+                                <span>+ Add Sonarr Instance</span>
+                            </button>
                         </div>
                     </div>
 
@@ -445,6 +391,8 @@
             var discordConfigs = [];
             var telegramConfigs = [];
             var emailConfigs = [];
+            var radarrConfigs = [];
+            var sonarrConfigs = [];
 
             // Tab switching function
             window.openTab = function (evt, tabName) {
@@ -463,8 +411,8 @@
 
             // Configuration fields mapping (for General tab only now)
             var FIELDS = {
-                checkboxes: ['DebugMode', 'RadarrEnabled', 'SonarrEnabled'],
-                inputs: ['Hostname', 'HostingSelector', 'EmailSize', 'RadarrUrl', 'RadarrApiKey', 'SonarrUrl', 'SonarrApiKey', 'UpcomingDaysAhead']
+                checkboxes: ['DebugMode'],
+                inputs: ['Hostname', 'HostingSelector', 'EmailSize', 'UpcomingDaysAhead']
             };
 
             function updateMaxEmailSizeVisibility() {
@@ -475,25 +423,151 @@
                 }
             }
 
-            // RADARR/SONARR functions
+            // RADARR/SONARR CONFIG FUNCTIONS
 
-            window.toggleRadarrFields = function () {
-                var enabled = document.getElementById('RadarrEnabled').checked;
-                document.getElementById('RadarrFields').style.display = enabled ? '' : 'none';
-            };
+            function addRadarrConfig() {
+                radarrConfigs.push({ Id: generateUUID(), Name: 'Radarr', Url: '', ApiKey: '' });
+                renderRadarrConfigs();
+            }
 
-            window.toggleSonarrFields = function () {
-                var enabled = document.getElementById('SonarrEnabled').checked;
-                document.getElementById('SonarrFields').style.display = enabled ? '' : 'none';
-            };
+            function removeRadarrConfig(id) {
+                if (confirm('Remove this Radarr instance?')) {
+                    radarrConfigs = radarrConfigs.filter(function (c) { return c.Id !== id; });
+                    renderRadarrConfigs();
+                }
+            }
 
-            window.testRadarrConnection = function () {
+            function testRadarrConfig(id) {
                 return;
-            };
+            }
 
-            window.testSonarrConnection = function () {
+            function toggleRadarrAccordion(id) {
+                var accordion = document.getElementById('radarr-accordion-' + id);
+                if (accordion) accordion.classList.toggle('expanded');
+            }
+
+            function updateRadarrConfigFromUI(id) {
+                var config = radarrConfigs.find(function (c) { return c.Id === id; });
+                if (!config) return;
+                config.Name = document.getElementById('radarr-name-' + id).value || 'Radarr';
+                config.Url = document.getElementById('radarr-url-' + id).value;
+                config.ApiKey = document.getElementById('radarr-apikey-' + id).value;
+                var headerTitle = document.querySelector('#radarr-accordion-' + id + ' .config-name');
+                if (headerTitle) headerTitle.textContent = config.Name;
+            }
+
+            function renderRadarrConfigs() {
+                var container = document.getElementById('RadarrConfigList');
+                if (radarrConfigs.length === 0) {
+                    container.innerHTML = '<p class="no-configs-text">No Radarr instances configured. Click "Add Radarr Instance" to create one.</p>';
+                    return;
+                }
+                var html = '';
+                radarrConfigs.forEach(function (config) {
+                    html += '<div id="radarr-accordion-' + config.Id + '" class="config-accordion">';
+                    html += '  <div class="config-accordion-header" onclick="toggleRadarrAccordion(\'' + config.Id + '\')"> ';
+                    html += '    <div class="config-accordion-title">';
+                    html += '      <span class="expand-icon">▶</span>';
+                    html += '      <span class="config-name">' + (config.Name || 'Radarr') + '</span>';
+                    html += '    </div>';
+                    html += '    <div class="config-accordion-actions">';
+                    html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testRadarrConfig(\'' + config.Id + '\')">Test</button>';
+                    html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeRadarrConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="config-accordion-content">';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Instance Name:</label>';
+                    html += '      <input id="radarr-name-' + config.Id + '" type="text" is="emby-input" value="' + (config.Name || '') + '" onchange="updateRadarrConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">This name will appear as the section header in your newsletter.</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Radarr URL:</label>';
+                    html += '      <input id="radarr-url-' + config.Id + '" type="text" is="emby-input" value="' + (config.Url || '') + '" onchange="updateRadarrConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">e.g. http://localhost:7878</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">API Key:</label>';
+                    html += '      <input id="radarr-apikey-' + config.Id + '" type="password" is="emby-input" value="' + (config.ApiKey || '') + '" onchange="updateRadarrConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Found in Radarr → Settings → General → API Key</div>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+
+            function addSonarrConfig() {
+                sonarrConfigs.push({ Id: generateUUID(), Name: 'Sonarr', Url: '', ApiKey: '' });
+                renderSonarrConfigs();
+            }
+
+            function removeSonarrConfig(id) {
+                if (confirm('Remove this Sonarr instance?')) {
+                    sonarrConfigs = sonarrConfigs.filter(function (c) { return c.Id !== id; });
+                    renderSonarrConfigs();
+                }
+            }
+
+            function testSonarrConfig(id) {
                 return;
-            };
+            }
+
+            function toggleSonarrAccordion(id) {
+                var accordion = document.getElementById('sonarr-accordion-' + id);
+                if (accordion) accordion.classList.toggle('expanded');
+            }
+
+            function updateSonarrConfigFromUI(id) {
+                var config = sonarrConfigs.find(function (c) { return c.Id === id; });
+                if (!config) return;
+                config.Name = document.getElementById('sonarr-name-' + id).value || 'Sonarr';
+                config.Url = document.getElementById('sonarr-url-' + id).value;
+                config.ApiKey = document.getElementById('sonarr-apikey-' + id).value;
+                var headerTitle = document.querySelector('#sonarr-accordion-' + id + ' .config-name');
+                if (headerTitle) headerTitle.textContent = config.Name;
+            }
+
+            function renderSonarrConfigs() {
+                var container = document.getElementById('SonarrConfigList');
+                if (sonarrConfigs.length === 0) {
+                    container.innerHTML = '<p class="no-configs-text">No Sonarr instances configured. Click "Add Sonarr Instance" to create one.</p>';
+                    return;
+                }
+                var html = '';
+                sonarrConfigs.forEach(function (config) {
+                    html += '<div id="sonarr-accordion-' + config.Id + '" class="config-accordion">';
+                    html += '  <div class="config-accordion-header" onclick="toggleSonarrAccordion(\'' + config.Id + '\')"> ';
+                    html += '    <div class="config-accordion-title">';
+                    html += '      <span class="expand-icon">▶</span>';
+                    html += '      <span class="config-name">' + (config.Name || 'Sonarr') + '</span>';
+                    html += '    </div>';
+                    html += '    <div class="config-accordion-actions">';
+                    html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testSonarrConfig(\'' + config.Id + '\')">Test</button>';
+                    html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeSonarrConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="config-accordion-content">';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Instance Name:</label>';
+                    html += '      <input id="sonarr-name-' + config.Id + '" type="text" is="emby-input" value="' + (config.Name || '') + '" onchange="updateSonarrConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">This name will appear as the section header in your newsletter.</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Sonarr URL:</label>';
+                    html += '      <input id="sonarr-url-' + config.Id + '" type="text" is="emby-input" value="' + (config.Url || '') + '" onchange="updateSonarrConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">e.g. http://localhost:8989</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">API Key:</label>';
+                    html += '      <input id="sonarr-apikey-' + config.Id + '" type="password" is="emby-input" value="' + (config.ApiKey || '') + '" onchange="updateSonarrConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Found in Sonarr → Settings → General → API Key</div>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
 
             function generateUUID() {
                 return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -1080,6 +1154,8 @@
                     config.DiscordConfigurations = discordConfigs;
                     config.TelegramConfigurations = telegramConfigs;
                     config.EmailConfigurations = emailConfigs;
+                    config.RadarrConfigurations = radarrConfigs;
+                    config.SonarrConfigurations = sonarrConfigs;
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -1112,22 +1188,24 @@
 
                     updateMaxEmailSizeVisibility();
 
-                    // Load Radarr/Sonarr fields
+                    // Load Upcoming Days Ahead
                     var daysAheadEl = document.querySelector('#UpcomingDaysAhead');
                     if (daysAheadEl) daysAheadEl.value = config.UpcomingDaysAhead !== undefined ? config.UpcomingDaysAhead : 7;
-                    toggleRadarrFields();
-                    toggleSonarrFields();
 
                     // Load multi-configurations
                     discordConfigs = config.DiscordConfigurations || [];
                     telegramConfigs = config.TelegramConfigurations || [];
                     emailConfigs = config.EmailConfigurations || [];
+                    radarrConfigs = config.RadarrConfigurations || [];
+                    sonarrConfigs = config.SonarrConfigurations || [];
 
                     // Load libraries first, then render configs
                     loadLibraries().then(function () {
                         renderDiscordConfigs();
                         renderTelegramConfigs();
                         renderEmailConfigs();
+                        renderRadarrConfigs();
+                        renderSonarrConfigs();
                         Dashboard.hideLoadingMsg();
                     });
                 });
