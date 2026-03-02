@@ -33,9 +33,9 @@ public class UpcomingMediaService
     /// Gets all upcoming items from all configured Radarr and Sonarr instances.
     /// </summary>
     /// <returns>A list of upcoming items sorted by air date.</returns>
-    public async Task<List<UpcomingItem>> GetAllUpcomingAsync()
+    public async Task<List<JsonFileObj>> GetAllUpcomingAsync()
     {
-        var items = new List<UpcomingItem>();
+        var items = new List<JsonFileObj>();
 
         foreach (var radarrConfig in Config.RadarrConfigurations)
         {
@@ -49,8 +49,13 @@ public class UpcomingMediaService
             items.AddRange(episodes);
         }
 
-        // Sort all upcoming items by air date
-        items.Sort((a, b) => a.AirDate.CompareTo(b.AirDate));
+        // Sort all upcoming items by air date (parsing dd-MM-yyyy back to DateTime)
+        items.Sort((a, b) => 
+        {
+            var dateA = DateTime.TryParseExact(a.PremiereYear, "dd-MM-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtA) ? dtA : DateTime.MaxValue;
+            var dateB = DateTime.TryParseExact(b.PremiereYear, "dd-MM-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtB) ? dtB : DateTime.MaxValue;
+            return dateA.CompareTo(dateB);
+        });
         return items;
     }
 
@@ -61,15 +66,17 @@ public class UpcomingMediaService
     /// <param name="apiKey">The Radarr API key.</param>
     /// <param name="sourceName">The name of this Radarr instance.</param>
     /// <returns>A list of upcoming movie items.</returns>
-    public async Task<List<UpcomingItem>> GetUpcomingMoviesAsync(string baseUrl, string apiKey, string sourceName)
+    public async Task<List<JsonFileObj>> GetUpcomingMoviesAsync(string baseUrl, string apiKey, string sourceName)
     {
-        var items = new List<UpcomingItem>();
+        var items = new List<JsonFileObj>();
 
         try
         {
             var trimmedUrl = baseUrl.TrimEnd('/');
-            var start = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-            var end = DateTime.UtcNow.AddDays(Config.UpcomingDaysAhead).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var startDateTime = DateTime.UtcNow.Date;
+            var endDateTime = startDateTime.AddDays(Config.UpcomingDaysAhead);
+            var start = startDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var end = endDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             var url = $"{trimmedUrl}/api/v3/calendar?start={start}&end={end}&unmonitored=false&apikey={apiKey}";
 
             logger.Debug($"Fetching upcoming movies from '{sourceName}': {trimmedUrl}/api/v3/calendar?start={start}&end={end}");
@@ -79,28 +86,45 @@ public class UpcomingMediaService
 
             foreach (var movie in doc.RootElement.EnumerateArray())
             {
-                var item = new UpcomingItem
+                var item = new JsonFileObj
                 {
                     Title = movie.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? string.Empty : string.Empty,
-                    Overview = movie.TryGetProperty("overview", out var overviewProp) ? overviewProp.GetString() ?? string.Empty : string.Empty,
-                    MediaType = "Movie",
+                    SeriesOverview = movie.TryGetProperty("overview", out var overviewProp) ? overviewProp.GetString() ?? string.Empty : string.Empty,
+                    Type = "Movie",
                     OfficialRating = movie.TryGetProperty("certification", out var certProp) ? certProp.GetString() ?? string.Empty : string.Empty,
-                    SourceName = sourceName
+                    EventType = "upcoming",
+                    LibraryId = sourceName
                 };
 
-                // Parse release date — try digitalRelease first, then physicalRelease, then inCinemas
+                DateTime? validReleaseDate = null;
+
+                // Parse release date - try digitalRelease first, then physicalRelease
+                // Only consider dates that fall strictly within our requested start/end window
                 if (movie.TryGetProperty("digitalRelease", out var digitalRelease) && digitalRelease.ValueKind != JsonValueKind.Null)
                 {
-                    item.AirDate = digitalRelease.GetDateTime();
+                    var date = digitalRelease.GetDateTime().ToUniversalTime().Date;
+                    if (date >= startDateTime && date <= endDateTime)
+                    {
+                        validReleaseDate = date;
+                    }
                 }
-                else if (movie.TryGetProperty("physicalRelease", out var physicalRelease) && physicalRelease.ValueKind != JsonValueKind.Null)
+
+                if (!validReleaseDate.HasValue && movie.TryGetProperty("physicalRelease", out var physicalRelease) && physicalRelease.ValueKind != JsonValueKind.Null)
                 {
-                    item.AirDate = physicalRelease.GetDateTime();
+                    var date = physicalRelease.GetDateTime().ToUniversalTime().Date;
+                    if (date >= startDateTime && date <= endDateTime)
+                    {
+                        validReleaseDate = date;
+                    }
                 }
-                else if (movie.TryGetProperty("inCinemas", out var inCinemas) && inCinemas.ValueKind != JsonValueKind.Null)
+
+                // If neither digital nor physical release is within the window, skip this movie
+                if (!validReleaseDate.HasValue)
                 {
-                    item.AirDate = inCinemas.GetDateTime();
+                    continue;
                 }
+
+                item.PremiereYear = validReleaseDate.Value.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
 
                 // Try to get poster image
                 if (movie.TryGetProperty("images", out var images))
@@ -113,7 +137,7 @@ public class UpcomingMediaService
                             var remoteUrl = image.TryGetProperty("remoteUrl", out var remoteProp) ? remoteProp.GetString() ?? string.Empty : string.Empty;
                             if (!string.IsNullOrEmpty(remoteUrl))
                             {
-                                item.ImageUrl = remoteUrl;
+                                item.ImageURL = remoteUrl;
                             }
 
                             break;
@@ -141,9 +165,9 @@ public class UpcomingMediaService
     /// <param name="apiKey">The Sonarr API key.</param>
     /// <param name="sourceName">The name of this Sonarr instance.</param>
     /// <returns>A list of upcoming episode items.</returns>
-    public async Task<List<UpcomingItem>> GetUpcomingEpisodesAsync(string baseUrl, string apiKey, string sourceName)
+    public async Task<List<JsonFileObj>> GetUpcomingEpisodesAsync(string baseUrl, string apiKey, string sourceName)
     {
-        var items = new List<UpcomingItem>();
+        var items = new List<JsonFileObj>();
 
         try
         {
@@ -159,25 +183,26 @@ public class UpcomingMediaService
 
             foreach (var episode in doc.RootElement.EnumerateArray())
             {
-                var item = new UpcomingItem
+                var item = new JsonFileObj
                 {
-                    Overview = episode.TryGetProperty("overview", out var overviewProp) ? overviewProp.GetString() ?? string.Empty : string.Empty,
-                    SeasonNumber = episode.TryGetProperty("seasonNumber", out var seasonProp) ? seasonProp.GetInt32() : 0,
-                    EpisodeNumber = episode.TryGetProperty("episodeNumber", out var episodeProp) ? episodeProp.GetInt32() : 0,
-                    MediaType = "Episode",
-                    SourceName = sourceName
+                    SeriesOverview = episode.TryGetProperty("overview", out var overviewProp) ? overviewProp.GetString() ?? string.Empty : string.Empty,
+                    Season = episode.TryGetProperty("seasonNumber", out var seasonProp) ? seasonProp.GetInt32() : 0,
+                    Episode = episode.TryGetProperty("episodeNumber", out var episodeProp) ? episodeProp.GetInt32() : 0,
+                    Type = "Episode",
+                    EventType = "upcoming",
+                    LibraryId = sourceName
                 };
 
                 // Parse air date
                 if (episode.TryGetProperty("airDateUtc", out var airDate) && airDate.ValueKind != JsonValueKind.Null)
                 {
-                    item.AirDate = airDate.GetDateTime();
+                    item.PremiereYear = airDate.GetDateTime().ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
                 }
                 else if (episode.TryGetProperty("airDate", out var airDateStr) && airDateStr.ValueKind != JsonValueKind.Null)
                 {
                     if (DateTime.TryParse(airDateStr.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
                     {
-                        item.AirDate = parsed;
+                        item.PremiereYear = parsed.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
                     }
                 }
 
@@ -198,7 +223,7 @@ public class UpcomingMediaService
                                 var remoteUrl = image.TryGetProperty("remoteUrl", out var remoteProp) ? remoteProp.GetString() ?? string.Empty : string.Empty;
                                 if (!string.IsNullOrEmpty(remoteUrl))
                                 {
-                                    item.ImageUrl = remoteUrl;
+                                    item.ImageURL = remoteUrl;
                                 }
 
                                 break;
