@@ -411,6 +411,7 @@ public class ClientBuilder(Logger loggerInstance,
             "add" => $"🎬 Added to {libDisplay}",
             "delete" => $"🗑️ Removed from {libDisplay}",
             "update" => $"🔄 Updated in {libDisplay}",
+            "upcoming" => $"📅 Upcoming in {libDisplay}",
             _ => $"🎬 Added to {libDisplay}"
         };
     }
