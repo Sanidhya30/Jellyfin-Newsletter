@@ -438,7 +438,15 @@
             }
 
             function testRadarrConfig(id) {
-                return;
+                Dashboard.showLoadingMsg();
+                var url = ApiClient.getUrl('UpcomingMedia/TestRadarr') + '?configurationId=' + encodeURIComponent(id);
+                ApiClient.ajax({ type: 'POST', url: url }).then(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert('Radarr connection successful!');
+                }).catch(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert('Failed to connect to Radarr. Check URL and API key.');
+                });
             }
 
             function toggleRadarrAccordion(id) {
@@ -510,7 +518,15 @@
             }
 
             function testSonarrConfig(id) {
-                return;
+                Dashboard.showLoadingMsg();
+                var url = ApiClient.getUrl('UpcomingMedia/TestSonarr') + '?configurationId=' + encodeURIComponent(id);
+                ApiClient.ajax({ type: 'POST', url: url }).then(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert('Sonarr connection successful!');
+                }).catch(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert('Failed to connect to Sonarr. Check URL and API key.');
+                });
             }
 
             function toggleSonarrAccordion(id) {
