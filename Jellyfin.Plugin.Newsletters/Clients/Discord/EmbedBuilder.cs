@@ -120,7 +120,7 @@ public class EmbedBuilder(
                     AddFieldIfEnabled(fieldsList, true, "Release Date", item.PremiereYear ?? "N/A");
                 }
                 
-                AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
+                AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating > 0 ? item.CommunityRating.Value.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) : "N/A");
                 AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
                 AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", item.RunTime > 0 ? $"{item.RunTime} min" : "N/A");
                 AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);

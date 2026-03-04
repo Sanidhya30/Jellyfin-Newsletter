@@ -246,8 +246,7 @@ public class TelegramMessageBuilder(
 
         if (telegramConfig.RatingEnabled)
         {
-            // var ratingString = item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A";
-            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Rating: {EscapeMarkdown(item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A")}");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Rating: {EscapeMarkdown(item.CommunityRating > 0 ? item.CommunityRating.Value.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) : "N/A")}");
         }
 
         if (telegramConfig.PGRatingEnabled)

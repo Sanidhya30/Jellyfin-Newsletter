@@ -99,7 +99,7 @@ public class HtmlBuilder(
 
         if (replaceKey == "{CommunityRating}" && replaceValue is float rating)
         {
-            replaceValue = rating.ToString($"F{Config.CommunityRatingDecimalPlaces}", System.Globalization.CultureInfo.InvariantCulture);
+            replaceValue = rating > 0 ? rating.ToString($"F{Config.CommunityRatingDecimalPlaces}", System.Globalization.CultureInfo.InvariantCulture) : "N/A";
         }
 
         Logger.Debug($"Replace Value {replaceKey} with " + replaceValue);

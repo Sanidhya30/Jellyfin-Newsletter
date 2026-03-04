@@ -213,6 +213,12 @@ public class UpcomingMediaService
                     item.Title = series.TryGetProperty("title", out var seriesTitleProp) ? seriesTitleProp.GetString() ?? string.Empty : string.Empty;
                     item.OfficialRating = series.TryGetProperty("certification", out var certProp) ? certProp.GetString() ?? string.Empty : string.Empty;
                     item.RunTime = series.TryGetProperty("runtime", out var runtimeProp) ? runtimeProp.GetInt32() : 0;
+                    
+                    // Sometimes the episode overview is empty, so we try to get the series overview
+                    if (string.IsNullOrEmpty(item.SeriesOverview))
+                    {
+                        item.SeriesOverview = series.TryGetProperty("overview", out var seriesOverviewProp) ? seriesOverviewProp.GetString() ?? string.Empty : string.Empty;
+                    }
 
                     // Try to get poster image from series
                     if (series.TryGetProperty("images", out var images))
