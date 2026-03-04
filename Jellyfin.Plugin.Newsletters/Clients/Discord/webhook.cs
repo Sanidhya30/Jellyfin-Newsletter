@@ -6,7 +6,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Library;
@@ -24,8 +26,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 public class DiscordWebhook(IServerApplicationHost appHost,
     Logger loggerInstance,
     SQLiteDatabase dbInstance,
-    ILibraryManager libraryManager)
-    : Client(loggerInstance, dbInstance, libraryManager), IClient, IDisposable
+    ILibraryManager libraryManager,
+    UpcomingMediaService upcomingMediaService)
+    : Client(loggerInstance, dbInstance, libraryManager, upcomingMediaService), IClient, IDisposable
 {
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
@@ -91,7 +94,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         {
             try
             {
-                EmbedBuilder builder = new(Logger, Db, LibraryManager);
+                EmbedBuilder builder = new(Logger, Db, LibraryManager, new List<JsonFileObj>());
                 var embedList = builder.BuildEmbedForTest(discordConfig);
 
                 var payload = new DiscordPayload
@@ -150,7 +153,8 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
         try
         {
-            if (NewsletterDbIsPopulated())
+            var (hasData, upcomingItems) = HasDataToSendAsync().GetAwaiter().GetResult();
+            if (hasData)
             {
                 // Iterate over all Discord configurations
                 foreach (var discordConfig in Config.DiscordConfigurations)
@@ -163,13 +167,13 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending Discord message to '{discordConfig.Name}'!");
 
-                    bool result = SendToWebhook(discordConfig);
+                    bool result = SendToWebhook(discordConfig, upcomingItems);
                     anySuccess |= result;
                 }
             }
             else
             {
-                Logger.Info("There is no Newsletter data.. Have I scanned or sent out a discord newsletter recently?");
+                Logger.Info("There is no Newsletter data, nor any upcoming media. Have I scanned or sent out a discord newsletter recently?");
             }
         }
         catch (Exception e)
@@ -184,8 +188,9 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// Sends newsletter data to a specific Discord webhook configuration.
     /// </summary>
     /// <param name="discordConfig">The Discord configuration to use.</param>
+    /// <param name="upcomingItems">The prefetched list of upcoming media items.</param>
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
-    private bool SendToWebhook(DiscordConfiguration discordConfig)
+    private bool SendToWebhook(DiscordConfiguration discordConfig, IReadOnlyList<JsonFileObj> upcomingItems)
     {
         bool anyResult = false; // true if at least one chunk was sent successfully across all webhooks
         
@@ -203,7 +208,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
         try
         {
-            EmbedBuilder builder = new(Logger, Db, LibraryManager);
+            EmbedBuilder builder = new(Logger, Db, LibraryManager, upcomingItems);
             var embedTuples = builder.BuildEmbedsFromNewsletterData(applicationHost.SystemId, discordConfig);
 
             // Discord webhook does not support more than 10 embeds per message
