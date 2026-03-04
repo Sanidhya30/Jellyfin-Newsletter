@@ -192,7 +192,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending email to '{emailConfig.Name}'!");
 
-                    bool anyResult = SendToSmtp(emailConfig, upcomingItems);
+                    bool anyResult = SendToSmtp(emailConfig, emailConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     anySuccess |= anyResult;
                 }
             }

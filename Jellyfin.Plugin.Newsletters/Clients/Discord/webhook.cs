@@ -167,7 +167,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending Discord message to '{discordConfig.Name}'!");
 
-                    bool result = SendToWebhook(discordConfig, upcomingItems);
+                    bool result = SendToWebhook(discordConfig, discordConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     anySuccess |= result;
                 }
             }

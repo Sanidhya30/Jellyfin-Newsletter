@@ -98,20 +98,32 @@
 
                         <!-- Radarr Instances -->
                         <div style="margin-bottom: 15px;">
-                            <h4>Radarr Instances (Upcoming Movies)</h4>
-                            <div id="RadarrConfigList"></div>
-                            <button type="button" is="emby-button" class="raised" onclick="addRadarrConfig()">
-                                <span>+ Add Radarr Instance</span>
-                            </button>
+                            <div class="config-header">
+                                <h3>Radarr Instances (Upcoming Movies)</h3>
+                                <button type="button" is="emby-button" class="raised button-submit"
+                                    onclick="addRadarrConfig()">
+                                    <span>+ Add Radarr Instance</span>
+                                </button>
+                            </div>
+                            <div id="RadarrConfigList" class="config-list">
+                                <p class="no-configs-text">No Radarr instances configured. Click "Add Radarr Instance"
+                                    to create one.</p>
+                            </div>
                         </div>
 
                         <!-- Sonarr Instances -->
                         <div style="margin-bottom: 15px;">
-                            <h4>Sonarr Instances (Upcoming Episodes)</h4>
-                            <div id="SonarrConfigList"></div>
-                            <button type="button" is="emby-button" class="raised" onclick="addSonarrConfig()">
-                                <span>+ Add Sonarr Instance</span>
-                            </button>
+                            <div class="config-header">
+                                <h3>Sonarr Instances (Upcoming Episodes)</h3>
+                                <button type="button" is="emby-button" class="raised button-submit"
+                                    onclick="addSonarrConfig()">
+                                    <span>+ Add Sonarr Instance</span>
+                                </button>
+                            </div>
+                            <div id="SonarrConfigList" class="config-list">
+                                <p class="no-configs-text">No Sonarr instances configured. Click "Add Sonarr Instance"
+                                    to create one.</p>
+                            </div>
                         </div>
                     </div>
 
@@ -632,7 +644,7 @@
                 return html;
             }
 
-            function getEventTogglesHtml(clientId, configType, added, updated, deleted) {
+            function getEventTogglesHtml(clientId, configType, added, updated, deleted, upcoming) {
                 var html = '<div>';
                 html += '  <label class="inputLabel">Events to Notify:</label>';
                 html += '  <table><tr>';
@@ -648,6 +660,10 @@
                 html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
                 html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-delete-' + clientId + '" ' + (deleted !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
                 html += '    <span>Item Deleted</span></label></div></td>';
+
+                html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
+                html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-upcoming-' + clientId + '" ' + (upcoming === true ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
+                html += '    <span>Upcoming Item</span></label></div></td>';
 
                 html += '  </tr></table>';
                 html += '</div>';
@@ -678,7 +694,8 @@
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
-                    NewsletterOnItemDeletedEnabled: true
+                    NewsletterOnItemDeletedEnabled: true,
+                    NewsletterOnUpcomingItemEnabled: false
                 };
                 discordConfigs.push(newConfig);
                 renderDiscordConfigs();
@@ -734,6 +751,7 @@
                 if (document.getElementById('discord-event-add-' + id)) config.NewsletterOnItemAddedEnabled = document.getElementById('discord-event-add-' + id).checked;
                 if (document.getElementById('discord-event-update-' + id)) config.NewsletterOnItemUpdatedEnabled = document.getElementById('discord-event-update-' + id).checked;
                 if (document.getElementById('discord-event-delete-' + id)) config.NewsletterOnItemDeletedEnabled = document.getElementById('discord-event-delete-' + id).checked;
+                if (document.getElementById('discord-event-upcoming-' + id)) config.NewsletterOnUpcomingItemEnabled = document.getElementById('discord-event-upcoming-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.discord-series-lib-' + id + ':checked');
@@ -782,7 +800,7 @@
                     html += '      <input id="discord-webhookname-' + config.Id + '" type="text" is="emby-input" value="' + (config.WebhookName || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'discord', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled);
+                    html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
@@ -836,7 +854,8 @@
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
-                    NewsletterOnItemDeletedEnabled: true
+                    NewsletterOnItemDeletedEnabled: true,
+                    NewsletterOnUpcomingItemEnabled: false
                 };
                 telegramConfigs.push(newConfig);
                 renderTelegramConfigs();
@@ -886,6 +905,7 @@
                 if (document.getElementById('telegram-event-add-' + id)) config.NewsletterOnItemAddedEnabled = document.getElementById('telegram-event-add-' + id).checked;
                 if (document.getElementById('telegram-event-update-' + id)) config.NewsletterOnItemUpdatedEnabled = document.getElementById('telegram-event-update-' + id).checked;
                 if (document.getElementById('telegram-event-delete-' + id)) config.NewsletterOnItemDeletedEnabled = document.getElementById('telegram-event-delete-' + id).checked;
+                if (document.getElementById('telegram-event-upcoming-' + id)) config.NewsletterOnUpcomingItemEnabled = document.getElementById('telegram-event-upcoming-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.telegram-series-lib-' + id + ':checked');
@@ -934,7 +954,7 @@
                     html += '      <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Separate multiple IDs with commas.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'telegram', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled);
+                    html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
@@ -974,7 +994,8 @@
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
-                    NewsletterOnItemDeletedEnabled: true
+                    NewsletterOnItemDeletedEnabled: true,
+                    NewsletterOnUpcomingItemEnabled: false
                 };
                 emailConfigs.push(newConfig);
                 renderEmailConfigs();
@@ -1027,6 +1048,7 @@
                 if (document.getElementById('email-event-add-' + id)) config.NewsletterOnItemAddedEnabled = document.getElementById('email-event-add-' + id).checked;
                 if (document.getElementById('email-event-update-' + id)) config.NewsletterOnItemUpdatedEnabled = document.getElementById('email-event-update-' + id).checked;
                 if (document.getElementById('email-event-delete-' + id)) config.NewsletterOnItemDeletedEnabled = document.getElementById('email-event-delete-' + id).checked;
+                if (document.getElementById('email-event-upcoming-' + id)) config.NewsletterOnUpcomingItemEnabled = document.getElementById('email-event-upcoming-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.email-series-lib-' + id + ':checked');
@@ -1103,7 +1125,7 @@
                     html += '      <input id="email-subject-' + config.Id + '" type="text" is="emby-input" value="' + (config.Subject || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled);
+                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="email-category-' + config.Id + '">Template Category:</label>';
                     html += '      <select id="email-category-' + config.Id + '" is="emby-select" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';

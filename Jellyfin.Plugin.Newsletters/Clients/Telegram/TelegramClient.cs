@@ -179,7 +179,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending Telegram message to '{telegramConfig.Name}'!");
 
-                    bool result = SendToBot(telegramConfig, upcomingItems);
+                    bool result = SendToBot(telegramConfig, telegramConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     anySuccess |= result;
                 }
             }
