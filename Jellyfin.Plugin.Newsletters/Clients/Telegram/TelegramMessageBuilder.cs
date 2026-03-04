@@ -92,13 +92,23 @@ public class TelegramMessageBuilder(
                 }
             }
 
-            var allItems = itemsByKey.Values.ToList();
-
-            // Append prefetched upcoming items directly to allItems
+            // Append prefetched upcoming items and deduplicate by title
             if (upcomingItems != null && upcomingItems.Count > 0)
             {
-                allItems.AddRange(upcomingItems);
+                foreach (var item in upcomingItems)
+                {
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (itemsByKey.ContainsKey(uniqueKey))
+                    {
+                        continue;
+                    }
+
+                    itemsByKey[uniqueKey] = item;
+                }
             }
+
+            var allItems = itemsByKey.Values.ToList();
 
             // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
             var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
@@ -172,8 +182,8 @@ public class TelegramMessageBuilder(
         string eventType = item.EventType?.ToLowerInvariant() ?? "add";
         string eventPrefix = GetEventDescriptionPrefix(eventType, libraryName);
         
-        // Add title with Jellyfin link if hostname is configured
-        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID))
+        // Add title with Jellyfin link if hostname is configured and event is not upcoming
+        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID) && eventType != "upcoming")
         {
             string jellyfinUrl;
             if (systemId == "newsletter-test")
@@ -199,24 +209,11 @@ public class TelegramMessageBuilder(
         if (telegramConfig.DescriptionEnabled && !string.IsNullOrEmpty(item.SeriesOverview))
         {
             messageBuilder.AppendLine(EscapeMarkdown(item.SeriesOverview));
+            messageBuilder.AppendLine();
         }
-
-        messageBuilder.AppendLine();
 
         // Add series/episode information if available
-        if (item.EventType == "upcoming")
-        {
-            if (DateTime.TryParseExact(item.PremiereYear, "dd-MM-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var airDate))
-            {
-                messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Release: {EscapeMarkdown(airDate.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture))}");
-            }
-
-            if (item.Type == "Episode")
-            {
-                messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Episode: S{item.Season:D2}E{item.Episode:D2}");
-            }
-        }
-        else if (item.Type == "Series" && telegramConfig.EpisodesEnabled)
+        if (item.Type == "Series" && telegramConfig.EpisodesEnabled)
         {
             string seaEps;
             if (item.Title == "Newsletter-Test")
@@ -230,7 +227,7 @@ public class TelegramMessageBuilder(
             }
             else
             {
-                ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
+                ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item, upcomingItems);
                 seaEps = GetSeasonEpisode(parsedInfoList);
             }
             
@@ -242,8 +239,10 @@ public class TelegramMessageBuilder(
             }
         }
 
-        // Add metadata fields
-        var metadataParts = new List<string>();
+        if (eventType == "upcoming")
+        {
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Release Date: {EscapeMarkdown(item.PremiereYear ?? "N/A")}");
+        }
 
         if (telegramConfig.RatingEnabled)
         {
@@ -258,7 +257,7 @@ public class TelegramMessageBuilder(
 
         if (telegramConfig.DurationEnabled)
         {
-            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Duration: {item.RunTime} min");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Duration: {(item.RunTime > 0 ? $"{item.RunTime} min" : "N/A")}");
         }
 
         return messageBuilder.ToString().Trim();

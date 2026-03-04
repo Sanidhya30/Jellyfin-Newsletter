@@ -92,6 +92,7 @@ public class UpcomingMediaService
                     SeriesOverview = movie.TryGetProperty("overview", out var overviewProp) ? overviewProp.GetString() ?? string.Empty : string.Empty,
                     Type = "Movie",
                     OfficialRating = movie.TryGetProperty("certification", out var certProp) ? certProp.GetString() ?? string.Empty : string.Empty,
+                    RunTime = movie.TryGetProperty("runtime", out var runtimeProp) ? runtimeProp.GetInt32() : 0,
                     EventType = "upcoming",
                     LibraryId = sourceName
                 };
@@ -188,7 +189,7 @@ public class UpcomingMediaService
                     SeriesOverview = episode.TryGetProperty("overview", out var overviewProp) ? overviewProp.GetString() ?? string.Empty : string.Empty,
                     Season = episode.TryGetProperty("seasonNumber", out var seasonProp) ? seasonProp.GetInt32() : 0,
                     Episode = episode.TryGetProperty("episodeNumber", out var episodeProp) ? episodeProp.GetInt32() : 0,
-                    Type = "Episode",
+                    Type = "Series",
                     EventType = "upcoming",
                     LibraryId = sourceName
                 };
@@ -211,6 +212,7 @@ public class UpcomingMediaService
                 {
                     item.Title = series.TryGetProperty("title", out var seriesTitleProp) ? seriesTitleProp.GetString() ?? string.Empty : string.Empty;
                     item.OfficialRating = series.TryGetProperty("certification", out var certProp) ? certProp.GetString() ?? string.Empty : string.Empty;
+                    item.RunTime = series.TryGetProperty("runtime", out var runtimeProp) ? runtimeProp.GetInt32() : 0;
 
                     // Try to get poster image from series
                     if (series.TryGetProperty("images", out var images))

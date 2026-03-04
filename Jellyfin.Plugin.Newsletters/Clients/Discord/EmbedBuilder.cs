@@ -71,13 +71,23 @@ public class EmbedBuilder(
                 }
             }
 
-            var allItems = itemsByKey.Values.ToList();
-
-            // Append prefetched upcoming items directly to allItems
+            // Append prefetched upcoming items and deduplicate by title
             if (upcomingItems != null && upcomingItems.Count > 0)
             {
-                allItems.AddRange(upcomingItems);
+                foreach (var item in upcomingItems)
+                {
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (itemsByKey.ContainsKey(uniqueKey))
+                    {
+                        continue;
+                    }
+
+                    itemsByKey[uniqueKey] = item;
+                }
             }
+
+            var allItems = itemsByKey.Values.ToList();
 
             // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
             var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
@@ -97,43 +107,28 @@ public class EmbedBuilder(
                 int embedColor = GetEventColor(item.EventType, item.Type, discordConfig);
                 var fieldsList = new Collection<EmbedField>();
 
-                if (item.EventType == "upcoming")
+                string seaEps = string.Empty;
+                if (item.Type == "Series")
                 {
-                    if (DateTime.TryParseExact(item.PremiereYear, "dd-MM-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var airDate))
-                    {
-                        AddFieldIfEnabled(fieldsList, true, "Release Date", airDate.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture));
-                    }
-
-                    if (!string.IsNullOrEmpty(item.OfficialRating))
-                    {
-                        AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG Rating", item.OfficialRating);
-                    }
-
-                    if (item.Type == "Episode")
-                    {
-                        AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episode", $"S{item.Season:D2}E{item.Episode:D2}", false);
-                    }
+                    // for series only
+                    ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item, upcomingItems);
+                    seaEps += GetSeasonEpisode(parsedInfoList);
                 }
-                else
+                
+                if (eventType == "upcoming")
                 {
-                    string seaEps = string.Empty;
-                    if (item.Type == "Series")
-                    {
-                        // for series only
-                        ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
-                        seaEps += GetSeasonEpisode(parsedInfoList);
-                    }
-
-                    AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
-                    AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
-                    AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", $"{item.RunTime} min");
-                    AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);
+                    AddFieldIfEnabled(fieldsList, true, "Release Date", item.PremiereYear ?? "N/A");
                 }
+                
+                AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
+                AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
+                AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", item.RunTime > 0 ? $"{item.RunTime} min" : "N/A");
+                AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);
 
                 // Add event type query otherwise discord deduplicate the embed with same url
                 // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
                 // Adding event type query should not cause issue
-                string embedUrl = string.IsNullOrEmpty(Config.Hostname) 
+                string embedUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
                     ? string.Empty 
                     : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
                 var embed = new Embed

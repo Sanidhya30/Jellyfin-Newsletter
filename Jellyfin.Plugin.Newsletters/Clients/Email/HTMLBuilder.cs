@@ -86,15 +86,15 @@ public class HtmlBuilder(
         Logger.Debug("Replacing {} params:\n " + htmlObj);
         if (replaceValue is null)
         {
-            Logger.Debug($"Replace string is null.. Nothing to replace");
-            return htmlObj;
+            Logger.Debug($"Replace string is null.. Defaulting to N/A");
+            replaceValue = "N/A";
         }
 
         if (replaceKey == "{RunTime}" && (int)replaceValue == 0)
         {
             Logger.Debug($"{replaceKey} == {replaceValue}");
-            Logger.Debug("Skipping replace..");
-            return htmlObj;
+            Logger.Debug("Defaulting to N/A");
+            replaceValue = "N/A";
         }
 
         if (replaceKey == "{CommunityRating}" && replaceValue is float rating)
@@ -163,13 +163,23 @@ public class HtmlBuilder(
             Db.CloseConnection();
         }
 
-        var allItems = itemsByKey.Values.ToList();
-
-        // Append prefetched upcoming items directly to allItems
+        // Append prefetched upcoming items and deduplicate by title
         if (upcomingItems != null && upcomingItems.Count > 0)
         {
-            allItems.AddRange(upcomingItems);
+            foreach (var item in upcomingItems)
+            {
+                string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                string uniqueKey = $"{item.Title}_{eventType}";
+                if (itemsByKey.ContainsKey(uniqueKey))
+                {
+                    continue;
+                }
+
+                itemsByKey[uniqueKey] = item;
+            }
         }
+
+        var allItems = itemsByKey.Values.ToList();
 
         // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
         var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
@@ -271,7 +281,7 @@ public class HtmlBuilder(
             string seaEpsHtml = string.Empty;
             if (item.Type == "Series")
             {
-                var parsedInfoList = ParseSeriesInfo(item);
+                var parsedInfoList = ParseSeriesInfo(item, upcomingItems);
                 seaEpsHtml += GetSeasonEpisodeHTML(parsedInfoList);
             }
 
@@ -305,7 +315,7 @@ public class HtmlBuilder(
             tmp_entry = tmp_entry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
 
             // Compose the entry's HTML now (for accurate size)
-            string itemUrl = string.IsNullOrEmpty(Config.Hostname) 
+            string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
                 ? string.Empty
                 : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
             string entryHTML = tmp_entry
