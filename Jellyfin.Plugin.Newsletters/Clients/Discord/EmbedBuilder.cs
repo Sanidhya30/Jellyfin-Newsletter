@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -19,9 +20,12 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 /// <param name="loggerInstance">The logger instance for logging operations.</param>
 /// <param name="dbInstance">The database instance for data access.</param>
 /// <param name="libraryManager">The library manager for resolving library names.</param>
-public class EmbedBuilder(Logger loggerInstance,
+/// <param name="upcomingItems">The list of prefetched upcoming media items.</param>
+public class EmbedBuilder(
+    Logger loggerInstance,
     SQLiteDatabase dbInstance,
-    ILibraryManager libraryManager)
+    ILibraryManager libraryManager,
+    IReadOnlyList<JsonFileObj> upcomingItems)
     : ClientBuilder(loggerInstance, dbInstance, libraryManager)
 {
      /// <summary>
@@ -67,40 +71,64 @@ public class EmbedBuilder(Logger loggerInstance,
                 }
             }
 
-            // Sort items: event type (add -> update -> delete), then Movie libraries first, then by library name
-            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 } };
-            var sortedItems = itemsByKey.Values
+            // Append prefetched upcoming items and deduplicate by title
+            if (upcomingItems != null && upcomingItems.Count > 0)
+            {
+                foreach (var item in upcomingItems)
+                {
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (itemsByKey.ContainsKey(uniqueKey))
+                    {
+                        continue;
+                    }
+
+                    itemsByKey[uniqueKey] = item;
+                }
+            }
+
+            var allItems = itemsByKey.Values.ToList();
+
+            // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
+            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
+
+            var sortedItems = allItems
                 .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
                 .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-                .ThenBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+                .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
                 .ToList();
 
             // Build embeds from sorted items
             foreach (var item in sortedItems)
             {
                 string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                string libraryName = GetLibraryName(item.LibraryId, libraryNameMap);
+                string libraryName = eventType == "upcoming" ? (item.LibraryId ?? string.Empty) : GetLibraryName(item.LibraryId, libraryNameMap);
 
                 int embedColor = GetEventColor(item.EventType, item.Type, discordConfig);
+                var fieldsList = new Collection<EmbedField>();
+
                 string seaEps = string.Empty;
                 if (item.Type == "Series")
                 {
                     // for series only
-                    ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
+                    ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item, upcomingItems);
                     seaEps += GetSeasonEpisode(parsedInfoList);
                 }
-
-                var fieldsList = new Collection<EmbedField>();
-
-                AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A");
+                
+                if (eventType == "upcoming")
+                {
+                    AddFieldIfEnabled(fieldsList, true, "Release Date", item.PremiereYear ?? "N/A");
+                }
+                
+                AddFieldIfEnabled(fieldsList, discordConfig.RatingEnabled, "Rating", item.CommunityRating > 0 ? item.CommunityRating.Value.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) : "N/A");
                 AddFieldIfEnabled(fieldsList, discordConfig.PGRatingEnabled, "PG rating", item.OfficialRating ?? "N/A");
-                AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", $"{item.RunTime} min");
+                AddFieldIfEnabled(fieldsList, discordConfig.DurationEnabled, "Duration", item.RunTime > 0 ? $"{item.RunTime} min" : "N/A");
                 AddFieldIfEnabled(fieldsList, discordConfig.EpisodesEnabled, "Episodes", seaEps, false);
 
                 // Add event type query otherwise discord deduplicate the embed with same url
                 // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
                 // Adding event type query should not cause issue
-                string embedUrl = string.IsNullOrEmpty(Config.Hostname) 
+                string embedUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
                     ? string.Empty 
                     : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
                 var embed = new Embed
@@ -131,13 +159,20 @@ public class EmbedBuilder(Logger loggerInstance,
                 {
                     if (Config.PosterType == "attachment")
                     {
-                        (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
-
-                        string thumbnailUrl = success ? $"attachment://{uniqueImageName}" : item.ImageURL;
-                        embed.Thumbnail = new Thumbnail
+                        if (item.EventType == "upcoming")
                         {
-                            Url = thumbnailUrl
-                        };
+                            embed.Thumbnail = new Thumbnail { Url = item.ImageURL };
+                        }
+                        else
+                        {
+                            (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
+
+                            string thumbnailUrl = success ? $"attachment://{uniqueImageName}" : item.ImageURL;
+                            embed.Thumbnail = new Thumbnail
+                            {
+                                Url = thumbnailUrl
+                            };
+                        }
                     }
                     else 
                     {
@@ -266,6 +301,11 @@ public class EmbedBuilder(Logger loggerInstance,
         }
 
         var eventLower = eventType.ToLowerInvariant();
+
+        if (eventLower == "upcoming")
+        {
+            return Convert.ToInt32("FF8C00", 16); // Orange for upcoming items
+        }
         
         if (mediaType == "Series")
         {
@@ -299,10 +339,12 @@ public class EmbedBuilder(Logger loggerInstance,
     {
         string basePrefix = GetEventDescriptionPrefixBase(eventType, libraryName);
         string libDisplay = string.IsNullOrEmpty(libraryName) ? "Library" : libraryName;
+
         // Discord uses bold formatting for the description prefix
         return basePrefix.Replace($"Added to {libDisplay}", $"**Added to {libDisplay}**", StringComparison.Ordinal)
                         .Replace($"Removed from {libDisplay}", $"**Removed from {libDisplay}**", StringComparison.Ordinal)
-                        .Replace($"Updated in {libDisplay}", $"**Updated in {libDisplay}**", StringComparison.Ordinal);
+                        .Replace($"Updated in {libDisplay}", $"**Updated in {libDisplay}**", StringComparison.Ordinal)
+                        .Replace($"Upcoming in {libDisplay}", $"**Upcoming in {libDisplay}**", StringComparison.Ordinal);
     }
 }
 

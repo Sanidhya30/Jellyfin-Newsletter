@@ -140,6 +140,9 @@ public class PluginConfiguration : BasePluginConfiguration
 
         // default community rating decimal places
         CommunityRatingDecimalPlaces = 1;
+
+        // default upcoming media settings
+        UpcomingDaysAhead = 7;
     }
 
     /// <summary>
@@ -395,6 +398,13 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public string TemplateCategory { get; set; } = "Modern";
 
+    // Upcoming Media Settings
+
+    /// <summary>
+    /// Gets or sets the number of days ahead to look for upcoming content.
+    /// </summary>
+    public int UpcomingDaysAhead { get; set; }
+
     // Telegram Bot Details
 
     /// <summary>
@@ -453,6 +463,16 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the collection of Email/SMTP configurations.
     /// </summary>
     public Collection<EmailConfiguration> EmailConfigurations { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the collection of Radarr instance configurations.
+    /// </summary>
+    public Collection<RadarrConfiguration> RadarrConfigurations { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the collection of Sonarr instance configurations.
+    /// </summary>
+    public Collection<SonarrConfiguration> SonarrConfigurations { get; set; } = new();
 
     /// <summary>
     /// Migrates legacy single-value configuration properties to the new collection-based format.

@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,8 +18,14 @@ namespace Jellyfin.Plugin.Newsletters.Clients;
 /// </summary>
 public class Client(Logger loggerInstance,
     SQLiteDatabase dbInstance,
-    ILibraryManager libraryManagerInstance) : ControllerBase
+    ILibraryManager libraryManagerInstance,
+    UpcomingMediaService upcomingMediaServiceInstance) : ControllerBase
 {
+    /// <summary>
+    /// Gets the upcoming media service instance.
+    /// </summary>
+    protected UpcomingMediaService UpcomingService { get; } = upcomingMediaServiceInstance;
+    
     /// <summary>
     /// Gets the current plugin configuration.
     /// </summary>
@@ -93,5 +103,17 @@ public class Client(Logger loggerInstance,
         {
             Db.CloseConnection();
         }
+    }
+
+    /// <summary>
+    /// Checks if there is any data to send (either current DB or upcoming media).
+    /// </summary>
+    /// <returns>The task result contains a boolean indicating if there is data to send, and a list of prefetched upcoming items.</returns>
+    protected async Task<(bool HasData, List<JsonFileObj> UpcomingItems)> HasDataToSendAsync()
+    {
+        bool dbPopulated = NewsletterDbIsPopulated();
+        var upcomingItems = await UpcomingService.GetAllUpcomingAsync().ConfigureAwait(false);
+        
+        return (dbPopulated || upcomingItems.Count > 0, upcomingItems);
     }
 }

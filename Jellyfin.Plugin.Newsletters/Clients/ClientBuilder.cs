@@ -90,28 +90,50 @@ public class ClientBuilder(Logger loggerInstance,
     /// Parses series information from the given JsonFileObj and returns a collection of NlDetailsJson.
     /// </summary>
     /// <param name="currObj">The current JsonFileObj containing series information.</param>
+    /// <param name="upcomingItems">Optional list of upcoming items to parse from.</param>
     /// <returns>A collection of NlDetailsJson representing the parsed series details.</returns>
-    protected ReadOnlyCollection<NlDetailsJson> ParseSeriesInfo(JsonFileObj currObj)
+    protected ReadOnlyCollection<NlDetailsJson> ParseSeriesInfo(JsonFileObj currObj, IReadOnlyList<JsonFileObj>? upcomingItems = null)
     {
         List<NlDetailsJson> compiledList = new List<NlDetailsJson>();
         List<NlDetailsJson> finalList = new List<NlDetailsJson>();
 
-        // Query by title and event type to avoid conflicts when same title exists with different events
-        foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "' AND EventType='" + currObj.EventType.Replace("'", "''", StringComparison.Ordinal) + "';"))
+        if (currObj.EventType == "upcoming" && upcomingItems != null)
         {
-            if (row is not null)
+            foreach (var itemObj in upcomingItems)
             {
-                JsonFileObj itemObj = JsonFileObj.ConvertToObj(row);
-
-                NlDetailsJson tempVar = new()
+                if (itemObj.Title == currObj.Title && itemObj.EventType == currObj.EventType)
                 {
-                    Title = itemObj.Title,
-                    Season = itemObj.Season,
-                    Episode = itemObj.Episode
-                };
+                    NlDetailsJson tempVar = new()
+                    {
+                        Title = itemObj.Title,
+                        Season = itemObj.Season,
+                        Episode = itemObj.Episode
+                    };
 
-                Logger.Debug("tempVar.Season: " + tempVar.Season + " : tempVar.Episode: " + tempVar.Episode);
-                compiledList.Add(tempVar);
+                    Logger.Debug("tempVar.Season: " + tempVar.Season + " : tempVar.Episode: " + tempVar.Episode);
+                    compiledList.Add(tempVar);
+                }
+            }
+        }
+        else
+        {
+            // Query by title and event type to avoid conflicts when same title exists with different events
+            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "' AND EventType='" + currObj.EventType.Replace("'", "''", StringComparison.Ordinal) + "';"))
+            {
+                if (row is not null)
+                {
+                    JsonFileObj itemObj = JsonFileObj.ConvertToObj(row);
+
+                    NlDetailsJson tempVar = new()
+                    {
+                        Title = itemObj.Title,
+                        Season = itemObj.Season,
+                        Episode = itemObj.Episode
+                    };
+
+                    Logger.Debug("tempVar.Season: " + tempVar.Season + " : tempVar.Episode: " + tempVar.Episode);
+                    compiledList.Add(tempVar);
+                }
             }
         }
 
@@ -411,6 +433,7 @@ public class ClientBuilder(Logger loggerInstance,
             "add" => $"🎬 Added to {libDisplay}",
             "delete" => $"🗑️ Removed from {libDisplay}",
             "update" => $"🔄 Updated in {libDisplay}",
+            "upcoming" => $"📅 Upcoming in {libDisplay}",
             _ => $"🎬 Added to {libDisplay}"
         };
     }

@@ -2,6 +2,7 @@
 using Jellyfin.Plugin.Newsletters.Clients.Discord;
 using Jellyfin.Plugin.Newsletters.Clients.Email;
 using Jellyfin.Plugin.Newsletters.Clients.Telegram;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.ItemEventNotifier;
 using Jellyfin.Plugin.Newsletters.Scanner;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -32,6 +33,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Register the core services
         serviceCollection.AddSingleton<Logger>();
         serviceCollection.AddSingleton<SQLiteDatabase>();
+
+        // Register the integration services
+        serviceCollection.AddSingleton<UpcomingMediaService>();
 
         // Register the entry point for item event notifications
         serviceCollection.AddHostedService<ItemEventNotifierEntryPoint>();

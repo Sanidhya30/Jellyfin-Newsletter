@@ -7,7 +7,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Library;
@@ -25,8 +27,9 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Telegram;
 public class TelegramClient(IServerApplicationHost appHost,
     Logger loggerInstance,
     SQLiteDatabase dbInstance,
-    ILibraryManager libraryManager)
-    : Client(loggerInstance, dbInstance, libraryManager), IClient, IDisposable
+    ILibraryManager libraryManager,
+    UpcomingMediaService upcomingMediaService)
+    : Client(loggerInstance, dbInstance, libraryManager, upcomingMediaService), IClient, IDisposable
 {
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
@@ -94,7 +97,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager);
+            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager, new List<JsonFileObj>());
             var (testMessage, imageUrl) = builder.BuildTestMessage(telegramConfig);
             
             if (string.IsNullOrEmpty(testMessage))
@@ -162,7 +165,8 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            if (NewsletterDbIsPopulated())
+            var (hasData, upcomingItems) = HasDataToSendAsync().GetAwaiter().GetResult();
+            if (hasData)
             {
                 // Iterate over all Telegram configurations
                 foreach (var telegramConfig in Config.TelegramConfigurations)
@@ -175,13 +179,13 @@ public class TelegramClient(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending Telegram message to '{telegramConfig.Name}'!");
 
-                    bool result = SendToBot(telegramConfig);
+                    bool result = SendToBot(telegramConfig, telegramConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     anySuccess |= result;
                 }
             }
             else
             {
-                Logger.Info("There is no Newsletter data.. Have I scanned or sent out a Telegram newsletter recently?");
+                Logger.Info("There is no Newsletter data, nor any upcoming media. Have I scanned or sent out a Telegram newsletter recently?");
             }
         }
         catch (Exception e)
@@ -196,8 +200,9 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// Sends newsletter data to a specific Telegram bot configuration.
     /// </summary>
     /// <param name="telegramConfig">The Telegram configuration to use.</param>
+    /// <param name="upcomingItems">The prefetched list of upcoming media items.</param>
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
-    private bool SendToBot(TelegramConfiguration telegramConfig)
+    private bool SendToBot(TelegramConfiguration telegramConfig, IReadOnlyList<JsonFileObj> upcomingItems)
     {
         bool anyResult = false; // true if at least one message was sent successfully across all chat IDs
         string botToken = telegramConfig.BotToken;
@@ -215,7 +220,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager);
+            TelegramMessageBuilder builder = new(Logger, Db, LibraryManager, upcomingItems);
             var messageTuples = builder.BuildMessagesFromNewsletterData(applicationHost.SystemId, telegramConfig);
 
             // Telegram has a 4096 character limit per message

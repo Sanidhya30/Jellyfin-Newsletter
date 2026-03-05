@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -15,50 +16,51 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Email;
 /// <summary>
 /// Builds HTML content for newsletters, including templating and chunking logic.
 /// </summary>
-public class HtmlBuilder : ClientBuilder
+/// <param name="loggerInstance">The logger instance for logging operations.</param>
+/// <param name="dbInstance">The database instance for data access.</param>
+/// <param name="emailConfig">The email configuration to use for templates.</param>
+/// <param name="libraryManager">The library manager for resolving library names.</param>
+/// <param name="upcomingItems">The list of prefetched upcoming media items.</param>
+public class HtmlBuilder(
+    Logger loggerInstance,
+    SQLiteDatabase dbInstance,
+    EmailConfiguration emailConfig,
+    ILibraryManager libraryManager,
+    IReadOnlyList<JsonFileObj> upcomingItems)
+    : ClientBuilder(loggerInstance, dbInstance, libraryManager)
 {
-    // Global Vars
     // Constant fields
     private const string Append = "Append";
     private const string Write = "Overwrite";
 
-    // Readonly
-    private readonly string newslettersDir;
-    private readonly string newsletterHTMLFile;
-
-    // private readonly string[] itemJsonKeys = 
+    // Readonly fields initialized from the Plugin Config directly
+    private readonly string newslettersDir = Plugin.Instance!.Configuration.NewsletterDir;
+    private readonly string newsletterHTMLFile = GetNewsletterHTMLFileLocation(emailConfig.Name);
 
     private string emailBody = string.Empty;
     private string emailEntry = string.Empty;
-    // private List<string> fileList;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="HtmlBuilder"/> class.
-    /// </summary>
-    /// <param name="loggerInstance">The logger instance to use for logging.</param>
-    /// <param name="dbInstance">The SQLite database instance to use for data access.</param>
-    /// <param name="emailConfig">The email configuration to use for templates.</param>
-    /// <param name="libraryManager">The library manager for resolving library names.</param>
-    public HtmlBuilder(
-        Logger loggerInstance,
-        SQLiteDatabase dbInstance,
-        EmailConfiguration emailConfig,
-        ILibraryManager libraryManager)
-        : base(loggerInstance, dbInstance, libraryManager)
+    private bool _isSetup;
+
+    private static string GetNewsletterHTMLFileLocation(string configName)
     {
-        DefaultBodyAndEntry(emailConfig); // set default body and entry HTML from template file if not set in config
-
-        newslettersDir = Config.NewsletterDir; // newsletterdir
-        Directory.CreateDirectory(newslettersDir);
-
-        // Always generate a unique filename
         string currDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss", System.Globalization.CultureInfo.InvariantCulture);
-        string configName = emailConfig.Name;
-        // Sanitize config name for filename
-        configName = string.Join("_", configName.Split(Path.GetInvalidFileNameChars()));
-        newsletterHTMLFile = Path.Combine(newslettersDir, $"{currDate}_{configName}_Newsletter.html");
+        string safeName = string.Join("_", configName.Split(Path.GetInvalidFileNameChars()));
+        return Path.Combine(Plugin.Instance!.Configuration.NewsletterDir, $"{currDate}_{safeName}_Newsletter.html");
+    }
 
+    private void EnsureSetup(EmailConfiguration config)
+    {
+        if (_isSetup)
+        {
+            return;
+        }
+
+        DefaultBodyAndEntry(config); // set default body and entry HTML from template file if not set in config
+
+        Directory.CreateDirectory(newslettersDir);
         Logger.Info("Newsletter will be saved to: " + newsletterHTMLFile);
+        _isSetup = true;
     }
 
     /// <summary>
@@ -68,6 +70,7 @@ public class HtmlBuilder : ClientBuilder
     /// <returns>The default HTML body string.</returns>
     public string GetDefaultHTMLBody(EmailConfiguration emailConfig)
     {
+        EnsureSetup(emailConfig);
         return emailBody;
     }
 
@@ -83,20 +86,20 @@ public class HtmlBuilder : ClientBuilder
         Logger.Debug("Replacing {} params:\n " + htmlObj);
         if (replaceValue is null)
         {
-            Logger.Debug($"Replace string is null.. Nothing to replace");
-            return htmlObj;
+            Logger.Debug($"Replace string is null.. Defaulting to N/A");
+            replaceValue = "N/A";
         }
 
         if (replaceKey == "{RunTime}" && (int)replaceValue == 0)
         {
             Logger.Debug($"{replaceKey} == {replaceValue}");
-            Logger.Debug("Skipping replace..");
-            return htmlObj;
+            Logger.Debug("Defaulting to N/A");
+            replaceValue = "N/A";
         }
 
         if (replaceKey == "{CommunityRating}" && replaceValue is float rating)
         {
-            replaceValue = rating.ToString($"F{Config.CommunityRatingDecimalPlaces}", System.Globalization.CultureInfo.InvariantCulture);
+            replaceValue = rating > 0 ? rating.ToString($"F{Config.CommunityRatingDecimalPlaces}", System.Globalization.CultureInfo.InvariantCulture) : "N/A";
         }
 
         Logger.Debug($"Replace Value {replaceKey} with " + replaceValue);
@@ -116,6 +119,8 @@ public class HtmlBuilder : ClientBuilder
     /// <returns>A collection of tuples containing HTML strings and associated image streams with content IDs.</returns>
     public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData(string serverId, EmailConfiguration emailConfig)
     {
+        EnsureSetup(emailConfig);
+
         // Build library name map for resolving LibraryId -> LibraryName
         var libraryNameMap = BuildLibraryNameMap();
 
@@ -158,12 +163,31 @@ public class HtmlBuilder : ClientBuilder
             Db.CloseConnection();
         }
 
-        // Sort items: event type (add -> update -> delete), then Movie libraries first, then by library name
-        var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 } };
-        var sortedItems = itemsByKey.Values
+        // Append prefetched upcoming items and deduplicate by title
+        if (upcomingItems != null && upcomingItems.Count > 0)
+        {
+            foreach (var item in upcomingItems)
+            {
+                string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                string uniqueKey = $"{item.Title}_{eventType}";
+                if (itemsByKey.ContainsKey(uniqueKey))
+                {
+                    continue;
+                }
+
+                itemsByKey[uniqueKey] = item;
+            }
+        }
+
+        var allItems = itemsByKey.Values.ToList();
+
+        // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
+        var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
+
+        var sortedItems = allItems
             .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
             .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-            .ThenBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+            .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
             .ToList();
 
         // Group sorted items by event type, then by library name (order is preserved from sort)
@@ -173,7 +197,7 @@ public class HtmlBuilder : ClientBuilder
             {
                 EventType = eventGroup.Key,
                 Libraries = eventGroup
-                    .GroupBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+                    .GroupBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
                     .Select(libGroup => new { LibraryName = libGroup.Key, Items = libGroup.ToList() })
             });
 
@@ -257,7 +281,7 @@ public class HtmlBuilder : ClientBuilder
             string seaEpsHtml = string.Empty;
             if (item.Type == "Series")
             {
-                var parsedInfoList = ParseSeriesInfo(item);
+                var parsedInfoList = ParseSeriesInfo(item, upcomingItems);
                 seaEpsHtml += GetSeasonEpisodeHTML(parsedInfoList);
             }
 
@@ -291,7 +315,7 @@ public class HtmlBuilder : ClientBuilder
             tmp_entry = tmp_entry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
 
             // Compose the entry's HTML now (for accurate size)
-            string itemUrl = string.IsNullOrEmpty(Config.Hostname) 
+            string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
                 ? string.Empty
                 : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
             string entryHTML = tmp_entry
@@ -332,6 +356,7 @@ public class HtmlBuilder : ClientBuilder
             "add" => ($"Added to {libraryName}", "🎬", "#4CAF50"),
             "update" => ($"Updated in {libraryName}", "🔄", "#2196F3"),
             "delete" => ($"Removed from {libraryName}", "🗑️", "#F44336"),
+            "upcoming" => ($"Upcoming in {libraryName}", "📅", "#FF8C00"),
             _ => ($"Added to {libraryName}", "🎬", "#4CAF50")
         };
 
@@ -355,6 +380,7 @@ public class HtmlBuilder : ClientBuilder
             "add" => ("NEW", "🎬", "#4CAF50"),
             "update" => ("UPDATED", "🔄", "#2196F3"),
             "delete" => ("REMOVED", "🗑️", "#F44336"),
+            "upcoming" => ("UPCOMING", "📅", "#FF8C00"),
             _ => ("NEW", "🎬", "#4CAF50")
         };
 
@@ -373,6 +399,8 @@ public class HtmlBuilder : ClientBuilder
 
         try
         {
+            EnsureSetup(emailConfig);
+
             // Create test entries for each event type
             string[] eventTypes = { "add", "update", "delete" };
             string[] titles = { "Test Series", "Test Movie", "Test Series" };
@@ -439,7 +467,6 @@ public class HtmlBuilder : ClientBuilder
     private string GetSeasonEpisodeHTML(IReadOnlyCollection<NlDetailsJson> list)
     {
         string baseText = GetSeasonEpisodeBase(list);
-        // Convert newlines to HTML <br> tags and trim the trailing newline
         return baseText.TrimEnd('\r', '\n').Replace("\n", "<br>", StringComparison.Ordinal);
     }
 

@@ -31,4 +31,9 @@ public interface INewsletterConfiguration
     /// Gets a value indicating whether to send newsletter on item deleted.
     /// </summary>
     bool NewsletterOnItemDeletedEnabled { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether to include upcoming items in the newsletter.
+    /// </summary>
+    bool NewsletterOnUpcomingItemEnabled { get; }
 }

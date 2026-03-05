@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -14,9 +15,11 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Telegram;
 /// <summary>
 /// Builds Telegram messages from newsletter data.
 /// </summary>
-public class TelegramMessageBuilder(Logger loggerInstance,
+public class TelegramMessageBuilder(
+    Logger loggerInstance,
     SQLiteDatabase dbInstance,
-    ILibraryManager libraryManager) : ClientBuilder(loggerInstance, dbInstance, libraryManager)
+    ILibraryManager libraryManager,
+    IReadOnlyList<JsonFileObj> upcomingItems) : ClientBuilder(loggerInstance, dbInstance, libraryManager)
 {
     /// <summary>
     /// Builds a test message for Telegram.
@@ -89,18 +92,38 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                 }
             }
 
-            // Sort items: event type (add -> update -> delete), then Movie libraries first, then by library name
-            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 } };
-            var sortedItems = itemsByKey.Values
+            // Append prefetched upcoming items and deduplicate by title
+            if (upcomingItems != null && upcomingItems.Count > 0)
+            {
+                foreach (var item in upcomingItems)
+                {
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (itemsByKey.ContainsKey(uniqueKey))
+                    {
+                        continue;
+                    }
+
+                    itemsByKey[uniqueKey] = item;
+                }
+            }
+
+            var allItems = itemsByKey.Values.ToList();
+
+            // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
+            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
+
+            var sortedItems = allItems
                 .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
                 .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-                .ThenBy(i => GetLibraryName(i.LibraryId, libraryNameMap))
+                .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
                 .ToList();
 
             // Build messages from sorted items
             foreach (var item in sortedItems)
             {
-                string libraryName = GetLibraryName(item.LibraryId, libraryNameMap);
+                string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                string libraryName = eventType == "upcoming" ? (item.LibraryId ?? string.Empty) : GetLibraryName(item.LibraryId, libraryNameMap);
                 var messageText = BuildMessageText(item, systemId, telegramConfig, libraryName);
                     
                 string? imageUrl = null;
@@ -111,8 +134,15 @@ public class TelegramMessageBuilder(Logger loggerInstance,
                 {
                     if (Config.PosterType == "attachment")
                     {
-                        // Upload as multipart file
-                        (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
+                        if (item.EventType == "upcoming")
+                        {
+                            imageUrl = item.ImageURL;
+                        }
+                        else
+                        {
+                            // Upload as multipart file
+                            (resizedImageStream, uniqueImageName, var success) = ResizeImage(item.PosterPath);
+                        }
                     }
                     else
                     {
@@ -152,8 +182,8 @@ public class TelegramMessageBuilder(Logger loggerInstance,
         string eventType = item.EventType?.ToLowerInvariant() ?? "add";
         string eventPrefix = GetEventDescriptionPrefix(eventType, libraryName);
         
-        // Add title with Jellyfin link if hostname is configured
-        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID))
+        // Add title with Jellyfin link if hostname is configured and event is not upcoming
+        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID) && eventType != "upcoming")
         {
             string jellyfinUrl;
             if (systemId == "newsletter-test")
@@ -179,9 +209,8 @@ public class TelegramMessageBuilder(Logger loggerInstance,
         if (telegramConfig.DescriptionEnabled && !string.IsNullOrEmpty(item.SeriesOverview))
         {
             messageBuilder.AppendLine(EscapeMarkdown(item.SeriesOverview));
+            messageBuilder.AppendLine();
         }
-
-        messageBuilder.AppendLine();
 
         // Add series/episode information if available
         if (item.Type == "Series" && telegramConfig.EpisodesEnabled)
@@ -198,7 +227,7 @@ public class TelegramMessageBuilder(Logger loggerInstance,
             }
             else
             {
-                ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item);
+                ReadOnlyCollection<NlDetailsJson> parsedInfoList = ParseSeriesInfo(item, upcomingItems);
                 seaEps = GetSeasonEpisode(parsedInfoList);
             }
             
@@ -210,13 +239,14 @@ public class TelegramMessageBuilder(Logger loggerInstance,
             }
         }
 
-        // Add metadata fields
-        var metadataParts = new List<string>();
+        if (eventType == "upcoming")
+        {
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Release Date: {EscapeMarkdown(item.PremiereYear ?? "N/A")}");
+        }
 
         if (telegramConfig.RatingEnabled)
         {
-            // var ratingString = item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A";
-            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Rating: {EscapeMarkdown(item.CommunityRating?.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) ?? "N/A")}");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Rating: {EscapeMarkdown(item.CommunityRating > 0 ? item.CommunityRating.Value.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) : "N/A")}");
         }
 
         if (telegramConfig.PGRatingEnabled)
@@ -226,7 +256,7 @@ public class TelegramMessageBuilder(Logger loggerInstance,
 
         if (telegramConfig.DurationEnabled)
         {
-            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Duration: {item.RunTime} min");
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Duration: {(item.RunTime > 0 ? $"{item.RunTime} min" : "N/A")}");
         }
 
         return messageBuilder.ToString().Trim();

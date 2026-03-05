@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
+using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MediaBrowser.Common.Api;
@@ -29,7 +31,8 @@ namespace Jellyfin.Plugin.Newsletters.Clients.Email;
 public class SmtpMailer(IServerApplicationHost appHost,
     Logger loggerInstance,
     SQLiteDatabase dbInstance,
-    ILibraryManager libraryManager) : Client(loggerInstance, dbInstance, libraryManager), IClient
+    ILibraryManager libraryManager,
+    UpcomingMediaService upcomingMediaService) : Client(loggerInstance, dbInstance, libraryManager, upcomingMediaService), IClient
 {
     private readonly IServerApplicationHost applicationHost = appHost;
 
@@ -100,7 +103,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return;
             }
 
-            HtmlBuilder hb = new(Logger, Db, emailConfig, LibraryManager);
+            HtmlBuilder hb = new(Logger, Db, emailConfig, LibraryManager, new List<JsonFileObj>());
 
             string body = hb.GetDefaultHTMLBody(emailConfig);
             string builtString = hb.BuildHtmlStringsForTest(emailConfig);
@@ -175,7 +178,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
         try
         {
-            if (NewsletterDbIsPopulated())
+            var (hasData, upcomingItems) = HasDataToSendAsync().GetAwaiter().GetResult();
+            if (hasData)
             {
                 // Iterate over all Email configurations
                 foreach (var emailConfig in Config.EmailConfigurations)
@@ -188,13 +192,13 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending email to '{emailConfig.Name}'!");
 
-                    bool anyResult = SendToSmtp(emailConfig);
+                    bool anyResult = SendToSmtp(emailConfig, emailConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     anySuccess |= anyResult;
                 }
             }
             else
             {
-                Logger.Info("There is no Newsletter data.. Have I scanned or sent out an email newsletter recently?");
+                Logger.Info("There is no Newsletter data, nor any upcoming media. Have I scanned or sent out an email newsletter recently?");
             }
         }
         catch (Exception e)
@@ -209,8 +213,9 @@ public class SmtpMailer(IServerApplicationHost appHost,
     /// Sends newsletter data to a specific SMTP configuration.
     /// </summary>
     /// <param name="emailConfig">The Email configuration to use.</param>
+    /// <param name="upcomingItems">The prefetched list of upcoming media items.</param>
     /// <returns>True if the email was sent successfully; otherwise, false.</returns>
-    private bool SendToSmtp(EmailConfiguration emailConfig)
+    private bool SendToSmtp(EmailConfiguration emailConfig, IReadOnlyList<JsonFileObj> upcomingItems)
     {
         bool anyResult = false;
         try
@@ -259,7 +264,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return false;
             }
 
-            HtmlBuilder hb = new(Logger, Db, emailConfig, LibraryManager);
+            HtmlBuilder hb = new(Logger, Db, emailConfig, LibraryManager, upcomingItems);
 
             string body = hb.GetDefaultHTMLBody(emailConfig);
             ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData(applicationHost.SystemId, emailConfig);
