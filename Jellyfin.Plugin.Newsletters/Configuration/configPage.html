@@ -748,10 +748,10 @@
                 config.MoviesUpdateEmbedColor = document.getElementById('discord-movies-update-color-' + id).value;
 
                 // Update Event Toggles
-                if (document.getElementById('discord-event-add-' + id)) config.NewsletterOnItemAddedEnabled = document.getElementById('discord-event-add-' + id).checked;
-                if (document.getElementById('discord-event-update-' + id)) config.NewsletterOnItemUpdatedEnabled = document.getElementById('discord-event-update-' + id).checked;
-                if (document.getElementById('discord-event-delete-' + id)) config.NewsletterOnItemDeletedEnabled = document.getElementById('discord-event-delete-' + id).checked;
-                if (document.getElementById('discord-event-upcoming-' + id)) config.NewsletterOnUpcomingItemEnabled = document.getElementById('discord-event-upcoming-' + id).checked;
+                config.NewsletterOnItemAddedEnabled = document.getElementById('discord-event-add-' + id).checked;
+                config.NewsletterOnItemUpdatedEnabled = document.getElementById('discord-event-update-' + id).checked;
+                config.NewsletterOnItemDeletedEnabled = document.getElementById('discord-event-delete-' + id).checked;
+                config.NewsletterOnUpcomingItemEnabled = document.getElementById('discord-event-upcoming-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.discord-series-lib-' + id + ':checked');
@@ -902,10 +902,10 @@
                 config.EpisodesEnabled = document.getElementById('telegram-episodes-' + id).checked;
 
                 // Update Event Toggles
-                if (document.getElementById('telegram-event-add-' + id)) config.NewsletterOnItemAddedEnabled = document.getElementById('telegram-event-add-' + id).checked;
-                if (document.getElementById('telegram-event-update-' + id)) config.NewsletterOnItemUpdatedEnabled = document.getElementById('telegram-event-update-' + id).checked;
-                if (document.getElementById('telegram-event-delete-' + id)) config.NewsletterOnItemDeletedEnabled = document.getElementById('telegram-event-delete-' + id).checked;
-                if (document.getElementById('telegram-event-upcoming-' + id)) config.NewsletterOnUpcomingItemEnabled = document.getElementById('telegram-event-upcoming-' + id).checked;
+                config.NewsletterOnItemAddedEnabled = document.getElementById('telegram-event-add-' + id).checked;
+                config.NewsletterOnItemUpdatedEnabled = document.getElementById('telegram-event-update-' + id).checked;
+                config.NewsletterOnItemDeletedEnabled = document.getElementById('telegram-event-delete-' + id).checked;
+                config.NewsletterOnUpcomingItemEnabled = document.getElementById('telegram-event-upcoming-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.telegram-series-lib-' + id + ':checked');
@@ -995,7 +995,8 @@
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
-                    NewsletterOnUpcomingItemEnabled: false
+                    NewsletterOnUpcomingItemEnabled: false,
+                    EnableSsl: true
                 };
                 emailConfigs.push(newConfig);
                 renderEmailConfigs();
@@ -1043,12 +1044,13 @@
                 config.Body = document.getElementById('email-body-' + id).value;
                 config.Entry = document.getElementById('email-entry-' + id).value;
                 config.TemplateCategory = document.getElementById('email-category-' + id).value;
+                config.EnableSsl = document.getElementById('email-ssl-' + id).checked;
 
                 // Update Event Toggles
-                if (document.getElementById('email-event-add-' + id)) config.NewsletterOnItemAddedEnabled = document.getElementById('email-event-add-' + id).checked;
-                if (document.getElementById('email-event-update-' + id)) config.NewsletterOnItemUpdatedEnabled = document.getElementById('email-event-update-' + id).checked;
-                if (document.getElementById('email-event-delete-' + id)) config.NewsletterOnItemDeletedEnabled = document.getElementById('email-event-delete-' + id).checked;
-                if (document.getElementById('email-event-upcoming-' + id)) config.NewsletterOnUpcomingItemEnabled = document.getElementById('email-event-upcoming-' + id).checked;
+                config.NewsletterOnItemAddedEnabled = document.getElementById('email-event-add-' + id).checked;
+                config.NewsletterOnItemUpdatedEnabled = document.getElementById('email-event-update-' + id).checked;
+                config.NewsletterOnItemDeletedEnabled = document.getElementById('email-event-delete-' + id).checked;
+                config.NewsletterOnUpcomingItemEnabled = document.getElementById('email-event-upcoming-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.email-series-lib-' + id + ':checked');
@@ -1105,6 +1107,12 @@
                     html += '        <label class="inputLabel inputLabelUnfocused">SMTP Password:</label>';
                     html += '        <input id="email-pass-' + config.Id + '" type="password" is="emby-input" value="' + (config.SMTPPass || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '      </div>';
+                    html += '    </div>';
+                    html += '    <div class="checkboxContainer">';
+                    html += '      <label class="emby-checkbox-label">';
+                    html += '        <input id="email-ssl-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EnableSsl !== false ? 'checked' : '') + ' onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '        <span>Enable SSL/TLS</span>';
+                    html += '      </label>';
                     html += '    </div>';
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">To Address:</label>';
