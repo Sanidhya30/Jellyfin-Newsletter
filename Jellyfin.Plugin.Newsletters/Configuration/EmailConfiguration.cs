@@ -102,4 +102,9 @@ public class EmailConfiguration : INewsletterConfiguration
     /// Gets or sets a value indicating whether to include upcoming items in the newsletter.
     /// </summary>
     public bool NewsletterOnUpcomingItemEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether SSL is enabled for the SMTP connection.
+    /// </summary>
+    public bool EnableSsl { get; set; } = true;
 }

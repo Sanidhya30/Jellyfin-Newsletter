@@ -63,7 +63,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
             Logger.Debug($"Sending out test mail for '{emailConfig.Name}'!");
             string smtpAddress = emailConfig.SMTPServer;
             int portNumber = emailConfig.SMTPPort;
-            bool enableSSL = true;
+            bool enableSSL = emailConfig.EnableSsl;
             string emailFromAddress = emailConfig.FromAddr;
             string username = emailConfig.SMTPUser;
             string password = emailConfig.SMTPPass;
@@ -223,7 +223,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
             Logger.Debug($"Sending out mail for '{emailConfig.Name}'!");
             string smtpAddress = emailConfig.SMTPServer;
             int portNumber = emailConfig.SMTPPort;
-            bool enableSSL = true;
+            bool enableSSL = emailConfig.EnableSsl;
             string emailFromAddress = emailConfig.FromAddr;
             string username = emailConfig.SMTPUser;
             string password = emailConfig.SMTPPass;
