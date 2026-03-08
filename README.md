@@ -75,12 +75,10 @@ Additionally, the plugin integrates with **Radarr** and **Sonarr** to include up
 <p align="center">
     <img src="images/Newsletter_Added_Telegram_Example.png"
          alt="Added Telegram Screenshot"
-         height="600"
-         width="49%"/>
+         height="600">
     <img src="images/Newsletter_Removed_Telegram_Example.png"
          alt="Removed Telegram Screenshot"
-         height="600"
-         width="49%"/>
+         height="600">
 </p>
 
 </details>
