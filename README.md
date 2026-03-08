@@ -15,11 +15,14 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 * Local Poster images support as attachments
 * Event-Based item detection and notifications (Add/Update/Delete)
 * Per-library selection for series and movies per client
+* Radarr & Sonarr Integration for Upcoming Media
 * Multiple Bug Fixes, Enhancements and much more!!!
 
 # Description
 
 This plugin uses event-driven notifications with scheduled processing. When library changes occur (additions or deletions), they are detected in real-time and stored in the database. A hidden background task processes these events every 30 seconds, and the main Newsletter task generates and sends newsletters containing all accumulated events.
+
+Additionally, the plugin integrates with **Radarr** and **Sonarr** to include upcoming media in your newsletters, giving users a preview of what's coming soon to your server.
 
 # Screenshots
 
@@ -167,6 +170,30 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 * TMDB Poster - Uses image URLs from TheMovieDB (default, smallest emails).
 * Local Poster Images - Embeds local poster images directly in the email/discord embed (larger messages).
 
+### Radarr / Sonarr Configuration
+
+> ***You can configure multiple Radarr and Sonarr instances. Each instance has its own URL, API key, and instance name. The plugin uses these to fetch upcoming media via the Radarr/Sonarr calendar APIs.***
+
+### Instance Name
+
+- A name for this Radarr/Sonarr instance. This name appears as the section header in the upcoming media portion of your newsletter.
+
+### URL
+
+- The base URL of your Radarr/Sonarr instance (e.g., `http://localhost:7878` for Radarr, `http://localhost:8989` for Sonarr).
+
+### API Key
+
+- The API key for your Radarr/Sonarr instance. Found under Settings → General → API Key in the respective application.
+
+### Test Connection
+
+- Use the "Test" button to verify connectivity to your Radarr/Sonarr instance before saving.
+
+### Upcoming Days Ahead
+
+- Configure how many days ahead to look for upcoming content (default: 7 days). This is a global setting shared across all Radarr/Sonarr instances.
+
 </details>
 
 <details>
@@ -198,6 +225,10 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 - The port number used by the email server above
   - Defaults to gmail's port (587)
 
+### Enable SSL
+
+- Toggle SSL/TLS encryption for the SMTP connection (default: enabled). Disable this if your SMTP server does not support or require SSL.
+
 ### Smtp Username
 
 - Your username/email to authenticate to the SMTP server above
@@ -214,10 +245,11 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 
 ### Newsletter Event Settings
 
-- Configure which library events (Add/Update/Delete) should trigger the newsletters for this email client:
+- Configure which library events (Add/Update/Delete/Upcoming) should trigger the newsletters for this email client:
   - **Add**: Enable newly added items section in the newsletter (default: enabled).
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
+  - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
 
 ### Newsletter Template Category
 
@@ -254,10 +286,11 @@ You can select between different email templates:
 
 ### Newsletter Event Settings
 
-- Configure which library events (Add/Update/Delete) should trigger Discord notifications:
+- Configure which library events (Add/Update/Delete/Upcoming) should trigger Discord notifications:
   - **Add**: Enable newly added items section in the newsletter (default: enabled).
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
+  - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
 
 ### Fields & Color selection
 
@@ -285,10 +318,11 @@ You can select between different email templates:
 
 ### Newsletter Event Settings
 
-- Configure which library events (Add/Update/Delete) should trigger Telegram notifications:
+- Configure which library events (Add/Update/Delete/Upcoming) should trigger Telegram notifications:
   - **Add**: Enable newly added items section in the newsletter (default: enabled).
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
+  - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
 
 ### Fields selection
 
@@ -321,7 +355,7 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 - {ImageURL} - Poster image for the Movie/Series
 - {ItemURL} - Direct link to the item in Jellyfin's web interface
 - {Type} - Item type (Movie or Series)
-- {PremiereYear} - Year Movie/Series was Premiered
+- {PremiereYear} - Year Movie/Series was Premiered, in case of upcoming media this is use as the date of release
 - {RunTime} - Movie/Episode Duration (for Series, gives first found duration. Will fix for only single episode or average in future update)
 - {OfficialRating} - TV-PG, TV-13, TV-14, etc.
 - {CommunityRating} - Numerical rating stored in Jellyfin's metadata
@@ -365,9 +399,10 @@ The following features are planned for future releases:
   - Individual configuration options for each recipient/channel
   - Granular control over which events trigger newsletter for each endpoint
 
-- [ ] **Upcoming series/episodes section for newsletter**
-  - Integration with TV show databases for release date tracking
+- [x] **Upcoming series/episodes section for newsletter**
+  - Integration with Radarr and Sonarr for upcoming media tracking
   - Configurable lead time for upcoming content newsletter
+  - Per-client toggle to enable/disable the upcoming section
 
 # Contribute
 

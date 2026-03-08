@@ -1,3 +1,11 @@
+# 1.5.0.0
+
+- **Radarr & Sonarr Integration**: Added support for configuring multiple Radarr and Sonarr instances to fetch upcoming media via their calendar APIs
+- **Upcoming Media Section**: Newsletters can now include an upcoming media section across all clients (Email, Discord, Telegram), with a per-client toggle to enable/disable
+- **Configurable Upcoming Window**: "Upcoming Days Ahead" setting to control how far ahead to look for upcoming content (default: 7 days)
+- **Enable SSL Toggle**: Added a configurable SSL/TLS toggle for SMTP connections, allowing users to disable SSL for servers that don't support it
+- **Bug Fix**: Handling of zero-value ratings and missing overviews for upcoming media
+
 # 1.4.1.0
 
 - **Library Grouping**: Newsletters now grouped by Library
