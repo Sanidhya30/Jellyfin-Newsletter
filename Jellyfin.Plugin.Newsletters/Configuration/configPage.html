@@ -19,6 +19,7 @@
                         <button type="button" class="tab-link" onclick="openTab(event, 'Email')">Email</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Discord')">Discord</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Telegram')">Telegram</button>
+                        <button type="button" class="tab-link" onclick="openTab(event, 'Matrix')">Matrix</button>
                     </div>
 
                     <!-- General Tab -->
@@ -169,6 +170,22 @@
                         <div id="TelegramConfigList" class="config-list">
                             <p class="no-configs-text">No Telegram configurations yet. Click "Add Telegram Bot" to
                                 create one.</p>
+                        </div>
+                    </div>
+
+
+                    <!-- Matrix Tab -->
+                    <div id="Matrix" class="tab-content">
+                        <div class="config-header">
+                            <h3>Matrix Configurations</h3>
+                            <button type="button" is="emby-button" class="raised button-submit"
+                                onclick="addMatrixConfig()">
+                                <span>+ Add Matrix Config</span>
+                            </button>
+                        </div>
+                        <div id="MatrixConfigList" class="config-list">
+                            <p class="no-configs-text">No Matrix configurations yet. Click "Add Matrix Config" to create
+                                one.</p>
                         </div>
                     </div>
 
@@ -402,6 +419,7 @@
             // In-memory config storage for multi-config management
             var discordConfigs = [];
             var telegramConfigs = [];
+            var matrixConfigs = [];
             var emailConfigs = [];
             var radarrConfigs = [];
             var sonarrConfigs = [];
@@ -1156,6 +1174,144 @@
                 container.innerHTML = html;
             }
 
+
+            // ===================== MATRIX CONFIG FUNCTIONS =====================
+
+            function addMatrixConfig() {
+                var newConfig = {
+                    Id: generateUUID(),
+                    Name: 'Matrix Bot',
+                    HomeserverUrl: '',
+                    AccessToken: '',
+                    RoomId: '',
+                    TemplateCategory: 'Modern',
+                    Body: '',
+                    Entry: '',
+                    SelectedSeriesLibraries: [],
+                    SelectedMoviesLibraries: [],
+                    NewsletterOnItemAddedEnabled: true,
+                    NewsletterOnItemUpdatedEnabled: false,
+                    NewsletterOnItemDeletedEnabled: true,
+                    NewsletterOnUpcomingItemEnabled: false
+                };
+                matrixConfigs.push(newConfig);
+                renderMatrixConfigs();
+            }
+
+            function removeMatrixConfig(id) {
+                if (confirm('Are you sure you want to remove this Matrix configuration?')) {
+                    matrixConfigs = matrixConfigs.filter(function (c) { return c.Id !== id; });
+                    renderMatrixConfigs();
+                }
+            }
+
+            function testMatrixConfig(id) {
+                Dashboard.showLoadingMsg();
+                var url = ApiClient.getUrl('Matrix/SendMatrixTestMessage') + '?configurationId=' + encodeURIComponent(id);
+                ApiClient.ajax({ type: 'POST', url: url }).then(function () {
+                    Dashboard.hideLoadingMsg();
+                    alert("Test Matrix message sent! Check your room.");
+                }).catch(function (err) {
+                    Dashboard.hideLoadingMsg();
+                    alert("Failed to send test message. Check server logs for details.");
+                });
+            }
+
+            function toggleMatrixAccordion(id) {
+                var accordion = document.getElementById('matrix-accordion-' + id);
+                if (accordion) accordion.classList.toggle('expanded');
+            }
+
+            function updateMatrixConfigFromUI(id) {
+                var config = matrixConfigs.find(function (c) { return c.Id === id; });
+                if (!config) return;
+
+                config.Name = document.getElementById('matrix-name-' + id).value || 'Unnamed';
+                config.HomeserverUrl = document.getElementById('matrix-url-' + id).value;
+                config.AccessToken = document.getElementById('matrix-token-' + id).value;
+                config.RoomId = document.getElementById('matrix-room-' + id).value;
+                config.Body = document.getElementById('matrix-body-' + id).value;
+                config.Entry = document.getElementById('matrix-entry-' + id).value;
+                config.TemplateCategory = document.getElementById('matrix-category-' + id).value;
+
+                config.NewsletterOnItemAddedEnabled = document.getElementById('matrix-event-add-' + id).checked;
+                config.NewsletterOnItemUpdatedEnabled = document.getElementById('matrix-event-update-' + id).checked;
+                config.NewsletterOnItemDeletedEnabled = document.getElementById('matrix-event-delete-' + id).checked;
+                config.NewsletterOnUpcomingItemEnabled = document.getElementById('matrix-event-upcoming-' + id).checked;
+
+                var seriesChecked = document.querySelectorAll('.matrix-series-lib-' + id + ':checked');
+                config.SelectedSeriesLibraries = Array.from(seriesChecked).map(function (cb) { return cb.getAttribute('data-lib-id'); });
+
+                var moviesChecked = document.querySelectorAll('.matrix-movies-lib-' + id + ':checked');
+                config.SelectedMoviesLibraries = Array.from(moviesChecked).map(function (cb) { return cb.getAttribute('data-lib-id'); });
+
+                var headerTitle = document.querySelector('#matrix-accordion-' + id + ' .config-name');
+                if (headerTitle) headerTitle.textContent = config.Name;
+            }
+
+            function renderMatrixConfigs() {
+                var container = document.getElementById('MatrixConfigList');
+                if (matrixConfigs.length === 0) {
+                    container.innerHTML = '<p class="no-configs-text">No Matrix configurations yet. Click "Add Matrix Config" to create one.</p>';
+                    return;
+                }
+
+                var html = '';
+                matrixConfigs.forEach(function (config) {
+                    html += '<div id="matrix-accordion-' + config.Id + '" class="config-accordion">';
+                    html += '  <div class="config-accordion-header" onclick="toggleMatrixAccordion(\'' + config.Id + '\')">';
+                    html += '    <div class="config-accordion-title">';
+                    html += '      <span class="expand-icon">▶</span>';
+                    html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
+                    html += '    </div>';
+                    html += '    <div class="config-accordion-actions">';
+                    html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testMatrixConfig(\'' + config.Id + '\')">Test</button>';
+                    html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeMatrixConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="config-accordion-content">';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Configuration Name:</label>';
+                    html += '      <input id="matrix-name-' + config.Id + '" type="text" is="emby-input" value="' + (config.Name || '') + '" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Homeserver URL:</label>';
+                    html += '      <input id="matrix-url-' + config.Id + '" type="text" is="emby-input" value="' + (config.HomeserverUrl || '') + '" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">e.g., https://matrix.org</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Access Token:</label>';
+                    html += '      <input id="matrix-token-' + config.Id + '" type="password" is="emby-input" value="' + (config.AccessToken || '') + '" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Room ID:</label>';
+                    html += '      <input id="matrix-room-' + config.Id + '" type="text" is="emby-input" value="' + (config.RoomId || '') + '" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">The internal room ID (e.g., !yourRoomId:example.com)</div>';
+                    html += '    </div>';
+                    html += getLibrarySelectionHtml(config.Id, 'matrix', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
+                    html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="selectLabel" for="matrix-category-' + config.Id + '">Template Category:</label>';
+                    html += '      <select id="matrix-category-' + config.Id + '" is="emby-select" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';
+                    html += '        <option value="Modern" ' + ((config.TemplateCategory || 'Modern') === 'Modern' ? 'selected' : '') + '>Modern</option>';
+                    html += '        <option value="Classic" ' + (config.TemplateCategory === 'Classic' ? 'selected' : '') + '>Classic</option>';
+                    html += '      </select>';
+                    html += '      <div class="fieldDescription">Select the template style (e.g., \'Modern\' or \'Classic\'). Clear the Body/Entry HTML fields below to use the template category.</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Body HTML:</label>';
+                    html += '      <textarea id="matrix-body-' + config.Id + '" style="width: 100%; height: 200px;" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')">' + (config.Body || '') + '</textarea>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Entry HTML:</label>';
+                    html += '      <textarea id="matrix-entry-' + config.Id + '" style="width: 100%; height: 200px;" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')">' + (config.Entry || '') + '</textarea>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+
             // ===================== LIBRARY FUNCTIONS =====================
 
             function loadLibraries() {
@@ -1199,6 +1355,7 @@
                     // Save multi-configurations
                     config.DiscordConfigurations = discordConfigs;
                     config.TelegramConfigurations = telegramConfigs;
+                    config.MatrixConfigurations = matrixConfigs;
                     config.EmailConfigurations = emailConfigs;
                     config.RadarrConfigurations = radarrConfigs;
                     config.SonarrConfigurations = sonarrConfigs;
@@ -1241,6 +1398,7 @@
                     // Load multi-configurations
                     discordConfigs = config.DiscordConfigurations || [];
                     telegramConfigs = config.TelegramConfigurations || [];
+                    matrixConfigs = config.MatrixConfigurations || [];
                     emailConfigs = config.EmailConfigurations || [];
                     radarrConfigs = config.RadarrConfigurations || [];
                     sonarrConfigs = config.SonarrConfigurations || [];
@@ -1249,6 +1407,7 @@
                     loadLibraries().then(function () {
                         renderDiscordConfigs();
                         renderTelegramConfigs();
+                        renderMatrixConfigs();
                         renderEmailConfigs();
                         renderRadarrConfigs();
                         renderSonarrConfigs();
