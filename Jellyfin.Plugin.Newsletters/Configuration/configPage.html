@@ -1184,7 +1184,7 @@
                     HomeserverUrl: '',
                     AccessToken: '',
                     RoomId: '',
-                    TemplateCategory: 'Modern',
+                    TemplateCategory: 'Matrix',
                     Body: '',
                     Entry: '',
                     SelectedSeriesLibraries: [],
@@ -1293,10 +1293,9 @@
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="matrix-category-' + config.Id + '">Template Category:</label>';
                     html += '      <select id="matrix-category-' + config.Id + '" is="emby-select" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';
-                    html += '        <option value="Modern" ' + ((config.TemplateCategory || 'Modern') === 'Modern' ? 'selected' : '') + '>Modern</option>';
-                    html += '        <option value="Classic" ' + (config.TemplateCategory === 'Classic' ? 'selected' : '') + '>Classic</option>';
+                    html += '        <option value="Matrix" ' + ((config.TemplateCategory || 'Matrix') === 'Matrix' ? 'selected' : '') + '>Matrix</option>';
                     html += '      </select>';
-                    html += '      <div class="fieldDescription">Select the template style (e.g., \'Modern\' or \'Classic\'). Clear the Body/Entry HTML fields below to use the template category.</div>';
+                    html += '      <div class="fieldDescription">Select the template style (e.g., \'Matrix\'). Clear the Body/Entry HTML fields below to use the template category.</div>';
                     html += '    </div>';
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">Body HTML:</label>';

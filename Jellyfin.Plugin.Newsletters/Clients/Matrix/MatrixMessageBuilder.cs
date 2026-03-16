@@ -371,14 +371,7 @@ public class MatrixMessageBuilder(
             _ => ($"Added to {libraryName}", "🎬", "#4CAF50")
         };
 
-        return $@"
-        <tr>
-            <td colspan='2' style='padding: 20px 10px 10px 10px;'>
-                <h2 style='color: {color}; margin: 0; font-size: 1.8em; border-bottom: 2px solid {color}; padding-bottom: 10px; display: flex; align-items: center; gap: 8px;'>
-                   <span style='margin-right: 4px;'>{emoji}</span> {title}
-                </h2>
-            </td>
-        </tr>";
+        return $"<h2><font data-mx-color='{color}'>{emoji} {title}</font></h2><hr/>";
     }
 
     private string GetEventBadge(string eventType)
@@ -392,7 +385,7 @@ public class MatrixMessageBuilder(
             _ => ("NEW", "🎬", "#4CAF50")
         };
 
-        return $@"<span style='display: inline-block; background-color: {bgColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold; margin-left: 8px;'>{emoji} {label}</span>";
+        return $"<font data-mx-color='{bgColor}'><b>[{emoji} {label}]</b></font>";
     }
 
     private void DefaultBodyAndEntry(MatrixConfiguration config)
@@ -408,7 +401,7 @@ public class MatrixMessageBuilder(
                 return;
             }
             
-            string category = !string.IsNullOrEmpty(config.TemplateCategory) ? config.TemplateCategory : "Modern";
+            string category = !string.IsNullOrEmpty(config.TemplateCategory) ? config.TemplateCategory : "Matrix";
 
             if (string.IsNullOrWhiteSpace(this.matrixBodyHtml))
             {

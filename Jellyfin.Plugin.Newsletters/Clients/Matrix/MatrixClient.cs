@@ -84,6 +84,10 @@ public class MatrixClient(IServerApplicationHost appHost,
         {
             var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, new List<JsonFileObj>());
             var htmlBody = builder.BuildMessageForTest(matrixConfig);
+            string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+                    
+            htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
+            htmlBody = htmlBody.Replace("{Date}", currDate, StringComparison.Ordinal);
 
             SendToMatrixApi(matrixConfig, htmlBody);
         }
@@ -127,6 +131,10 @@ public class MatrixClient(IServerApplicationHost appHost,
 
                     var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, matrixConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     var htmlBody = builder.BuildMessageFromNewsletterData(applicationHost.SystemId, matrixConfig);
+                    string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+                    
+                    htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
+                    htmlBody = htmlBody.Replace("{Date}", currDate, StringComparison.Ordinal);
 
                     bool result = SendToMatrixApi(matrixConfig, htmlBody);
                     anySuccess |= result;

@@ -33,9 +33,9 @@ public class MatrixConfiguration : INewsletterConfiguration
     public string RoomId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the template category (e.g., "Modern").
+    /// Gets or sets the template category (e.g., "Matrix").
     /// </summary>
-    public string TemplateCategory { get; set; } = "Modern";
+    public string TemplateCategory { get; set; } = "Matrix";
 
     /// <summary>
     /// Gets or sets a custom body HTML string. If empty, uses the template.
