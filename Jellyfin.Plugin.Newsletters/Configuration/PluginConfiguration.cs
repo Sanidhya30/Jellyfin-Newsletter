@@ -460,6 +460,11 @@ public class PluginConfiguration : BasePluginConfiguration
     public Collection<TelegramConfiguration> TelegramConfigurations { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the collection of Matrix room configurations.
+    /// </summary>
+    public Collection<MatrixConfiguration> MatrixConfigurations { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the collection of Email/SMTP configurations.
     /// </summary>
     public Collection<EmailConfiguration> EmailConfigurations { get; set; } = new();

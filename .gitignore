@@ -5,3 +5,7 @@ RELEASES
 artifacts
 Jellyfin.Plugin.Newsletters/newsletters/
 *.bak
+.flox/
+deploy/
+deploy-plugin.sh
+*.zip
