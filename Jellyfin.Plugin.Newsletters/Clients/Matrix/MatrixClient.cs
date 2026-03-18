@@ -37,6 +37,7 @@ public class MatrixClient(
 {
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost _appHost = appHost;
+    private readonly Dictionary<string, string> _mxcCache = new();
     private bool _disposed;
 
     /// <summary>
@@ -281,6 +282,14 @@ public class MatrixClient(
     private async Task<string?> DownloadAndUploadImage(MatrixConfiguration config, string imageUrl, string filename)
     {
         var baseUrl = NormalizeHomeserverUrl(config.HomeserverUrl);
+        var cacheKey = $"{baseUrl}|{imageUrl}";
+
+        if (_mxcCache.TryGetValue(cacheKey, out var cachedUrl))
+        {
+            Logger.Debug($"Matrix image cache hit for {filename}");
+            return cachedUrl;
+        }
+
         var safeFilename = Uri.EscapeDataString(filename + ".jpg");
 
         try
@@ -305,7 +314,14 @@ public class MatrixClient(
             }
 
             using var doc = JsonDocument.Parse(responseBody);
-            return doc.RootElement.GetProperty("content_uri").GetString();
+            var mxcUrl = doc.RootElement.GetProperty("content_uri").GetString();
+
+            if (!string.IsNullOrEmpty(mxcUrl))
+            {
+                _mxcCache[cacheKey] = mxcUrl;
+            }
+
+            return mxcUrl;
         }
         catch (Exception e)
         {
@@ -317,6 +333,14 @@ public class MatrixClient(
     private async Task<string?> UploadImage(MatrixConfiguration config, string imagePath, string filename)
     {
         var baseUrl = NormalizeHomeserverUrl(config.HomeserverUrl);
+        var cacheKey = $"{baseUrl}|{imagePath}";
+
+        if (_mxcCache.TryGetValue(cacheKey, out var cachedUrl))
+        {
+            Logger.Debug($"Matrix image cache hit for {filename}");
+            return cachedUrl;
+        }
+
         var safeFilename = Uri.EscapeDataString(filename + ".jpg");
 
         try
@@ -341,7 +365,14 @@ public class MatrixClient(
             }
 
             using var doc = JsonDocument.Parse(responseBody);
-            return doc.RootElement.GetProperty("content_uri").GetString();
+            var mxcUrl = doc.RootElement.GetProperty("content_uri").GetString();
+
+            if (!string.IsNullOrEmpty(mxcUrl))
+            {
+                _mxcCache[cacheKey] = mxcUrl;
+            }
+
+            return mxcUrl;
         }
         catch (Exception e)
         {
