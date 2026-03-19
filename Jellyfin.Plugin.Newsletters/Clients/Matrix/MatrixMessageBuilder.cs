@@ -65,11 +65,14 @@ public class MatrixMessageBuilder(
     {
         if (replaceValue is null)
         {
+            Logger.Debug($"Replace string is null.. Defaulting to N/A");
             replaceValue = "N/A";
         }
 
-        if (replaceKey == "{RunTime}" && replaceValue is int rt && rt == 0)
+        if (replaceKey == "{RunTime}" && (int)replaceValue == 0)
         {
+            Logger.Debug($"{replaceKey} == {replaceValue}");
+            Logger.Debug("Defaulting to N/A");
             replaceValue = "N/A";
         }
 
@@ -78,7 +81,12 @@ public class MatrixMessageBuilder(
             replaceValue = rating > 0 ? rating.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) : "N/A";
         }
 
-        return htmlObj.Replace(replaceKey, replaceValue.ToString(), StringComparison.Ordinal);
+        Logger.Debug($"Replace Value {replaceKey} with " + replaceValue);
+        
+        htmlObj = htmlObj.Replace(replaceKey, replaceValue.ToString(), StringComparison.Ordinal);
+
+        Logger.Debug("New HTML OBJ: \n" + htmlObj);
+        return htmlObj;
     }
 
     /// <summary>
@@ -210,9 +218,19 @@ public class MatrixMessageBuilder(
             var tmpEntryHtml = matrixEntryHtml;
 
             // Upload the image to the Matrix homeserver and use the MXC URL for the image
-            // Fallback to HTTP ImageURL if upload fails or is unavailable
+            // Fallback to HTTP ImageURL if it is an upcoming item, or if upload fails/is unavailable
             var replaceDict = item.GetReplaceDict();
-            string? mxcUrl = UploadImageToMatrix(item.PosterPath, config);
+            
+            string? mxcUrl = null;
+            if (Config.PosterType == "attachment" && eventType != "upcoming")
+            {
+                mxcUrl = UploadImageToMatrix(item.PosterPath, false, config);
+            }
+            else if (!string.IsNullOrEmpty(item.ImageURL))
+            {
+                mxcUrl = UploadImageToMatrix(item.ImageURL, true, config);
+            }
+
             if (!string.IsNullOrEmpty(mxcUrl))
             {
                 replaceDict["{ImageURL}"] = mxcUrl;
@@ -264,12 +282,21 @@ public class MatrixMessageBuilder(
             JsonFileObj item = JsonFileObj.GetTestObj();
             item.Title = titles[i];
 
-            string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10";
+            string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10";
 
             string tmpEntryHtml = matrixEntryHtml;
             var replaceDict = item.GetReplaceDict();
             
-            string? mxcUrl = UploadImageToMatrix(item.PosterPath, config);
+            string? mxcUrl = null;
+            if (Config.PosterType == "attachment" && eventType != "upcoming")
+            {
+                mxcUrl = UploadImageToMatrix(item.PosterPath, false, config);
+            }
+            else if (!string.IsNullOrEmpty(item.ImageURL))
+            {
+                mxcUrl = UploadImageToMatrix(item.ImageURL, true, config);
+            }
+
             if (!string.IsNullOrEmpty(mxcUrl))
             {
                 replaceDict["{ImageURL}"] = mxcUrl;
@@ -308,9 +335,9 @@ public class MatrixMessageBuilder(
         return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
     }
 
-    private string? UploadImageToMatrix(string posterPath, MatrixConfiguration config)
+    private string? UploadImageToMatrix(string? source, bool isUrl, MatrixConfiguration config)
     {
-        if (string.IsNullOrEmpty(posterPath) || !File.Exists(posterPath))
+        if (string.IsNullOrEmpty(source))
         {
             return null;
         }
@@ -318,43 +345,89 @@ public class MatrixMessageBuilder(
         try
         {
             var homeserverUrl = config.HomeserverUrl.TrimEnd('/');
-            var fileName = Path.GetFileName(posterPath);
-            var requestUrl = $"{homeserverUrl}/_matrix/media/v3/upload?filename={Uri.EscapeDataString(fileName)}";
+            Stream imageStream;
+            string contentType;
+            string fileName;
 
-            using var fileStream = File.OpenRead(posterPath);
-            using var streamContent = new StreamContent(fileStream);
+            Logger.Debug($"Preparing to upload Matrix image. Source: {source}, IsUrl: {isUrl}");
 
-            var ext = Path.GetExtension(posterPath).ToLowerInvariant();
-            var contentType = ext switch
+            if (isUrl)
             {
-                ".png" => "image/png",
-                ".webp" => "image/webp",
-                ".gif" => "image/gif",
-                ".svg" => "image/svg+xml",
-                _ => "image/jpeg"
-            };
-            streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                Logger.Debug($"Downloading image from URL: {source}");
+                var response = _httpClient.GetAsync(source).GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.Error($"Failed to download image from {source}: {response.StatusCode}");
+                    return null;
+                }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, requestUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.AccessToken);
-            request.Content = streamContent;
-
-            var response = _httpClient.SendAsync(request).GetAwaiter().GetResult();
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                var jsonNode = System.Text.Json.Nodes.JsonNode.Parse(responseContent);
-                return jsonNode?["content_uri"]?.ToString();
+                imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+                contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+                var ext = contentType.ToLowerInvariant() switch
+                {
+                    "image/png" => ".png",
+                    "image/webp" => ".webp",
+                    "image/gif" => ".gif",
+                    "image/svg+xml" => ".svg",
+                    _ => ".jpeg"
+                };
+                fileName = "image" + ext;
+                Logger.Debug($"Successfully downloaded image. ContentType: {contentType}, Ext: {ext}");
             }
             else
             {
-                var errorBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                Logger.Error($"Matrix Image Upload Failed: {response.StatusCode} - {errorBody}");
+                Logger.Debug($"Reading image from local file: {source}");
+                if (!File.Exists(source))
+                {
+                    Logger.Debug($"Local file does not exist: {source}");
+                    return null;
+                }
+
+                imageStream = File.OpenRead(source);
+                var ext = Path.GetExtension(source).ToLowerInvariant();
+                contentType = ext switch
+                {
+                    ".png" => "image/png",
+                    ".webp" => "image/webp",
+                    ".gif" => "image/gif",
+                    ".svg" => "image/svg+xml",
+                    _ => "image/jpeg"
+                };
+                fileName = Path.GetFileName(source);
+                Logger.Debug($"Successfully opened local file. ContentType: {contentType}");
+            }
+
+            using (imageStream)
+            {
+                using var streamContent = new StreamContent(imageStream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+
+                var requestUrl = $"{homeserverUrl}/_matrix/media/v3/upload?filename={Uri.EscapeDataString(fileName)}";
+
+                Logger.Debug($"Sending Matrix upload POST request to: {requestUrl}");
+                using var request = new HttpRequestMessage(HttpMethod.Post, requestUrl);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.AccessToken);
+                request.Content = streamContent;
+
+                var uploadResponse = _httpClient.SendAsync(request).GetAwaiter().GetResult();
+                if (uploadResponse.IsSuccessStatusCode)
+                {
+                    var responseContent = uploadResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    var jsonNode = System.Text.Json.Nodes.JsonNode.Parse(responseContent);
+                    var mxcUrl = jsonNode?["content_uri"]?.ToString();
+                    Logger.Debug($"Matrix image upload successful. MXC URL: {mxcUrl}");
+                    return mxcUrl;
+                }
+                else
+                {
+                    var errorBody = uploadResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    Logger.Error($"Matrix Image Upload Failed for {source}: {uploadResponse.StatusCode} - {errorBody}");
+                }
             }
         }
         catch (Exception ex)
         {
-            Logger.Error($"Error uploading image to Matrix for {posterPath}: {ex}");
+            Logger.Error($"Error uploading image to Matrix for {source}: {ex}");
         }
 
         return null;
