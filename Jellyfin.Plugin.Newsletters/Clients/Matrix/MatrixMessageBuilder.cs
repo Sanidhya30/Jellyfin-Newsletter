@@ -342,9 +342,17 @@ public class MatrixMessageBuilder(
             return null;
         }
 
+        var homeserverUrl = config.HomeserverUrl.TrimEnd('/');
+
+        string? cachedMxcUrl = GetCachedMxcUrl(source, homeserverUrl);
+        if (!string.IsNullOrEmpty(cachedMxcUrl))
+        {
+            Logger.Debug($"Using cached MXC URL for {source} on {homeserverUrl}: {cachedMxcUrl}");
+            return cachedMxcUrl;
+        }
+
         try
         {
-            var homeserverUrl = config.HomeserverUrl.TrimEnd('/');
             Stream imageStream;
             string contentType;
             string fileName;
@@ -416,6 +424,12 @@ public class MatrixMessageBuilder(
                     var jsonNode = System.Text.Json.Nodes.JsonNode.Parse(responseContent);
                     var mxcUrl = jsonNode?["content_uri"]?.ToString();
                     Logger.Debug($"Matrix image upload successful. MXC URL: {mxcUrl}");
+                    
+                    if (!string.IsNullOrEmpty(mxcUrl))
+                    {
+                        SaveCachedMxcUrl(source, homeserverUrl, mxcUrl);
+                    }
+
                     return mxcUrl;
                 }
                 else
@@ -431,6 +445,56 @@ public class MatrixMessageBuilder(
         }
 
         return null;
+    }
+
+    private string? GetCachedMxcUrl(string source, string homeserver)
+    {
+        try
+        {
+            Db.CreateConnection();
+            string escapedSource = source.Replace("'", "''", StringComparison.Ordinal);
+            string escapedHomeserver = homeserver.Replace("'", "''", StringComparison.Ordinal);
+            var query = $"SELECT MxcUrl FROM MatrixImageCache WHERE Source = '{escapedSource}' AND Homeserver = '{escapedHomeserver}';";
+            
+            foreach (var row in Db.Query(query))
+            {
+                if (row is not null && row.Count > 0)
+                {
+                    return row[0].ToString();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error retrieving cached MXC URL for {source}: {ex}");
+        }
+        finally
+        {
+            Db.CloseConnection();
+        }
+
+        return null;
+    }
+
+    private void SaveCachedMxcUrl(string source, string homeserver, string mxcUrl)
+    {
+        try
+        {
+            Db.CreateConnection();
+            string escapedSource = source.Replace("'", "''", StringComparison.Ordinal);
+            string escapedHomeserver = homeserver.Replace("'", "''", StringComparison.Ordinal);
+            string escapedMxcUrl = mxcUrl.Replace("'", "''", StringComparison.Ordinal);
+            string query = $"INSERT OR REPLACE INTO MatrixImageCache (Source, Homeserver, MxcUrl) VALUES ('{escapedSource}', '{escapedHomeserver}', '{escapedMxcUrl}');";
+            Db.ExecuteSQL(query);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error saving MXC URL to cache for {source}: {ex}");
+        }
+        finally
+        {
+            Db.CloseConnection();
+        }
     }
 
     private string GetEventSectionHeader(string eventType, string libraryName = "Library")

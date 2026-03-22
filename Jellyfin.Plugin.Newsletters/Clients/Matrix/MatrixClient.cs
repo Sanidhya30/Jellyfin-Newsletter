@@ -55,13 +55,14 @@ public class MatrixClient(IServerApplicationHost appHost,
     /// Sends a test Matrix message.
     /// </summary>
     /// <param name="configurationId">The configuration GUID to test.</param>
+    /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendMatrixTestMessage")]
-    public void SendMatrixTestMessage([FromQuery] string configurationId)
+    public ActionResult SendMatrixTestMessage([FromQuery] string configurationId)
     {
         if (string.IsNullOrEmpty(configurationId))
         {
             Logger.Error("Configuration ID is required for testing Matrix.");
-            return;
+            return BadRequest("Configuration ID is required for testing Matrix.");
         }
 
         var matrixConfig = Config.MatrixConfigurations.FirstOrDefault(c => c.Id == configurationId);
@@ -69,7 +70,7 @@ public class MatrixClient(IServerApplicationHost appHost,
         if (matrixConfig == null)
         {
             Logger.Error($"Matrix configuration with ID '{configurationId}' not found.");
-            return;
+            return BadRequest("Matrix configuration not found.");
         }
 
         if (string.IsNullOrEmpty(matrixConfig.HomeserverUrl) ||
@@ -77,7 +78,7 @@ public class MatrixClient(IServerApplicationHost appHost,
             string.IsNullOrEmpty(matrixConfig.RoomId))
         {
             Logger.Error($"Matrix configuration '{matrixConfig.Name}' is missing required fields (Homeserver, Token, or Room).");
-            return;
+            return BadRequest("Matrix configuration is missing required fields (Homeserver, Token, or Room).");
         }
 
         try
@@ -89,11 +90,20 @@ public class MatrixClient(IServerApplicationHost appHost,
             htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
             htmlBody = htmlBody.Replace("{Date}", currDate, StringComparison.Ordinal);
 
-            SendToMatrixApi(matrixConfig, htmlBody);
+            bool success = SendToMatrixApi(matrixConfig, htmlBody);
+            if (success)
+            {
+                return Ok("Test Matrix message sent successfully.");
+            }
+            else
+            {
+                return BadRequest("Failed to send test message to Matrix API. Check server logs for details.");
+            }
         }
         catch (Exception e)
         {
             Logger.Error($"An error occurred while sending Matrix test message to '{matrixConfig.Name}': " + e);
+            return BadRequest("An internal error occurred while sending the test message.");
         }
     }
 
