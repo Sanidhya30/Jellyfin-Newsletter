@@ -8,7 +8,8 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 
 * Discord Webhook Support
 * Telegram Support
-* Multiple Client Instances (Discord, Telegram, Email)
+* Matrix Support
+* Multiple Client Instances (Discord, Telegram, Matrix, Email)
 * Multiple Email Templates (Modern/Classic)
 * Removal of Imgur and Local Hosted Image Dependencies
 * TMDB Integration
@@ -81,6 +82,22 @@ Additionally, the plugin integrates with **Radarr** and **Sonarr** to include up
          alt="Removed Telegram Screenshot"
          height="600"
          width="49%"/>
+</p>
+
+</details>
+
+<details>
+<summary><big>Matrix Screenshots (Element Client)</big></summary>
+
+> Screenshots captured using the [Element](https://element.io/) Matrix client.
+
+<p align="center">
+    <img src="images/Newsletter_Added_Matrix_Example.png"
+         alt="Added Matrix Screenshot"
+         height="600"/>
+    <img src="images/Newsletter_Removed_Matrix_Example.png"
+         alt="Removed Matrix Screenshot"
+         height="600"/>
 </p>
 
 </details>
@@ -327,6 +344,54 @@ You can select between different email templates:
 ### Fields selection
 
 - Select the fields that you want as part of your message.
+</details>
+
+<details>
+<summary>Matrix Configuration</summary>
+
+> ***You can configure Multiple Matrix Clients. Each client instance can have its own Homeserver URL, Access Token, Room ID, library selection, and event configurations.***
+
+### Homeserver URL
+
+- The URL of your Matrix homeserver (e.g., `https://matrix.org` or your self-hosted instance URL).
+
+### Access Token
+
+- The access token for your Matrix bot/user account. This is used to authenticate API requests to the homeserver.
+
+### Room ID
+
+- The Room ID where newsletters will be sent (e.g., `!roomid:matrix.org`). You can find this in your Matrix client's room settings.
+
+### Test Message
+
+- Use the "Test" button to send a test message and verify your Matrix configuration before saving.
+
+### Library Selection
+
+- Choose specific libraries within each item type (Movies/Series) to include in newsletters for this Matrix client.
+
+### Newsletter Event Settings
+
+- Configure which library events (Add/Update/Delete/Upcoming) should trigger Matrix notifications:
+  - **Add**: Enable newly added items section in the newsletter (default: enabled).
+  - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
+  - **Delete**: Enable deleted items section in the newsletter (default: enabled).
+  - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
+
+### Newsletter Template Category
+
+- Currently, one template is available:
+  - **Matrix**: An HTML-based template designed for Matrix clients with HTML rendering support (e.g., Element).
+
+### Body HTML
+
+- Define custom HTML structure for the main message body. If left empty, the default HTML from the selected **Newsletter Template Category** will be used.
+
+### EntryData HTML
+
+- Define custom HTML formatting for each individual media item (Movies/Series) in the newsletter. If left empty, the default HTML from the selected **Newsletter Template Category** will be used.
+
 </details>
 
 # Issues
