@@ -74,6 +74,10 @@ public class SQLiteDatabase
         logger.Debug("Creating Tables...");
         string[] tableNames = { "CurrRunData", "CurrNewsletterData", "ArchiveData" };
         CreateTables(tableNames);
+        
+        // Create MatrixImageCache table if it doesn't exist
+        ExecuteSQL("CREATE TABLE IF NOT EXISTS MatrixImageCache (Source TEXT, Homeserver TEXT, MxcUrl TEXT, PRIMARY KEY (Source, Homeserver));");
+        
         logger.Debug("Done Init of tables");
     }
 

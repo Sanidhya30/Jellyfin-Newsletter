@@ -1,6 +1,7 @@
-﻿using Jellyfin.Plugin.Newsletters.Clients;
+using Jellyfin.Plugin.Newsletters.Clients;
 using Jellyfin.Plugin.Newsletters.Clients.Discord;
 using Jellyfin.Plugin.Newsletters.Clients.Email;
+using Jellyfin.Plugin.Newsletters.Clients.Matrix;
 using Jellyfin.Plugin.Newsletters.Clients.Telegram;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.ItemEventNotifier;
@@ -24,6 +25,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddScoped<IClient, SmtpMailer>();
         serviceCollection.AddScoped<IClient, DiscordWebhook>();
         serviceCollection.AddScoped<IClient, TelegramClient>();
+        serviceCollection.AddScoped<IClient, MatrixClient>();
 
         // Register the item related services
         serviceCollection.AddSingleton<ItemEventManager>();
