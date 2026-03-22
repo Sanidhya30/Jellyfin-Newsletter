@@ -2,11 +2,11 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.5.0.0"
+version: "1.6.0.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated/upcoming media"
-description: "This plugin populates a list of recently added/deleted/updated media and upcoming content (via Radarr/Sonarr), sends out the newsletter to configured clients(email, discord webhook & telegram)."
+description: "This plugin populates a list of recently added/deleted/updated media and upcoming content (via Radarr/Sonarr), sends out the newsletter to configured clients(email, discord webhook, telegram & matrix)."
 category: "General"
 owner: "Sanidhya30"
 artifacts:
@@ -17,8 +17,7 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Radarr & Sonarr integration for upcoming media in newsletters.
-  - Upcoming media section support for Email, Discord and Telegram clients.
-  - Enable SSL toggle for SMTP connections.
-  - Bug fixes for rating and overview handling.
+  - Matrix client support for newsletters with HTML rendering.
+  - Poster image uploads to Matrix homeserver with mxc:// URL caching.
+  - Dedicated Matrix HTML templates.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

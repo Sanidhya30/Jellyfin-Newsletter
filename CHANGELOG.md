@@ -1,3 +1,10 @@
+# 1.6.0.0
+
+- **Matrix Client Support**: Added Matrix as a new newsletter client with HTML rendering support (tested with Element)
+- **Matrix Image Uploads**: Poster images are uploaded to the Matrix homeserver via the content API and referenced using `mxc://` URLs
+- **MatrixImageCache Table**: New SQLite table for caching uploaded `mxc://` URLs per homeserver and file source
+- **Matrix Templates**: Dedicated HTML templates (`template_body.html`, `template_entry.html`) for Matrix messages
+
 # 1.5.0.0
 
 - **Radarr & Sonarr Integration**: Added support for configuring multiple Radarr and Sonarr instances to fetch upcoming media via their calendar APIs
