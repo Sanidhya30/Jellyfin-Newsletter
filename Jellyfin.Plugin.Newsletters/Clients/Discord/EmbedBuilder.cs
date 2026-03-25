@@ -128,7 +128,7 @@ public class EmbedBuilder(
                 // Add event type query otherwise discord deduplicate the embed with same url
                 // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
                 // Adding event type query should not cause issue
-                string embedUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
+                string embedUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" || eventType == "delete"
                     ? string.Empty 
                     : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
                 var embed = new Embed

@@ -247,7 +247,7 @@ public class MatrixMessageBuilder(
             string eventBadge = GetEventBadge(eventType);
             tmpEntryHtml = tmpEntryHtml.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
 
-            string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
+            string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" || eventType == "delete"
                 ? string.Empty
                 : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
             

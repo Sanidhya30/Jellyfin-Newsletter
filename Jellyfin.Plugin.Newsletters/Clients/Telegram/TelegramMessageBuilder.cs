@@ -183,7 +183,7 @@ public class TelegramMessageBuilder(
         string eventPrefix = GetEventDescriptionPrefix(eventType, libraryName);
         
         // Add title with Jellyfin link if hostname is configured and event is not upcoming
-        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID) && eventType != "upcoming")
+        if (!string.IsNullOrEmpty(Config.Hostname) && !string.IsNullOrEmpty(item.ItemID) && eventType != "upcoming" && eventType != "delete")
         {
             string jellyfinUrl;
             if (systemId == "newsletter-test")

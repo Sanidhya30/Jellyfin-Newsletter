@@ -315,7 +315,7 @@ public class HtmlBuilder(
             tmp_entry = tmp_entry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
 
             // Compose the entry's HTML now (for accurate size)
-            string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
+            string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" || eventType == "delete"
                 ? string.Empty
                 : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
             string entryHTML = tmp_entry
