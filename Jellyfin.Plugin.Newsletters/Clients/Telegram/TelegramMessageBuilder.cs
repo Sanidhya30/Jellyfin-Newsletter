@@ -58,66 +58,18 @@ public class TelegramMessageBuilder(
     /// <returns>A collection of message tuples containing text and optional image data.</returns>
     public ReadOnlyCollection<(string MessageText, string? ImageUrl, MemoryStream? ImageStream, string UniqueImageName)> BuildMessagesFromNewsletterData(string systemId, TelegramConfiguration telegramConfig)
     {
-        var itemsByKey = new Dictionary<string, JsonFileObj>(); // Key: "Title_EventType", deduplicates and collects
         var result = new List<(string, string?, MemoryStream?, string)>();
 
         // Build library name map
         var libraryNameMap = BuildLibraryNameMap();
 
+        // BuildSortedItems manages its own DB connection for querying/deduplication
+        var sortedItems = BuildSortedItems(telegramConfig, upcomingItems, "Telegram");
+
         try
         {
+            // Open connection for ParseSeriesInfo calls inside BuildMessageText
             Db.CreateConnection();
-
-            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData;"))
-            {
-                if (row is not null)
-                {
-                    JsonFileObj item = JsonFileObj.ConvertToObj(row);
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-
-                    // Check if the event type should be included based on configuration
-                    if (!ShouldIncludeItem(item, telegramConfig, "Telegram"))
-                    {
-                        continue;
-                    }
-
-                    // Create a unique key combining title and event type
-                    string uniqueKey = $"{item.Title}_{eventType}";
-                    if (itemsByKey.ContainsKey(uniqueKey))
-                    {
-                        continue;
-                    }
-
-                    itemsByKey[uniqueKey] = item;
-                }
-            }
-
-            // Append prefetched upcoming items and deduplicate by title
-            if (upcomingItems != null && upcomingItems.Count > 0)
-            {
-                foreach (var item in upcomingItems)
-                {
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                    string uniqueKey = $"{item.Title}_{eventType}";
-                    if (itemsByKey.ContainsKey(uniqueKey))
-                    {
-                        continue;
-                    }
-
-                    itemsByKey[uniqueKey] = item;
-                }
-            }
-
-            var allItems = itemsByKey.Values.ToList();
-
-            // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
-            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
-
-            var sortedItems = allItems
-                .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
-                .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-                .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
-                .ToList();
 
             // Build messages from sorted items
             foreach (var item in sortedItems)

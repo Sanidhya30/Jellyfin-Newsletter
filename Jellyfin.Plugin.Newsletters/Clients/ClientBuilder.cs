@@ -87,6 +87,82 @@ public class ClientBuilder(Logger loggerInstance,
     }
 
     /// <summary>
+    /// Queries newsletter data from the database, merges upcoming items, deduplicates,
+    /// and sorts by event type → media type → library name.
+    /// This is the shared data pipeline used by all client builders.
+    /// </summary>
+    /// <param name="config">The newsletter configuration for filtering items.</param>
+    /// <param name="upcomingItems">The prefetched upcoming media items to include.</param>
+    /// <param name="clientName">The client name for log messages (e.g., "Email", "Discord").</param>
+    /// <returns>A sorted, deduplicated list of items ready for rendering.</returns>
+    protected IReadOnlyList<JsonFileObj> BuildSortedItems(INewsletterConfiguration config, IReadOnlyList<JsonFileObj> upcomingItems, string clientName)
+    {
+        var libraryNameMap = BuildLibraryNameMap();
+        var itemsByKey = new Dictionary<string, JsonFileObj>();
+
+        try
+        {
+            Db.CreateConnection();
+
+            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData;"))
+            {
+                if (row is not null)
+                {
+                    JsonFileObj item = JsonFileObj.ConvertToObj(row);
+                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+
+                    if (!ShouldIncludeItem(item, config, clientName))
+                    {
+                        continue;
+                    }
+
+                    string uniqueKey = $"{item.Title}_{eventType}";
+                    if (itemsByKey.ContainsKey(uniqueKey))
+                    {
+                        continue;
+                    }
+
+                    itemsByKey[uniqueKey] = item;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Error("An error has occured: " + e);
+        }
+        finally
+        {
+            Db.CloseConnection();
+        }
+
+        // Append prefetched upcoming items and deduplicate by title
+        if (upcomingItems != null && upcomingItems.Count > 0)
+        {
+            foreach (var item in upcomingItems)
+            {
+                string eventType = item.EventType?.ToLowerInvariant() ?? "add";
+                string uniqueKey = $"{item.Title}_{eventType}";
+                if (itemsByKey.ContainsKey(uniqueKey))
+                {
+                    continue;
+                }
+
+                itemsByKey[uniqueKey] = item;
+            }
+        }
+
+        var allItems = itemsByKey.Values.ToList();
+
+        var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
+
+        return allItems
+            .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
+            .ThenBy(i => i.Type == "Movie" ? 0 : 1)
+            .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
+            .ToList();
+    }
+
+    /// <summary>
     /// Parses series information from the given JsonFileObj and returns a collection of NlDetailsJson.
     /// </summary>
     /// <param name="currObj">The current JsonFileObj containing series information.</param>
