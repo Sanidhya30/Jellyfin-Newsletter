@@ -6,7 +6,7 @@ namespace Jellyfin.Plugin.Newsletters.Configuration;
 /// <summary>
 /// Represents a single Email/SMTP configuration.
 /// </summary>
-public class EmailConfiguration : INewsletterConfiguration
+public class EmailConfiguration : ITemplatedConfiguration
 {
     /// <summary>
     /// Gets or sets the unique identifier for this configuration.

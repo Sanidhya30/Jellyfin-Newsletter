@@ -37,66 +37,18 @@ public class EmbedBuilder(
     /// <returns>A read-only collection of tuples containing Discord embeds, image streams, and unique image names.</returns>
     public ReadOnlyCollection<(Embed Embed, MemoryStream? ResizedImageStream, string UniqueImageName)> BuildEmbedsFromNewsletterData(string serverId, DiscordConfiguration discordConfig)
     {
-        var itemsByKey = new Dictionary<string, JsonFileObj>(); // Key: "Title_EventType", deduplicates and collects
         var result = new List<(Embed, MemoryStream?, string)>();
 
         // Build library name map
         var libraryNameMap = BuildLibraryNameMap();
 
+        // BuildSortedItems manages its own DB connection for querying/deduplication
+        var sortedItems = BuildSortedItems(discordConfig, upcomingItems, "Discord");
+
         try
         {
+            // Open connection for ParseSeriesInfo calls inside the item loop
             Db.CreateConnection();
-
-            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData;"))
-            {
-                if (row is not null)
-                {
-                    JsonFileObj item = JsonFileObj.ConvertToObj(row);
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-
-                    // Check if the event type should be included based on configuration
-                    if (!ShouldIncludeItem(item, discordConfig, "Discord"))
-                    {
-                        continue;
-                    }
-
-                    // Create a unique key combining title and event type
-                    string uniqueKey = $"{item.Title}_{eventType}";
-                    if (itemsByKey.ContainsKey(uniqueKey))
-                    {
-                        continue;
-                    }
-
-                    itemsByKey[uniqueKey] = item;
-                }
-            }
-
-            // Append prefetched upcoming items and deduplicate by title
-            if (upcomingItems != null && upcomingItems.Count > 0)
-            {
-                foreach (var item in upcomingItems)
-                {
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                    string uniqueKey = $"{item.Title}_{eventType}";
-                    if (itemsByKey.ContainsKey(uniqueKey))
-                    {
-                        continue;
-                    }
-
-                    itemsByKey[uniqueKey] = item;
-                }
-            }
-
-            var allItems = itemsByKey.Values.ToList();
-
-            // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
-            var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
-
-            var sortedItems = allItems
-                .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
-                .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-                .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
-                .ToList();
 
             // Build embeds from sorted items
             foreach (var item in sortedItems)
@@ -128,7 +80,7 @@ public class EmbedBuilder(
                 // Add event type query otherwise discord deduplicate the embed with same url
                 // For eg. an item of the same series got added and another got deleted, both will have same url without the event type query
                 // Adding event type query should not cause issue
-                string embedUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
+                string embedUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" || eventType == "delete"
                     ? string.Empty 
                     : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
                 var embed = new Embed

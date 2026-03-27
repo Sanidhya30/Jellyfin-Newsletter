@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -12,327 +9,180 @@ using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
-using Newtonsoft.Json;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Matrix;
 
 /// <summary>
-/// Builds HTML and plaintext content for Matrix newsletters based on templates.
+/// Builds HTML content for Matrix newsletters based on templates.
+/// Handles Matrix-specific image uploading and MXC URL caching.
 /// </summary>
 public class MatrixMessageBuilder(
     Logger loggerInstance,
     SQLiteDatabase dbInstance,
     ILibraryManager libraryManager,
     IReadOnlyList<JsonFileObj> upcomingItems)
-    : ClientBuilder(loggerInstance, dbInstance, libraryManager)
+    : HtmlContentBuilder(loggerInstance, dbInstance, libraryManager, upcomingItems)
 {
     private static readonly HttpClient _httpClient = new();
+    private MatrixConfiguration? _currentConfig;
 
-    private string matrixBodyHtml = string.Empty;
-    private string matrixEntryHtml = string.Empty;
-    private bool _isSetup;
-
-    private void EnsureSetup(MatrixConfiguration config)
-    {
-        if (_isSetup)
-        {
-            return;
-        }
-
-        DefaultBodyAndEntry(config);
-        _isSetup = true;
-    }
+    /// <inheritdoc/>
+    protected override string DefaultTemplateCategory => "Matrix";
 
     /// <summary>
-    /// Gets the default HTML body wrapper for the newsletter.
-    /// </summary>
-    /// <param name="config">The Matrix configuration.</param>
-    /// <returns>The Default HTML builder string.</returns>
-    public string GetDefaultHTMLBody(MatrixConfiguration config)
-    {
-        EnsureSetup(config);
-        return matrixBodyHtml;
-    }
-
-    /// <summary>
-    /// Replaces templated values in an HTML string.
-    /// </summary>
-    /// <param name="htmlObj">The original HTML string.</param>
-    /// <param name="replaceKey">The key to replace.</param>
-    /// <param name="replaceValue">The value to replace the key with.</param>
-    /// <returns>The updated HTML string.</returns>
-    public string TemplateReplace(string htmlObj, string replaceKey, object replaceValue)
-    {
-        if (replaceValue is null)
-        {
-            Logger.Debug($"Replace string is null.. Defaulting to N/A");
-            replaceValue = "N/A";
-        }
-
-        if (replaceKey == "{RunTime}" && (int)replaceValue == 0)
-        {
-            Logger.Debug($"{replaceKey} == {replaceValue}");
-            Logger.Debug("Defaulting to N/A");
-            replaceValue = "N/A";
-        }
-
-        if (replaceKey == "{CommunityRating}" && replaceValue is float rating)
-        {
-            replaceValue = rating > 0 ? rating.ToString($"F{Config.CommunityRatingDecimalPlaces}", CultureInfo.InvariantCulture) : "N/A";
-        }
-
-        Logger.Debug($"Replace Value {replaceKey} with " + replaceValue);
-        
-        htmlObj = htmlObj.Replace(replaceKey, replaceValue.ToString(), StringComparison.Ordinal);
-
-        Logger.Debug("New HTML OBJ: \n" + htmlObj);
-        return htmlObj;
-    }
-
-    /// <summary>
-    /// Builds the rich HTML fallback from the current newsletter data.
+    /// Builds the rich HTML message from the current newsletter data.
     /// </summary>
     /// <param name="serverId">The ID of the server.</param>
     /// <param name="config">The Matrix configuration.</param>
-    /// <returns>A string containing HTML body.</returns>
+    /// <returns>A string containing the complete HTML body.</returns>
     public string BuildMessageFromNewsletterData(string serverId, MatrixConfiguration config)
     {
         EnsureSetup(config);
 
-        // Build library name map for resolving LibraryId -> LibraryName
-        var libraryNameMap = BuildLibraryNameMap();
+        var groupedItems = BuildGroupedItems(config, "Matrix");
 
-        var itemsByKey = new Dictionary<string, JsonFileObj>(); // Key: "Title_EventType", deduplicates and collects
+        StringBuilder contentBuilderHtml = new();
 
         try
         {
+            // Open connection for ParseSeriesInfo calls inside BuildEntryHtml
             Db.CreateConnection();
 
-            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData;"))
+            foreach (var eventGroup in groupedItems)
             {
-                if (row is not null)
+                foreach (var library in eventGroup.Libraries)
                 {
-                    JsonFileObj item = JsonFileObj.ConvertToObj(row);
-                    string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                    
-                    // Check if the event type should be included based on configuration
-                    if (!ShouldIncludeItem(item, config, "Matrix"))
+                    if (library.Items.Count == 0)
                     {
                         continue;
                     }
 
-                    // Create a unique key combining title and event type
-                    string uniqueKey = $"{item.Title}_{eventType}";
-                    if (!itemsByKey.ContainsKey(uniqueKey))
+                    contentBuilderHtml.Append(GetEventSectionHeader(eventGroup.EventType, library.LibraryName));
+
+                    foreach (var item in library.Items)
                     {
-                        itemsByKey[uniqueKey] = item;
+                        contentBuilderHtml.Append(BuildEntryHtml(item, eventGroup.EventType, serverId));
                     }
                 }
             }
         }
         catch (Exception e)
         {
-            Logger.Error("An error occurred: " + e);
+            Logger.Error("An error has occured: " + e);
         }
         finally
         {
             Db.CloseConnection();
         }
 
-        // Append prefetched upcoming items and deduplicate by title
-        if (upcomingItems != null && upcomingItems.Count > 0)
-        {
-            foreach (var item in upcomingItems)
-            {
-                string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                string uniqueKey = $"{item.Title}_{eventType}";
-                if (itemsByKey.ContainsKey(uniqueKey))
-                {
-                    continue;
-                }
-
-                itemsByKey[uniqueKey] = item;
-            }
-        }
-
-        var allItems = itemsByKey.Values.ToList();
-
-        // Sort items: event type (add -> update -> delete -> upcoming), then Movie libraries first, then by library name
-        var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
-
-        var sortedItems = allItems
-            .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
-            .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-            .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
-            .ToList();
-
-        // Group sorted items by event type, then by library name (order is preserved from sort)
-        var groupedItems = sortedItems
-            .GroupBy(i => i.EventType?.ToLowerInvariant() ?? "add")
-            .Select(eventGroup => new
-            {
-                EventType = eventGroup.Key,
-                Libraries = eventGroup
-                    .GroupBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
-                    .Select(libGroup => new { LibraryName = libGroup.Key, Items = libGroup.ToList() })
-            });
-
-        StringBuilder contentBuilderHtml = new();
-
-        foreach (var eventGroup in groupedItems)
-        {
-            foreach (var library in eventGroup.Libraries)
-            {
-                if (library.Items.Count == 0)
-                {
-                    continue;
-                }
-
-                string sectionHtml = GetEventSectionHeader(eventGroup.EventType, library.LibraryName);
-                contentBuilderHtml.Append(sectionHtml);
-
-                ProcessItems(library.Items, eventGroup.EventType, contentBuilderHtml, serverId, config);
-            }
-        }
-
         return ReplaceBodyWithBuiltString(GetDefaultHTMLBody(config), contentBuilderHtml.ToString());
-    }
-
-    private void ProcessItems(
-        List<JsonFileObj> items,
-        string eventType,
-        StringBuilder htmlBuilder,
-        string serverId,
-        MatrixConfiguration config)
-    {
-        foreach (var item in items)
-        {
-            string seaEpsHtml = string.Empty;
-            if (item.Type == "Series")
-            {
-                var parsedInfoList = ParseSeriesInfo(item, upcomingItems);
-                string seaEpsPlain = GetSeasonEpisodeBase(parsedInfoList);
-                seaEpsHtml = seaEpsPlain.TrimEnd('\r', '\n').Replace("\n", "<br>", StringComparison.Ordinal);
-            }
-
-            var tmpEntryHtml = matrixEntryHtml;
-
-            // Upload the image to the Matrix homeserver and use the MXC URL for the image
-            // Fallback to HTTP ImageURL if it is an upcoming item, or if upload fails/is unavailable
-            var replaceDict = item.GetReplaceDict();
-            
-            string? mxcUrl = null;
-            if (Config.PosterType == "attachment" && eventType != "upcoming")
-            {
-                mxcUrl = UploadImageToMatrix(item.PosterPath, false, config);
-            }
-            else if (!string.IsNullOrEmpty(item.ImageURL))
-            {
-                mxcUrl = UploadImageToMatrix(item.ImageURL, true, config);
-            }
-
-            if (!string.IsNullOrEmpty(mxcUrl))
-            {
-                replaceDict["{ImageURL}"] = mxcUrl;
-            }
-
-            foreach (var ele in replaceDict)
-            {
-                if (ele.Value is not null)
-                {
-                    tmpEntryHtml = this.TemplateReplace(tmpEntryHtml, ele.Key, ele.Value);
-                }
-            }
-
-            string eventBadge = GetEventBadge(eventType);
-            tmpEntryHtml = tmpEntryHtml.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
-
-            string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" 
-                ? string.Empty
-                : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
-            
-            string entryHTML = tmpEntryHtml
-                .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                .Replace("{ItemURL}", itemUrl, StringComparison.Ordinal);
-
-            htmlBuilder.Append(entryHTML);
-        }
     }
 
     /// <summary>
     /// Builds a sample message for testing.
     /// </summary>
     /// <param name="config">The Matrix configuration.</param>
-    /// <returns>A string containing HTML body.</returns>
+    /// <returns>A string containing the complete HTML body for testing.</returns>
     public string BuildMessageForTest(MatrixConfiguration config)
     {
         EnsureSetup(config);
-
-        StringBuilder testHTML = new StringBuilder();
-
-        string[] eventTypes = { "add", "update", "delete", "upcoming" };
-        string[] titles = { "Test Added Series", "Test Updated Movie", "Test Deleted Series", "Test Upcoming Movie" };
-
-        for (int i = 0; i < eventTypes.Length; i++)
-        {
-            string eventType = eventTypes[i];
-            
-            testHTML.Append(GetEventSectionHeader(eventType));
-
-            JsonFileObj item = JsonFileObj.GetTestObj();
-            item.Title = titles[i];
-
-            string seaEpsHtml = "Season: 1 - Eps. 1 - 10<br>Season: 2 - Eps. 1 - 10<br>Season: 3 - Eps. 1 - 10";
-
-            string tmpEntryHtml = matrixEntryHtml;
-            var replaceDict = item.GetReplaceDict();
-            
-            string? mxcUrl = null;
-            if (Config.PosterType == "attachment" && eventType != "upcoming")
-            {
-                mxcUrl = UploadImageToMatrix(item.PosterPath, false, config);
-            }
-            else if (!string.IsNullOrEmpty(item.ImageURL))
-            {
-                mxcUrl = UploadImageToMatrix(item.ImageURL, true, config);
-            }
-
-            if (!string.IsNullOrEmpty(mxcUrl))
-            {
-                replaceDict["{ImageURL}"] = mxcUrl;
-            }
-
-            foreach (var ele in replaceDict)
-            {
-                if (ele.Value is not null)
-                {
-                    tmpEntryHtml = this.TemplateReplace(tmpEntryHtml, ele.Key, ele.Value);
-                }
-            }
-
-            string eventBadge = GetEventBadge(eventType);
-            tmpEntryHtml = tmpEntryHtml.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
-
-            string itemUrl = string.IsNullOrEmpty(Config.Hostname) ? string.Empty : Config.Hostname;
-            string entryHTML = tmpEntryHtml
-                .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                .Replace("{ItemURL}", itemUrl, StringComparison.Ordinal);
-
-            testHTML.Append(entryHTML);
-        }
-
-        return ReplaceBodyWithBuiltString(GetDefaultHTMLBody(config), testHTML.ToString());
+        return ReplaceBodyWithBuiltString(GetDefaultHTMLBody(config), BuildTestEntriesHtml(config));
     }
 
-    /// <summary>
-    /// Replaces the {EntryData} placeholder in the newsletter body with the provided newsletter data string.
-    /// </summary>
-    /// <param name="body">The HTML body template containing the {EntryData} placeholder.</param>
-    /// <param name="nlData">The newsletter data to insert into the body.</param>
-    /// <returns>The HTML body with the {EntryData} placeholder replaced by the newsletter data.</returns>
-    public static string ReplaceBodyWithBuiltString(string body, string nlData)
+    /// <inheritdoc/>
+    protected override void CustomizeItemReplaceDict(JsonFileObj item, string eventType, Dictionary<string, object?> replaceDict)
     {
-        return body.Replace("{EntryData}", nlData, StringComparison.Ordinal);
+        // Upload the image to the Matrix homeserver and use the MXC URL
+        var matrixConfig = GetCurrentMatrixConfig();
+        if (matrixConfig == null)
+        {
+            return;
+        }
+
+        string? mxcUrl = null;
+        if (Config.PosterType == "attachment" && eventType != "upcoming")
+        {
+            mxcUrl = UploadImageToMatrix(item.PosterPath, false, matrixConfig);
+        }
+        else if (!string.IsNullOrEmpty(item.ImageURL))
+        {
+            mxcUrl = UploadImageToMatrix(item.ImageURL, true, matrixConfig);
+        }
+
+        if (!string.IsNullOrEmpty(mxcUrl))
+        {
+            replaceDict["{ImageURL}"] = mxcUrl;
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void CustomizeTestItemReplaceDict(JsonFileObj item, string eventType, Dictionary<string, object?> replaceDict, ITemplatedConfiguration config)
+    {
+        if (config is not MatrixConfiguration matrixConfig)
+        {
+            return;
+        }
+
+        string? mxcUrl = null;
+        if (Config.PosterType == "attachment" && eventType != "upcoming")
+        {
+            mxcUrl = UploadImageToMatrix(item.PosterPath, false, matrixConfig);
+        }
+        else if (!string.IsNullOrEmpty(item.ImageURL))
+        {
+            mxcUrl = UploadImageToMatrix(item.ImageURL, true, matrixConfig);
+        }
+
+        if (!string.IsNullOrEmpty(mxcUrl))
+        {
+            replaceDict["{ImageURL}"] = mxcUrl;
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override string GetEventSectionHeader(string eventType, string libraryName = "Library")
+    {
+        var (title, emoji, color) = eventType.ToLowerInvariant() switch
+        {
+            "add" => ($"Added to {libraryName}", "🎬", "#4CAF50"),
+            "update" => ($"Updated in {libraryName}", "🔄", "#2196F3"),
+            "delete" => ($"Removed from {libraryName}", "🗑️", "#F44336"),
+            "upcoming" => ($"Upcoming in {libraryName}", "📅", "#FF8C00"),
+            _ => ($"Added to {libraryName}", "🎬", "#4CAF50")
+        };
+
+        return $"<h2><font data-mx-color='{color}'>{emoji} {title}</font></h2><hr/>";
+    }
+
+    /// <inheritdoc/>
+    protected override string GetEventBadge(string eventType)
+    {
+        var (label, emoji, bgColor) = eventType.ToLowerInvariant() switch
+        {
+            "add" => ("NEW", "🎬", "#4CAF50"),
+            "update" => ("UPDATED", "🔄", "#2196F3"),
+            "delete" => ("REMOVED", "🗑️", "#F44336"),
+            "upcoming" => ("UPCOMING", "📅", "#FF8C00"),
+            _ => ("NEW", "🎬", "#4CAF50")
+        };
+
+        return $"<font data-mx-color='{bgColor}'><b>[{emoji} {label}]</b></font>";
+    }
+
+    private MatrixConfiguration? GetCurrentMatrixConfig()
+    {
+        return _currentConfig;
+    }
+
+    // Override EnsureSetup to also store the config
+    private new void EnsureSetup(ITemplatedConfiguration config)
+    {
+        if (config is MatrixConfiguration matrixConfig)
+        {
+            _currentConfig = matrixConfig;
+        }
+
+        base.EnsureSetup(config);
     }
 
     private string? UploadImageToMatrix(string? source, bool isUrl, MatrixConfiguration config)
@@ -494,65 +344,6 @@ public class MatrixMessageBuilder(
         finally
         {
             Db.CloseConnection();
-        }
-    }
-
-    private string GetEventSectionHeader(string eventType, string libraryName = "Library")
-    {
-        var (title, emoji, color) = eventType.ToLowerInvariant() switch
-        {
-            "add" => ($"Added to {libraryName}", "🎬", "#4CAF50"),
-            "update" => ($"Updated in {libraryName}", "🔄", "#2196F3"),
-            "delete" => ($"Removed from {libraryName}", "🗑️", "#F44336"),
-            "upcoming" => ($"Upcoming in {libraryName}", "📅", "#FF8C00"),
-            _ => ($"Added to {libraryName}", "🎬", "#4CAF50")
-        };
-
-        return $"<h2><font data-mx-color='{color}'>{emoji} {title}</font></h2><hr/>";
-    }
-
-    private string GetEventBadge(string eventType)
-    {
-        var (label, emoji, bgColor) = eventType.ToLowerInvariant() switch
-        {
-            "add" => ("NEW", "🎬", "#4CAF50"),
-            "update" => ("UPDATED", "🔄", "#2196F3"),
-            "delete" => ("REMOVED", "🗑️", "#F44336"),
-            "upcoming" => ("UPCOMING", "📅", "#FF8C00"),
-            _ => ("NEW", "🎬", "#4CAF50")
-        };
-
-        return $"<font data-mx-color='{bgColor}'><b>[{emoji} {label}]</b></font>";
-    }
-
-    private void DefaultBodyAndEntry(MatrixConfiguration config)
-    {
-        this.matrixBodyHtml = config.Body ?? string.Empty;
-        this.matrixEntryHtml = config.Entry ?? string.Empty;
-
-        try
-        {
-            var pluginDir = Path.GetDirectoryName(typeof(MatrixMessageBuilder).Assembly.Location);
-            if (pluginDir == null)
-            {
-                return;
-            }
-            
-            string category = !string.IsNullOrEmpty(config.TemplateCategory) ? config.TemplateCategory : "Matrix";
-
-            if (string.IsNullOrWhiteSpace(this.matrixBodyHtml))
-            {
-                this.matrixBodyHtml = File.ReadAllText(Path.Combine(pluginDir, "Templates", category, "template_body.html"));
-            }
-
-            if (string.IsNullOrWhiteSpace(this.matrixEntryHtml))
-            {
-                this.matrixEntryHtml = File.ReadAllText(Path.Combine(pluginDir, "Templates", category, "template_entry.html"));
-            }
-        }
-        catch (Exception e)
-        {
-            Logger.Error("Failed to set default body HTML from template file: " + e);
         }
     }
 }

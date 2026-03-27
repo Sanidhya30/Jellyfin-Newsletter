@@ -5,7 +5,7 @@ namespace Jellyfin.Plugin.Newsletters.Configuration;
 /// <summary>
 /// Configuration for Matrix client.
 /// </summary>
-public class MatrixConfiguration : INewsletterConfiguration
+public class MatrixConfiguration : ITemplatedConfiguration
 {
     /// <summary>
     /// Gets or sets the name of the Matrix configuration.
