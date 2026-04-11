@@ -349,7 +349,7 @@ You can select between different email templates:
 <details>
 <summary>Matrix Configuration</summary>
 
-> ***You can configure Multiple Matrix Clients. Each client instance can have its own Homeserver URL, Access Token, Room ID, library selection, and event configurations.***
+> ***You can configure Multiple Matrix Clients. Each client instance can have its own Homeserver URL, Access Token, Room ID(s), library selection, and event configurations.***
 
 ### Homeserver URL
 
@@ -361,7 +361,7 @@ You can select between different email templates:
 
 ### Room ID
 
-- The Room ID where newsletters will be sent (e.g., `!roomid:matrix.org`). You can find this in your Matrix client's room settings.
+- The Room ID where newsletters will be sent (e.g., `!roomid:matrix.org`). You can find this in your Matrix client's room settings. **Supports multiple Room IDs**: You can enter multiple Room IDs separated by commas `,`.
 
 ### Test Message
 
@@ -459,7 +459,7 @@ The following features are planned for future releases:
   - Extend newsletter functionality to music libraries
   - Include album art, artist information, and track details
 
-- [x] **Multiple webhook/telegram ID/email support with configurable parameters**
+- [x] **Multiple webhook/telegram ID/email/matrix room ID support with configurable parameters**
   - Support for multiple notification endpoints per event type
   - Individual configuration options for each recipient/channel
   - Granular control over which events trigger newsletter for each endpoint
