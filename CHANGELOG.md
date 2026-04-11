@@ -1,3 +1,8 @@
+# 1.6.1.0
+
+- **Feature**: Added support for multiple room IDs in Matrix configuration
+- **Bug Fix**: Removed hyperlink for deleted items
+
 # 1.6.0.0
 
 - **Matrix Client Support**: Added Matrix as a new newsletter client with HTML rendering support (tested with Element)

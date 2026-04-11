@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.6.1.0",
+                "changelog": "- Feature: Added support for multiple room IDs in Matrix configuration.\n- Bug Fix: Removed hyperlink for deleted items.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.6.1.0/newsletters_1.6.1.0.zip",
+                "checksum": "a75f66e5a281f7351524e78af5b8f958",
+                "timestamp": "2026-04-11T11:18:23Z"
+            },
+            {
                 "version": "1.6.0.0",
                 "changelog": "- Matrix client support for newsletters with HTML rendering.\n- Poster image uploads to Matrix homeserver with mxc:// URL caching.\n- Dedicated Matrix HTML templates.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",
