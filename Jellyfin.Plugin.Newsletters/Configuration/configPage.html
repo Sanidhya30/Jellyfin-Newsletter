@@ -1286,7 +1286,7 @@
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">Room ID:</label>';
                     html += '      <input id="matrix-room-' + config.Id + '" type="text" is="emby-input" value="' + (config.RoomId || '') + '" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
-                    html += '      <div class="fieldDescription">The internal room ID (e.g., !yourRoomId:example.com)</div>';
+                    html += '      <div class="fieldDescription">The internal room ID (e.g., !yourRoomId:example.com). Separate multiple with commas.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'matrix', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);

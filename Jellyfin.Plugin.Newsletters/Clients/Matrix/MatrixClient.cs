@@ -81,6 +81,18 @@ public class MatrixClient(IServerApplicationHost appHost,
             return BadRequest("Matrix configuration is missing required fields (Homeserver, Token, or Room).");
         }
 
+        // Split RoomId by comma
+        var roomIds = matrixConfig.RoomId.Split(',')
+                                     .Select(id => id.Trim())
+                                     .Where(id => !string.IsNullOrEmpty(id))
+                                     .ToList();
+
+        if (roomIds.Count == 0)
+        {
+             Logger.Error($"Matrix configuration '{matrixConfig.Name}' has no valid room IDs. Aborting test message.");
+             return BadRequest("Matrix configuration has no valid room IDs.");
+        }
+
         try
         {
             var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, new List<JsonFileObj>());
@@ -90,8 +102,17 @@ public class MatrixClient(IServerApplicationHost appHost,
             htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
             htmlBody = htmlBody.Replace("{Date}", currDate, StringComparison.Ordinal);
 
-            bool success = SendToMatrixApi(matrixConfig, htmlBody);
-            if (success)
+            bool anySuccess = false;
+            foreach (var roomId in roomIds)
+            {
+                bool success = SendToMatrixApi(matrixConfig, htmlBody, roomId);
+                if (success)
+                {
+                    anySuccess = true;
+                }
+            }
+
+            if (anySuccess)
             {
                 return Ok("Test Matrix message sent successfully.");
             }
@@ -133,7 +154,18 @@ public class MatrixClient(IServerApplicationHost appHost,
                         string.IsNullOrEmpty(matrixConfig.AccessToken) ||
                         string.IsNullOrEmpty(matrixConfig.RoomId))
                     {
-                        Logger.Info($"Matrix configuration '{matrixConfig.Name}' is missing required fields. Skipping.");
+                        Logger.Error($"Matrix configuration '{matrixConfig.Name}' is missing required fields. Skipping.");
+                        continue;
+                    }
+
+                    var roomIds = matrixConfig.RoomId.Split(',')
+                                                 .Select(id => id.Trim())
+                                                 .Where(id => !string.IsNullOrEmpty(id))
+                                                 .ToList();
+
+                    if (roomIds.Count == 0)
+                    {
+                        Logger.Error($"Matrix configuration '{matrixConfig.Name}' has no valid room IDs. Skipping.");
                         continue;
                     }
 
@@ -146,8 +178,11 @@ public class MatrixClient(IServerApplicationHost appHost,
                     htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
                     htmlBody = htmlBody.Replace("{Date}", currDate, StringComparison.Ordinal);
 
-                    bool result = SendToMatrixApi(matrixConfig, htmlBody);
-                    anySuccess |= result;
+                    foreach (var roomId in roomIds)
+                    {
+                        bool result = SendToMatrixApi(matrixConfig, htmlBody, roomId);
+                        anySuccess |= result;
+                    }
                 }
             }
             else
@@ -163,13 +198,13 @@ public class MatrixClient(IServerApplicationHost appHost,
         return anySuccess;
     }
 
-    private bool SendToMatrixApi(MatrixConfiguration matrixConfig, string htmlBody)
+    private bool SendToMatrixApi(MatrixConfiguration matrixConfig, string htmlBody, string roomId)
     {
         try
         {
             var homeserverUrl = matrixConfig.HomeserverUrl.TrimEnd('/');
             // Need to URL encode the Room ID since it usually contains special characters like # or ! and colons
-            var encodedRoomId = Uri.EscapeDataString(matrixConfig.RoomId);
+            var encodedRoomId = Uri.EscapeDataString(roomId);
             var txnId = Guid.NewGuid().ToString();
 
             var requestUrl = $"{homeserverUrl}/_matrix/client/v3/rooms/{encodedRoomId}/send/m.room.message/{txnId}";
