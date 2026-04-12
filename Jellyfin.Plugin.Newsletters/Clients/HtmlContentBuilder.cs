@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -30,6 +31,10 @@ public abstract class HtmlContentBuilder(
 {
     private string bodyHtml = string.Empty;
     private string entryHtml = string.Empty;
+    private string headerAddHtml = string.Empty;
+    private string headerUpdateHtml = string.Empty;
+    private string headerDeleteHtml = string.Empty;
+    private string headerUpcomingHtml = string.Empty;
     private bool _isSetup;
 
     /// <summary>
@@ -44,12 +49,30 @@ public abstract class HtmlContentBuilder(
 
     /// <summary>
     /// Gets the HTML section header for an event type and library name.
-    /// Each client provides its own markup style.
+    /// Loads the header from the parsed template and substitutes {LibraryName}.
     /// </summary>
     /// <param name="eventType">The event type (add, update, delete, upcoming).</param>
     /// <param name="libraryName">The library name to display.</param>
     /// <returns>An HTML string for the section header.</returns>
-    protected abstract string GetEventSectionHeader(string eventType, string libraryName = "Library");
+    protected virtual string GetEventSectionHeader(string eventType, string libraryName = "Library")
+    {
+        string headerTemplate = eventType.ToLowerInvariant() switch
+        {
+            "add" => headerAddHtml,
+            "update" => headerUpdateHtml,
+            "delete" => headerDeleteHtml,
+            "upcoming" => headerUpcomingHtml,
+            _ => headerAddHtml
+        };
+
+        if (string.IsNullOrWhiteSpace(headerTemplate))
+        {
+            Logger.Warn($"No header template found for event type '{eventType}'. Using empty string.");
+            return string.Empty;
+        }
+
+        return this.TemplateReplace(headerTemplate, "{LibraryName}", libraryName);
+    }
 
     /// <summary>
     /// Gets the HTML badge for an event type to be displayed on individual entries.
@@ -198,6 +221,13 @@ public abstract class HtmlContentBuilder(
         var replaceDict = item.GetReplaceDict();
         CustomizeItemReplaceDict(item, eventType, replaceDict);
 
+        // Add computed replacements to the dict
+        replaceDict["{EventBadge}"] = GetEventBadge(eventType);
+        replaceDict["{SeasonEpsInfo}"] = seaEpsHtml;
+        replaceDict["{ItemURL}"] = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" || eventType == "delete"
+            ? string.Empty
+            : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
+
         foreach (var ele in replaceDict)
         {
             if (ele.Value is not null)
@@ -206,16 +236,7 @@ public abstract class HtmlContentBuilder(
             }
         }
 
-        string eventBadge = GetEventBadge(eventType);
-        tmpEntry = tmpEntry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
-
-        string itemUrl = string.IsNullOrEmpty(Config.Hostname) || eventType == "upcoming" || eventType == "delete"
-            ? string.Empty
-            : $"{Config.Hostname}/web/index.html#/details?id={item.ItemID}&serverId={serverId}&event={eventType}";
-
-        return tmpEntry
-            .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-            .Replace("{ItemURL}", itemUrl, StringComparison.Ordinal);
+        return tmpEntry;
     }
 
     /// <summary>
@@ -262,6 +283,13 @@ public abstract class HtmlContentBuilder(
             var replaceDict = item.GetReplaceDict();
             CustomizeTestItemReplaceDict(item, eventType, replaceDict, config);
 
+            // Add computed replacements to the dict
+            replaceDict["{EventBadge}"] = GetEventBadge(eventType);
+            replaceDict["{SeasonEpsInfo}"] = seaEpsHtml;
+            replaceDict["{ItemURL}"] = string.IsNullOrEmpty(Config.Hostname)
+                ? string.Empty
+                : Config.Hostname;
+
             foreach (var ele in replaceDict)
             {
                 if (ele.Value is not null)
@@ -270,17 +298,7 @@ public abstract class HtmlContentBuilder(
                 }
             }
 
-            string eventBadge = GetEventBadge(eventType);
-            tmpEntry = tmpEntry.Replace("{EventBadge}", eventBadge, StringComparison.Ordinal);
-
-            string itemUrl = string.IsNullOrEmpty(Config.Hostname)
-                ? string.Empty
-                : Config.Hostname;
-            string entryHTML = tmpEntry
-                .Replace("{SeasonEpsInfo}", seaEpsHtml, StringComparison.Ordinal)
-                .Replace("{ItemURL}", itemUrl, StringComparison.Ordinal);
-
-            testHTML.Append(entryHTML);
+            testHTML.Append(tmpEntry);
         }
 
         return testHTML.ToString();
@@ -301,10 +319,11 @@ public abstract class HtmlContentBuilder(
 
     private void DefaultBodyAndEntry(ITemplatedConfiguration config)
     {
-        Logger.Debug("Checking for default Body and Entry HTML from Template file..");
+        Logger.Debug("Checking for default Body, Entry, and Header HTML from Template file..");
 
         this.bodyHtml = config.Body ?? string.Empty;
         this.entryHtml = config.Entry ?? string.Empty;
+        string headerHtml = config.Header ?? string.Empty;
 
         try
         {
@@ -346,12 +365,73 @@ public abstract class HtmlContentBuilder(
                     Logger.Error(ex);
                 }
             }
+
+            if (string.IsNullOrWhiteSpace(headerHtml))
+            {
+                try
+                {
+                    headerHtml = File.ReadAllText(Path.Combine(pluginDir, "Templates", category, "template_header.html"));
+                    Logger.Debug($"Header HTML set from Template file ({category}) internally!");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to set default Header HTML from Template file");
+                    Logger.Error(ex);
+                }
+            }
+
+            // Parse the four header sections from the combined template
+            ParseHeaderSections(headerHtml);
         }
         catch (Exception e)
         {
             Logger.Error("Failed to locate/set html body from template file..");
             Logger.Error(e);
         }
+    }
+
+    /// <summary>
+    /// Parses the combined header HTML into four separate sections using template tag IDs.
+    /// Extracts content between &lt;template id="header-{type}"&gt; and &lt;/template&gt; markers.
+    /// </summary>
+    /// <param name="fullHeaderHtml">The combined header HTML containing all four template sections.</param>
+    private void ParseHeaderSections(string fullHeaderHtml)
+    {
+        if (string.IsNullOrWhiteSpace(fullHeaderHtml))
+        {
+            Logger.Warn("Header HTML is empty. Section headers will not be rendered.");
+            return;
+        }
+
+        this.headerAddHtml = ExtractTemplateSection(fullHeaderHtml, "header-add");
+        this.headerUpdateHtml = ExtractTemplateSection(fullHeaderHtml, "header-update");
+        this.headerDeleteHtml = ExtractTemplateSection(fullHeaderHtml, "header-delete");
+        this.headerUpcomingHtml = ExtractTemplateSection(fullHeaderHtml, "header-upcoming");
+
+        Logger.Debug($"Header sections parsed — Add: {!string.IsNullOrEmpty(this.headerAddHtml)}, Update: {!string.IsNullOrEmpty(this.headerUpdateHtml)}, Delete: {!string.IsNullOrEmpty(this.headerDeleteHtml)}, Upcoming: {!string.IsNullOrEmpty(this.headerUpcomingHtml)}");
+    }
+
+    /// <summary>
+    /// Extracts the inner content of a template tag by its ID.
+    /// For example, for id="header-add", extracts content between
+    /// <template id="header-add"> and </template>.
+    /// </summary>
+    /// <param name="html">The full HTML string containing template tags.</param>
+    /// <param name="templateId">The ID of the template tag to extract.</param>
+    /// <returns>The inner content of the matched template tag, or empty string if not found.</returns>
+    private string ExtractTemplateSection(string html, string templateId)
+    {
+        // Match <template id="header-add"> ... </template> (case-insensitive, single-line mode)
+        string pattern = $@"<template\s+id\s*=\s*[""']{Regex.Escape(templateId)}[""']\s*>(.*?)</template>";
+        var match = Regex.Match(html, pattern, RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        if (match.Success)
+        {
+            return match.Groups[1].Value.Trim();
+        }
+
+        Logger.Warn($"Template section '{templateId}' not found in header HTML.");
+        return string.Empty;
     }
 
     /// <summary>

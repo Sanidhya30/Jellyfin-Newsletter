@@ -20,4 +20,11 @@ public interface ITemplatedConfiguration : INewsletterConfiguration
     /// Gets the template category (e.g., "Modern", "Matrix").
     /// </summary>
     string TemplateCategory { get; }
+
+    /// <summary>
+    /// Gets the custom HTML header template containing section headers for each event type.
+    /// Uses template tags with IDs (header-add, header-update, header-delete, header-upcoming).
+    /// If empty, the default template file is used.
+    /// </summary>
+    string Header { get; }
 }

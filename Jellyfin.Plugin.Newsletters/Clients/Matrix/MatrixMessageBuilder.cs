@@ -140,21 +140,6 @@ public class MatrixMessageBuilder(
     }
 
     /// <inheritdoc/>
-    protected override string GetEventSectionHeader(string eventType, string libraryName = "Library")
-    {
-        var (title, emoji, color) = eventType.ToLowerInvariant() switch
-        {
-            "add" => ($"Added to {libraryName}", "🎬", "#4CAF50"),
-            "update" => ($"Updated in {libraryName}", "🔄", "#2196F3"),
-            "delete" => ($"Removed from {libraryName}", "🗑️", "#F44336"),
-            "upcoming" => ($"Upcoming in {libraryName}", "📅", "#FF8C00"),
-            _ => ($"Added to {libraryName}", "🎬", "#4CAF50")
-        };
-
-        return $"<h2><font data-mx-color='{color}'>{emoji} {title}</font></h2><hr/>";
-    }
-
-    /// <inheritdoc/>
     protected override string GetEventBadge(string eventType)
     {
         var (label, emoji, bgColor) = eventType.ToLowerInvariant() switch

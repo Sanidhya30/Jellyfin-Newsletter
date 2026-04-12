@@ -47,6 +47,13 @@ public class MatrixConfiguration : ITemplatedConfiguration
     /// </summary>
     public string Entry { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the header HTML template for section headers.
+    /// Uses template tags with IDs (header-add, header-update, header-delete, header-upcoming).
+    /// If empty, the default template file is used.
+    /// </summary>
+    public string Header { get; set; } = string.Empty;
+
     /// <inheritdoc/>
     public Collection<string> SelectedSeriesLibraries { get; set; } = new();
 
