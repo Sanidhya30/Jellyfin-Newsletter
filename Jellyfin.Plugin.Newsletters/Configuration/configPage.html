@@ -1028,7 +1028,8 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
-                    EnableSsl: true
+                    EnableSsl: true,
+                    UseAuthentication: true
                 };
                 emailConfigs.push(newConfig);
                 renderEmailConfigs();
@@ -1079,6 +1080,7 @@
                 config.Header = document.getElementById('email-header-' + id).value;
                 config.TemplateCategory = document.getElementById('email-category-' + id).value;
                 config.EnableSsl = document.getElementById('email-ssl-' + id).checked;
+                config.UseAuthentication = document.getElementById('email-auth-' + id).checked;
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('email-event-add-' + id).checked;
@@ -1146,11 +1148,19 @@
                     html += '        <input id="email-pass-' + config.Id + '" type="password" is="emby-input" value="' + (config.SMTPPass || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '      </div>';
                     html += '    </div>';
-                    html += '    <div class="checkboxContainer">';
-                    html += '      <label class="emby-checkbox-label">';
-                    html += '        <input id="email-ssl-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EnableSsl !== false ? 'checked' : '') + ' onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
-                    html += '        <span>Enable SSL/TLS</span>';
-                    html += '      </label>';
+                    html += '    <div class="config-field-row">';
+                    html += '      <div class="checkboxContainer" style="flex: 1; min-width: 200px;">';
+                    html += '        <label class="emby-checkbox-label">';
+                    html += '          <input id="email-ssl-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EnableSsl !== false ? 'checked' : '') + ' onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '          <span>Enable SSL/TLS</span>';
+                    html += '        </label>';
+                    html += '      </div>';
+                    html += '      <div class="checkboxContainer" style="flex: 1; min-width: 200px;">';
+                    html += '        <label class="emby-checkbox-label">';
+                    html += '          <input id="email-auth-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.UseAuthentication !== false ? 'checked' : '') + ' onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '          <span>Use Authentication</span>';
+                    html += '        </label>';
+                    html += '      </div>';
                     html += '    </div>';
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">To Address:</label>';

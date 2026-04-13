@@ -119,4 +119,9 @@ public class EmailConfiguration : ITemplatedConfiguration
     /// Gets or sets a value indicating whether SSL is enabled for the SMTP connection.
     /// </summary>
     public bool EnableSsl { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether authentication is used for the SMTP connection.
+    /// </summary>
+    public bool UseAuthentication { get; set; } = true;
 }
