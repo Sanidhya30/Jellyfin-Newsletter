@@ -216,28 +216,6 @@ public class HtmlBuilder(
     }
 
     /// <inheritdoc/>
-    protected override string GetEventSectionHeader(string eventType, string libraryName = "Library")
-    {
-        var (title, emoji, color) = eventType.ToLowerInvariant() switch
-        {
-            "add" => ($"Added to {libraryName}", "🎬", "#4CAF50"),
-            "update" => ($"Updated in {libraryName}", "🔄", "#2196F3"),
-            "delete" => ($"Removed from {libraryName}", "🗑️", "#F44336"),
-            "upcoming" => ($"Upcoming in {libraryName}", "📅", "#FF8C00"),
-            _ => ($"Added to {libraryName}", "🎬", "#4CAF50")
-        };
-
-        return $@"
-        <tr>
-            <td colspan='2' style='padding: 20px 10px 10px 10px;'>
-                <h2 style='color: {color}; margin: 0; font-size: 1.8em; border-bottom: 2px solid {color}; padding-bottom: 10px; display: flex; align-items: center; gap: 8px;'>
-                   <span style='margin-right: 4px;'>{emoji}</span> {title}
-                </h2>
-            </td>
-        </tr>";
-    }
-
-    /// <inheritdoc/>
     protected override string GetEventBadge(string eventType)
     {
         var (label, emoji, bgColor) = eventType.ToLowerInvariant() switch

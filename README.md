@@ -280,6 +280,16 @@ You can select between different email templates:
 
 - Define custom HTML formatting for each individual media item (Movies/Series) in the newsletter. If left empty, the default HTML from the selected **Newsletter Template Category** will be used.
 
+### Header HTML
+
+- Define custom HTML for section headers (e.g., "Added to Movies", "Removed from Series"). The template uses `<template>` tags with IDs to define all four event-type headers in a single file:
+  - `<template id="header-add">` - Header for newly added items
+  - `<template id="header-update">` - Header for updated items
+  - `<template id="header-delete">` - Header for deleted items
+  - `<template id="header-upcoming">` - Header for upcoming items
+- **Placeholder**: `{LibraryName}` - replaced with the library name (e.g., "Movies", "TV Shows")
+- If left empty, the default header template from the selected **Newsletter Template Category** will be used.
+
 </details>
 
 <details>
@@ -390,6 +400,16 @@ You can select between different email templates:
 
 - Define custom HTML formatting for each individual media item (Movies/Series) in the newsletter. If left empty, the default HTML from the selected **Newsletter Template Category** will be used.
 
+### Header HTML
+
+- Define custom HTML for section headers (e.g., "Added to Movies", "Removed from Series"). The template uses `<template>` tags with IDs to define all four event-type headers in a single file:
+  - `<template id="header-add">` - Header for newly added items
+  - `<template id="header-update">` - Header for updated items
+  - `<template id="header-delete">` - Header for deleted items
+  - `<template id="header-upcoming">` - Header for upcoming items
+- **Placeholder**: `{LibraryName}` - replaced with the library name (e.g., "Movies", "TV Shows")
+- If left empty, the default header template from the selected **Newsletter Template Category** will be used.
+
 </details>
 
 # Issues
@@ -400,7 +420,7 @@ Please be patient with me, since I did this on the side of my normal job. But I 
 # Available HTML Data Tags
 
 Some of these may not interest that average user (if anyone), but I figured I would have any element in the Newsletters.db be available for use! `<br>`
-**NOTE:** *Examples of most tags can be found in the default Templates (template_modern_body.html AND template_modern_entry.html)*
+**NOTE:** *Examples of most tags can be found in the default Templates under `Templates/` (template_body.html, template_entry.html, template_header.html)*
 
 ## Required Tags
 
@@ -412,6 +432,7 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 
 ```
 - {Date} - Auto-generated date of Newsletter email generation
+- {ServerURL} - The configured server URL for Jellyfin
 - {SeasonEpsInfo} - This tag is the Plugin-generated Season/Episode data
 - {Title} - Title of Movie/Series
 - {SeriesOverview} - Movie/Series overview
@@ -422,6 +443,7 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 - {RunTime} - Movie/Episode Duration (for Series, gives first found duration. Will fix for only single episode or average in future update)
 - {OfficialRating} - TV-PG, TV-13, TV-14, etc.
 - {CommunityRating} - Numerical rating stored in Jellyfin's metadata
+- {LibraryName} - The library name (e.g., "Movies", "TV Shows") - used in the Header template
 ```
 
 ## Non-Recommended Tags
@@ -446,26 +468,26 @@ See 'issues' tab in GitHub with the label 'bug'
 The following features are planned for future releases:
 
 - [ ] **Support for delete events for series/season**
-  - Enhanced deletion tracking for series and individual seasons
-  - Improved cleanup of related data
+  - Deletion tracking for series and individual seasons
+  - Cleanup of related data
 
 - [ ] **Support for update events to update the database**
-  - Real-time database synchronization for item updates
+  - Database synchronization for item updates
   - Better handling of metadata changes and file upgrades
 
 - [ ] **Support for music/audio items**
   - Extend newsletter functionality to music libraries
   - Include album art, artist information, and track details
 
-- [x] **Multiple webhook/telegram ID/email/matrix room ID support with configurable parameters**
-  - Support for multiple notification endpoints per event type
-  - Individual configuration options for each recipient/channel
-  - Granular control over which events trigger newsletter for each endpoint
+- [x] ~~**Multiple webhook/telegram ID/email/matrix room ID support with configurable parameters**~~
+  - ~~Support for multiple notification endpoints per event type~~
+  - ~~Individual configuration options for each recipient/channel~~
+  - ~~Granular control over which events trigger newsletter for each endpoint~~
 
-- [x] **Upcoming series/episodes section for newsletter**
-  - Integration with Radarr and Sonarr for upcoming media tracking
-  - Configurable lead time for upcoming content newsletter
-  - Per-client toggle to enable/disable the upcoming section
+- [x] ~~**Upcoming series/episodes section for newsletter**~~
+  - ~~Integration with Radarr and Sonarr for upcoming media tracking~~
+  - ~~Configurable lead time for upcoming content newsletter~~
+  - ~~Per-client toggle to enable/disable the upcoming section~~
 
 # Contribute
 

@@ -69,6 +69,13 @@ public class EmailConfiguration : ITemplatedConfiguration
     public string Entry { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the header HTML template for section headers.
+    /// Uses template tags with IDs (header-add, header-update, header-delete, header-upcoming).
+    /// If empty, the default template file is used.
+    /// </summary>
+    public string Header { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the template category (e.g., "Modern").
     /// </summary>
     public string TemplateCategory { get; set; } = "Modern";
