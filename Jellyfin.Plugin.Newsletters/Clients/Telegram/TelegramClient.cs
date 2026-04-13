@@ -77,6 +77,12 @@ public class TelegramClient(IServerApplicationHost appHost,
             return;
         }
 
+        if (!telegramConfig.IsEnabled)
+        {
+            Logger.Info($"Telegram configuration '{telegramConfig.Name}' is disabled. Aborting test message.");
+            return;
+        }
+
         if (string.IsNullOrEmpty(telegramConfig.BotToken) || string.IsNullOrEmpty(telegramConfig.ChatId))
         {
             Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no bot token or chat ID. Aborting test message.");
@@ -171,6 +177,12 @@ public class TelegramClient(IServerApplicationHost appHost,
                 // Iterate over all Telegram configurations
                 foreach (var telegramConfig in Config.TelegramConfigurations)
                 {
+                    if (!telegramConfig.IsEnabled)
+                    {
+                        Logger.Info($"Telegram configuration '{telegramConfig.Name}' is disabled. Skipping.");
+                        continue;
+                    }
+                    
                     if (string.IsNullOrEmpty(telegramConfig.BotToken) || string.IsNullOrEmpty(telegramConfig.ChatId))
                     {
                         Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no bot token or chat ID. Skipping.");

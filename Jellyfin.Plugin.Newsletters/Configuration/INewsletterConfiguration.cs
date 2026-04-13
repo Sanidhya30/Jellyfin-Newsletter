@@ -8,6 +8,11 @@ namespace Jellyfin.Plugin.Newsletters.Configuration;
 public interface INewsletterConfiguration
 {
     /// <summary>
+    /// Gets a value indicating whether this configuration is enabled.
+    /// </summary>
+    bool IsEnabled { get; }
+
+    /// <summary>
     /// Gets the collection of selected series libraries.
     /// </summary>
     Collection<string> SelectedSeriesLibraries { get; }

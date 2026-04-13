@@ -694,6 +694,7 @@
                 var newConfig = {
                     Id: generateUUID(),
                     Name: 'Discord Webhook',
+                    IsEnabled: true,
                     WebhookURL: '',
                     WebhookName: 'Jellyfin Newsletter',
                     DescriptionEnabled: true,
@@ -750,6 +751,7 @@
                 if (!config) return;
 
                 config.Name = document.getElementById('discord-name-' + id).value || 'Unnamed';
+                config.IsEnabled = document.getElementById('discord-enabled-' + id).checked;
                 config.WebhookURL = document.getElementById('discord-url-' + id).value;
                 config.WebhookName = document.getElementById('discord-webhookname-' + id).value;
                 config.DescriptionEnabled = document.getElementById('discord-desc-' + id).checked;
@@ -799,6 +801,10 @@
                     html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
                     html += '    </div>';
                     html += '    <div class="config-accordion-actions">';
+                    html += '      <label class="emby-checkbox-label" style="margin-right: 15px; margin-bottom: 0;" onclick="event.stopPropagation()">';
+                    html += '        <input id="discord-enabled-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.IsEnabled !== false ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '        <span>Enabled</span>';
+                    html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testDiscordConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeDiscordConfig(\'' + config.Id + '\')">Delete</button>';
                     html += '    </div>';
@@ -860,6 +866,7 @@
                 var newConfig = {
                     Id: generateUUID(),
                     Name: 'Telegram Bot',
+                    IsEnabled: true,
                     BotToken: '',
                     ChatId: '',
                     DescriptionEnabled: true,
@@ -910,6 +917,7 @@
                 if (!config) return;
 
                 config.Name = document.getElementById('telegram-name-' + id).value || 'Unnamed';
+                config.IsEnabled = document.getElementById('telegram-enabled-' + id).checked;
                 config.BotToken = document.getElementById('telegram-token-' + id).value;
                 config.ChatId = document.getElementById('telegram-chatid-' + id).value;
                 config.DescriptionEnabled = document.getElementById('telegram-desc-' + id).checked;
@@ -952,6 +960,10 @@
                     html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
                     html += '    </div>';
                     html += '    <div class="config-accordion-actions">';
+                    html += '      <label class="emby-checkbox-label" style="margin-right: 15px; margin-bottom: 0;" onclick="event.stopPropagation()">';
+                    html += '        <input id="telegram-enabled-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.IsEnabled !== false ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '        <span>Enabled</span>';
+                    html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testTelegramConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeTelegramConfig(\'' + config.Id + '\')">Delete</button>';
                     html += '    </div>';
@@ -997,6 +1009,7 @@
                 var newConfig = {
                     Id: generateUUID(),
                     Name: 'Email Configuration',
+                    IsEnabled: true,
                     SMTPServer: 'smtp.gmail.com',
                     SMTPPort: 587,
                     SMTPUser: '',
@@ -1052,6 +1065,7 @@
                 if (!config) return;
 
                 config.Name = document.getElementById('email-name-' + id).value || 'Unnamed';
+                config.IsEnabled = document.getElementById('email-enabled-' + id).checked;
                 config.SMTPServer = document.getElementById('email-server-' + id).value;
                 config.SMTPPort = parseInt(document.getElementById('email-port-' + id).value) || 587;
                 config.SMTPUser = document.getElementById('email-user-' + id).value;
@@ -1099,6 +1113,10 @@
                     html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
                     html += '    </div>';
                     html += '    <div class="config-accordion-actions">';
+                    html += '      <label class="emby-checkbox-label" style="margin-right: 15px; margin-bottom: 0;" onclick="event.stopPropagation()">';
+                    html += '        <input id="email-enabled-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.IsEnabled !== false ? 'checked' : '') + ' onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '        <span>Enabled</span>';
+                    html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testEmailConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeEmailConfig(\'' + config.Id + '\')">Delete</button>';
                     html += '    </div>';
@@ -1190,6 +1208,7 @@
                 var newConfig = {
                     Id: generateUUID(),
                     Name: 'Matrix Bot',
+                    IsEnabled: true,
                     HomeserverUrl: '',
                     AccessToken: '',
                     RoomId: '',
@@ -1237,6 +1256,7 @@
                 if (!config) return;
 
                 config.Name = document.getElementById('matrix-name-' + id).value || 'Unnamed';
+                config.IsEnabled = document.getElementById('matrix-enabled-' + id).checked;
                 config.HomeserverUrl = document.getElementById('matrix-url-' + id).value;
                 config.AccessToken = document.getElementById('matrix-token-' + id).value;
                 config.RoomId = document.getElementById('matrix-room-' + id).value;
@@ -1276,6 +1296,10 @@
                     html += '      <span class="config-name">' + (config.Name || 'Unnamed') + '</span>';
                     html += '    </div>';
                     html += '    <div class="config-accordion-actions">';
+                    html += '      <label class="emby-checkbox-label" style="margin-right: 15px; margin-bottom: 0;" onclick="event.stopPropagation()">';
+                    html += '        <input id="matrix-enabled-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.IsEnabled !== false ? 'checked' : '') + ' onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '        <span>Enabled</span>';
+                    html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testMatrixConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeMatrixConfig(\'' + config.Id + '\')">Delete</button>';
                     html += '    </div>';

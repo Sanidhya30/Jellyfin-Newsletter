@@ -60,6 +60,12 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return;
             }
 
+            if (!emailConfig.IsEnabled)
+            {
+                Logger.Info($"Email configuration '{emailConfig.Name}' is disabled. Aborting test message.");
+                return;
+            }
+
             Logger.Debug($"Sending out test mail for '{emailConfig.Name}'!");
             string smtpAddress = emailConfig.SMTPServer;
             int portNumber = emailConfig.SMTPPort;
@@ -184,6 +190,12 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 // Iterate over all Email configurations
                 foreach (var emailConfig in Config.EmailConfigurations)
                 {
+                    if (!emailConfig.IsEnabled)
+                    {
+                        Logger.Info($"Email configuration '{emailConfig.Name}' is disabled. Skipping.");
+                        continue;
+                    }
+                    
                     if (string.IsNullOrEmpty(emailConfig.SMTPServer) || string.IsNullOrEmpty(emailConfig.SMTPUser))
                     {
                         Logger.Info($"Email configuration '{emailConfig.Name}' has no SMTP server or user. Skipping.");

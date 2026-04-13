@@ -18,6 +18,11 @@ public class MatrixConfiguration : ITemplatedConfiguration
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets a value indicating whether this Matrix configuration is enabled.
+    /// </summary>
+    public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the Matrix Homeserver URL.
     /// </summary>
     public string HomeserverUrl { get; set; } = string.Empty;

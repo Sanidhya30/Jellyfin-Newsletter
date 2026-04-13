@@ -76,6 +76,12 @@ public class DiscordWebhook(IServerApplicationHost appHost,
             return;
         }
 
+        if (!discordConfig.IsEnabled)
+        {
+            Logger.Info($"Discord configuration '{discordConfig.Name}' is disabled. Aborting test message.");
+            return;
+        }
+
         // Split the Webhook URL by comma to support multiple webhooks
         var webhookUrls = discordConfig.WebhookURL.Split(',')
                                        .Select(url => url.Trim())
@@ -159,6 +165,12 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                 // Iterate over all Discord configurations
                 foreach (var discordConfig in Config.DiscordConfigurations)
                 {
+                    if (!discordConfig.IsEnabled)
+                    {
+                        Logger.Info($"Discord configuration '{discordConfig.Name}' is disabled. Skipping.");
+                        continue;
+                    }
+                    
                     if (string.IsNullOrEmpty(discordConfig.WebhookURL))
                     {
                         Logger.Info($"Discord configuration '{discordConfig.Name}' has no webhook URL. Skipping.");
