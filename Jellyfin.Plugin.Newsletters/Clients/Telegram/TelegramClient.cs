@@ -59,13 +59,14 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// Sends a test message to a specific Telegram configuration to verify connectivity.
     /// </summary>
     /// <param name="configurationId">The ID of the Telegram configuration to test.</param>
+    /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendTelegramTestMessage")]
-    public void SendTelegramTestMessage([FromQuery] string configurationId)
+    public ActionResult SendTelegramTestMessage([FromQuery] string configurationId)
     {
         if (string.IsNullOrEmpty(configurationId))
         {
             Logger.Error("Configuration ID is required for testing.");
-            return;
+            return BadRequest("Configuration ID is required for testing.");
         }
 
         var telegramConfig = Config.TelegramConfigurations
@@ -74,19 +75,19 @@ public class TelegramClient(IServerApplicationHost appHost,
         if (telegramConfig == null)
         {
             Logger.Error($"Telegram configuration with ID '{configurationId}' not found.");
-            return;
+            return BadRequest($"Telegram configuration with ID '{configurationId}' not found.");
         }
 
         if (!telegramConfig.IsEnabled)
         {
             Logger.Info($"Telegram configuration '{telegramConfig.Name}' is disabled. Aborting test message.");
-            return;
+            return BadRequest($"Telegram configuration '{telegramConfig.Name}' is disabled. Aborting test message.");
         }
 
         if (string.IsNullOrEmpty(telegramConfig.BotToken) || string.IsNullOrEmpty(telegramConfig.ChatId))
         {
             Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no bot token or chat ID. Aborting test message.");
-            return;
+            return BadRequest($"Telegram configuration '{telegramConfig.Name}' has no bot token or chat ID. Aborting test message.");
         }
 
         // Split ChatId by comma
@@ -98,7 +99,7 @@ public class TelegramClient(IServerApplicationHost appHost,
         if (chatIds.Count == 0)
         {
              Logger.Info($"Telegram configuration '{telegramConfig.Name}' has no valid chat IDs. Aborting test message.");
-             return;
+             return BadRequest($"Telegram configuration '{telegramConfig.Name}' has no valid chat IDs. Aborting test message.");
         }
 
         try
@@ -109,7 +110,7 @@ public class TelegramClient(IServerApplicationHost appHost,
             if (string.IsNullOrEmpty(testMessage))
             {
                 Logger.Error("Failed to build test message.");
-                return;
+                return BadRequest("Failed to build test message.");
             }
 
             bool anySuccess = false;
@@ -142,15 +143,18 @@ public class TelegramClient(IServerApplicationHost appHost,
             if (anySuccess)
             {
                 Logger.Info($"Telegram test message process completed for '{telegramConfig.Name}'. At least one message verified.");
+                return Ok($"Telegram test message sent successfully for '{telegramConfig.Name}'.");
             }
             else
             {
                 Logger.Error($"Telegram test message process failed for all Chat IDs in '{telegramConfig.Name}'.");
+                return BadRequest($"Telegram test message process failed for all Chat IDs in '{telegramConfig.Name}'.");
             }
         }
         catch (Exception e)
         {
             Logger.Error($"An error occurred while sending Telegram test message to '{telegramConfig.Name}': " + e);
+            return BadRequest($"An error occurred while sending Telegram test message to '{telegramConfig.Name}'.");
         }
     }
 
