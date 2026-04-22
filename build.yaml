@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.6.1.0"
+version: "1.6.2.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated/upcoming media"
@@ -17,6 +17,8 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Feature: Added support for multiple room IDs in Matrix configuration.
-  - Bug Fix: Removed hyperlink for deleted items.
+  - Feature: Added customizable header templates for HTML clients.
+  - Feature: Added enable/disable toggle for each client instance.
+  - Bug Fix: Added unauthenticated SMTP support and auto-detected secure options for email clients.
+  - Bug Fix: Improved mobile responsiveness for Classic template.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

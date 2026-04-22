@@ -1,3 +1,11 @@
+# 1.6.2.0
+
+- **Feature**: Added customizable header templates for HTML clients
+- **Feature**: Added enable/disable toggle for each client instance
+- **Bug Fix**: Added unauthenticated SMTP support and auto-detected secure options for email clients
+- **Bug Fix**: Improved mobile responsiveness for Classic template
+- **Bug Fix**: Improved UI error handling messages
+
 # 1.6.1.0
 
 - **Feature**: Added support for multiple room IDs in Matrix configuration
