@@ -15,35 +15,20 @@
                         </h2>
                     </div>
 
-                    <!-- One time create, not loop for these elements-->
-                    <table>
-                        <td>
-                            <div id="runtime" style="color: #d190c5; font-size: small;">
-                                <b>Duration:</b> <i>{RunTime} min.</i> |
-                            </div>
-                        </td>
-                        <td>
-                            <div id="communityrating" style="color: #d190c5; font-size: small;">
-                                <img src="https://cdn-icons-png.flaticon.com/512/3418/3418886.png"
-                                    style="height: 15px;">
-                            </div>
-                        </td>
-                        <td>
-                            <div id="communityrating" style="color: #d190c5; font-size: small;">
-                                {CommunityRating} |
-                            </div>
-                        </td>
-                        <td>
-                            <div id="officialrating" style="color: #d190c5; font-size: small;">
-                                {OfficialRating} |
-                            </div>
-                        </td>
-                        <td>
-                            <div id="premiereyear" style="color: #d190c5; font-size: small;">
-                                {PremiereYear}
-                            </div>
-                        </td>
-                    </table>
+                    <div style="color: #d190c5; font-size: small; margin-bottom: 5px;">
+                        <span id="runtime" style="display: inline-block; white-space: nowrap; margin-right: 4px;">
+                            <b>Duration:</b> <i>{RunTime} min.</i> |
+                        </span>
+                        <span id="communityrating" style="display: inline-block; white-space: nowrap; margin-right: 4px;">
+                            <img src="https://cdn-icons-png.flaticon.com/512/3418/3418886.png" style="height: 14px; vertical-align: text-bottom;"> {CommunityRating} |
+                        </span>
+                        <span id="officialrating" style="display: inline-block; white-space: nowrap; margin-right: 4px;">
+                            {OfficialRating} |
+                        </span>
+                        <span id="premiereyear" style="display: inline-block; white-space: nowrap;">
+                            {PremiereYear}
+                        </span>
+                    </div>
 
                     <!--  -->
 
