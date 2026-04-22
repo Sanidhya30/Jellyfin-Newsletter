@@ -58,13 +58,14 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// Sends a test message to a specific Discord webhook configuration to verify connectivity.
     /// </summary>
     /// <param name="configurationId">The ID of the Discord configuration to test.</param>
+    /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendDiscordTestMessage")]
-    public void SendDiscordTestMessage([FromQuery] string configurationId)
+    public ActionResult SendDiscordTestMessage([FromQuery] string configurationId)
     {
         if (string.IsNullOrEmpty(configurationId))
         {
             Logger.Error("Configuration ID is required for testing.");
-            return;
+            return BadRequest("Configuration ID is required for testing.");
         }
 
         var discordConfig = Config.DiscordConfigurations
@@ -73,13 +74,13 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         if (discordConfig == null)
         {
             Logger.Error($"Discord configuration with ID '{configurationId}' not found.");
-            return;
+            return BadRequest($"Discord configuration with ID '{configurationId}' not found.");
         }
 
         if (!discordConfig.IsEnabled)
         {
             Logger.Info($"Discord configuration '{discordConfig.Name}' is disabled. Aborting test message.");
-            return;
+            return BadRequest($"Discord configuration '{discordConfig.Name}' is disabled. Aborting test message.");
         }
 
         // Split the Webhook URL by comma to support multiple webhooks
@@ -91,7 +92,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         if (webhookUrls.Count == 0)
         {
             Logger.Info($"Discord configuration '{discordConfig.Name}' has no valid webhook URLs. Aborting test message.");
-            return;
+            return BadRequest($"Discord configuration '{discordConfig.Name}' has no valid webhook URLs. Aborting test message.");
         }
 
         bool anySuccess = false;
@@ -135,10 +136,12 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         if (anySuccess)
         {
             Logger.Info($"Discord test message process completed for '{discordConfig.Name}'. At least one message verified.");
+            return Ok($"Discord test message sent successfully for '{discordConfig.Name}'.");
         }
         else
         {
             Logger.Error($"Discord test message process failed for all webhooks in '{discordConfig.Name}'.");
+            return BadRequest($"Discord test message process failed for all webhooks in '{discordConfig.Name}'.");
         }
     }
 

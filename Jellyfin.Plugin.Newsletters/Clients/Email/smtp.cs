@@ -40,15 +40,16 @@ public class SmtpMailer(IServerApplicationHost appHost,
     /// Sends a test email using a specific email configuration.
     /// </summary>
     /// <param name="configurationId">The ID of the Email configuration to test.</param>
+    /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendTestMail")]
-    public void SendTestMail([FromQuery] string configurationId)
+    public ActionResult SendTestMail([FromQuery] string configurationId)
     {
         try
         {
             if (string.IsNullOrEmpty(configurationId))
             {
                 Logger.Error("Configuration ID is required for testing.");
-                return;
+                return BadRequest("Configuration ID is required for testing.");
             }
 
             var emailConfig = Config.EmailConfigurations
@@ -57,13 +58,13 @@ public class SmtpMailer(IServerApplicationHost appHost,
             if (emailConfig == null)
             {
                 Logger.Error($"Email configuration with ID '{configurationId}' not found.");
-                return;
+                return BadRequest($"Email configuration with ID '{configurationId}' not found.");
             }
 
             if (!emailConfig.IsEnabled)
             {
                 Logger.Info($"Email configuration '{emailConfig.Name}' is disabled. Aborting test message.");
-                return;
+                return BadRequest($"Email configuration '{emailConfig.Name}' is disabled. Aborting test message.");
             }
 
             Logger.Debug($"Sending out test mail for '{emailConfig.Name}'!");
@@ -110,7 +111,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
             if (missingField)
             {
                 Logger.Error($"One or more required email configuration fields are missing for '{emailConfig.Name}'. Aborting send.");
-                return;
+                return BadRequest($"One or more required email configuration fields are missing for '{emailConfig.Name}'. Aborting send.");
             }
 
             HtmlBuilder hb = new(Logger, Db, emailConfig, LibraryManager, new List<JsonFileObj>());
@@ -166,10 +167,12 @@ public class SmtpMailer(IServerApplicationHost appHost,
             }
 
             Logger.Debug($"Test email sent successfully for '{emailConfig.Name}'.");
+            return Ok($"Test email sent successfully for '{emailConfig.Name}'.");
         }
         catch (Exception e)
         {
             Logger.Error("An error has occured: " + e);
+            return BadRequest("An error occurred while sending the test email.");
         }
     }
 
