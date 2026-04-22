@@ -14,6 +14,11 @@ public class DiscordConfiguration : INewsletterConfiguration
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
+    /// Gets or sets a value indicating whether this Discord configuration is enabled.
+    /// </summary>
+    public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the user-friendly name for this configuration.
     /// </summary>
     public string Name { get; set; } = "Discord Webhook";

@@ -14,6 +14,11 @@ public class EmailConfiguration : ITemplatedConfiguration
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
+    /// Gets or sets a value indicating whether this Email configuration is enabled.
+    /// </summary>
+    public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the user-friendly name for this configuration.
     /// </summary>
     public string Name { get; set; } = "Email Configuration";
@@ -114,4 +119,9 @@ public class EmailConfiguration : ITemplatedConfiguration
     /// Gets or sets a value indicating whether SSL is enabled for the SMTP connection.
     /// </summary>
     public bool EnableSsl { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether authentication is used for the SMTP connection.
+    /// </summary>
+    public bool UseAuthentication { get; set; } = true;
 }

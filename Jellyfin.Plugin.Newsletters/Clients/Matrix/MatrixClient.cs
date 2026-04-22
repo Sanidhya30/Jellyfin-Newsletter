@@ -73,6 +73,12 @@ public class MatrixClient(IServerApplicationHost appHost,
             return BadRequest("Matrix configuration not found.");
         }
 
+        if (!matrixConfig.IsEnabled)
+        {
+            Logger.Info($"Matrix configuration '{matrixConfig.Name}' is disabled. Aborting test message.");
+            return BadRequest("Matrix configuration is disabled.");
+        }
+
         if (string.IsNullOrEmpty(matrixConfig.HomeserverUrl) ||
             string.IsNullOrEmpty(matrixConfig.AccessToken) ||
             string.IsNullOrEmpty(matrixConfig.RoomId))
@@ -150,6 +156,12 @@ public class MatrixClient(IServerApplicationHost appHost,
             {
                 foreach (var matrixConfig in Config.MatrixConfigurations)
                 {
+                    if (!matrixConfig.IsEnabled)
+                    {
+                        Logger.Info($"Matrix configuration '{matrixConfig.Name}' is disabled. Skipping.");
+                        continue;
+                    }
+                    
                     if (string.IsNullOrEmpty(matrixConfig.HomeserverUrl) ||
                         string.IsNullOrEmpty(matrixConfig.AccessToken) ||
                         string.IsNullOrEmpty(matrixConfig.RoomId))

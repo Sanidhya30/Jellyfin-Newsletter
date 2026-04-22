@@ -214,7 +214,7 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 <details>
 <summary>Email Configuration</summary>
 
-> ***You can configure Multiple Email Clients. Each client instance has its own SMTP settings, recipients, library selection, event triggers, and template settings.***
+> ***You can configure Multiple Email Clients. Each client instance has its own SMTP settings, recipients, library selection, event triggers, template settings, and an enable/disable toggle.***
 
 ### To Addresses:
 
@@ -295,7 +295,7 @@ You can select between different email templates:
 <details>
 <summary>Discord Configuration</summary>
 
-> ***You can now configure Multiple Discord Clients. Each client instance can have its own Webhook URL(s), library selection, and event triggers.***
+> ***You can now configure Multiple Discord Clients. Each client instance can have its own Webhook URL(s), library selection, event triggers, and an enable/disable toggle.***
 
 ### Webhook URL
 
@@ -327,7 +327,7 @@ You can select between different email templates:
 <details>
 <summary>Telegram Configuration</summary>
 
-> ***You can now configure Multiple Telegram Clients. Each client instance can have its own Bot Token/Chat IDs, library selection and event configurations.***
+> ***You can now configure Multiple Telegram Clients. Each client instance can have its own Bot Token/Chat IDs, library selection, event configurations, and an enable/disable toggle.***
 
 ### Bot Token:
 
@@ -357,7 +357,7 @@ You can select between different email templates:
 <details>
 <summary>Matrix Configuration</summary>
 
-> ***You can configure Multiple Matrix Clients. Each client instance can have its own Homeserver URL, Access Token, Room ID(s), library selection, and event configurations.***
+> ***You can configure Multiple Matrix Clients. Each client instance can have its own Homeserver URL, Access Token, Room ID(s), library selection, event configurations, and an enable/disable toggle.***
 
 ### Homeserver URL
 

@@ -60,6 +60,12 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 return;
             }
 
+            if (!emailConfig.IsEnabled)
+            {
+                Logger.Info($"Email configuration '{emailConfig.Name}' is disabled. Aborting test message.");
+                return;
+            }
+
             Logger.Debug($"Sending out test mail for '{emailConfig.Name}'!");
             string smtpAddress = emailConfig.SMTPServer;
             int portNumber = emailConfig.SMTPPort;
@@ -72,13 +78,17 @@ public class SmtpMailer(IServerApplicationHost appHost,
             string subject = emailConfig.Subject;
 
             // Tuple format: (display-name, value)
-            var requiredFields = new[]
+            var requiredFields = new List<(string Name, string Value)>
             {
-                (name: "SMTP Server Address", value: smtpAddress),
-                (name: "From Address", value: emailFromAddress),
-                (name: "SMTP Username", value: username),
-                (name: "SMTP Password", value: password),
+                (Name: "SMTP Server Address", Value: smtpAddress),
+                (Name: "From Address", Value: emailFromAddress)
             };
+
+            if (emailConfig.UseAuthentication)
+            {
+                requiredFields.Add((Name: "SMTP Username", Value: username));
+                requiredFields.Add((Name: "SMTP Password", Value: password));
+            }
 
             bool missingField = false;
             foreach (var (name, value) in requiredFields)
@@ -146,7 +156,11 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 client.CheckCertificateRevocation = false;
                 var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
                 client.Connect(smtpAddress, portNumber, secureOptions);
-                client.Authenticate(username, password);
+                if (emailConfig.UseAuthentication)
+                {
+                    client.Authenticate(username, password);
+                }
+
                 client.Send(mail);
                 client.Disconnect(true);
             }
@@ -184,12 +198,12 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 // Iterate over all Email configurations
                 foreach (var emailConfig in Config.EmailConfigurations)
                 {
-                    if (string.IsNullOrEmpty(emailConfig.SMTPServer) || string.IsNullOrEmpty(emailConfig.SMTPUser))
+                    if (!emailConfig.IsEnabled)
                     {
-                        Logger.Info($"Email configuration '{emailConfig.Name}' has no SMTP server or user. Skipping.");
+                        Logger.Info($"Email configuration '{emailConfig.Name}' is disabled. Skipping.");
                         continue;
                     }
-
+                    
                     Logger.Debug($"Sending email to '{emailConfig.Name}'!");
 
                     bool anyResult = SendToSmtp(emailConfig, emailConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
@@ -233,13 +247,17 @@ public class SmtpMailer(IServerApplicationHost appHost,
             int smtpTimeout = 100000;
 
             // Tuple format: (display-name, value)
-            var requiredFields = new[]
+            var requiredFields = new List<(string Name, string Value)>
             {
-                (name: "SMTP Server Address", value: smtpAddress),
-                (name: "From Address", value: emailFromAddress),
-                (name: "SMTP Username", value: username),
-                (name: "SMTP Password", value: password),
+                (Name: "SMTP Server Address", Value: smtpAddress),
+                (Name: "From Address", Value: emailFromAddress)
             };
+
+            if (emailConfig.UseAuthentication)
+            {
+                requiredFields.Add((Name: "SMTP Username", Value: username));
+                requiredFields.Add((Name: "SMTP Password", Value: password));
+            }
 
             bool missingField = false;
             foreach (var (name, value) in requiredFields)
@@ -346,7 +364,11 @@ public class SmtpMailer(IServerApplicationHost appHost,
                         client.CheckCertificateRevocation = false;
                         var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
                         client.Connect(smtpAddress, portNumber, secureOptions);
-                        client.Authenticate(username, password);
+                        if (emailConfig.UseAuthentication)
+                        {
+                            client.Authenticate(username, password);
+                        }
+                        
                         Logger.Debug($"Sending email part {partNum} for '{emailConfig.Name}' with finalBody: {finalBody}");
                         client.Send(mail);
                         client.Disconnect(true);
