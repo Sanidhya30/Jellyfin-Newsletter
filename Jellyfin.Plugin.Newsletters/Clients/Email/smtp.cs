@@ -154,7 +154,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
             using (var client = new SmtpClient())
             {
                 client.CheckCertificateRevocation = false;
-                var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+                var secureOptions = enableSSL ? SecureSocketOptions.Auto : SecureSocketOptions.None;
                 client.Connect(smtpAddress, portNumber, secureOptions);
                 if (emailConfig.UseAuthentication)
                 {
@@ -362,7 +362,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                     {
                         client.Timeout = smtpTimeout;
                         client.CheckCertificateRevocation = false;
-                        var secureOptions = enableSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+                        var secureOptions = enableSSL ? SecureSocketOptions.Auto : SecureSocketOptions.None;
                         client.Connect(smtpAddress, portNumber, secureOptions);
                         if (emailConfig.UseAuthentication)
                         {

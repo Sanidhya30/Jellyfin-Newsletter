@@ -1154,7 +1154,7 @@
                     html += '          <input id="email-ssl-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EnableSsl !== false ? 'checked' : '') + ' onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '          <span>Enable SSL/TLS</span>';
                     html += '        </label>';
-                    html += '        <div class="fieldDescription checkboxDescription">Secure the connection to the SMTP server. Most modern services require this.</div>';
+                    html += '        <div class="fieldDescription checkboxDescription">Secure the connection to the SMTP server using SSL/TLS or STARTTLS automatically based on the port.</div>';
                     html += '      </div>';
                     html += '      <div class="checkboxContainer checkboxContainer-withDescription" style="flex: 1; min-width: 200px;">';
                     html += '        <label class="emby-checkbox-label">';
