@@ -103,10 +103,8 @@ public class MatrixClient(IServerApplicationHost appHost,
         {
             var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, new List<JsonFileObj>());
             var htmlBody = builder.BuildMessageForTest(matrixConfig);
-            string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-                    
             htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
-            htmlBody = htmlBody.Replace("{Date}", currDate, StringComparison.Ordinal);
+            htmlBody = builder.ReplaceDatePlaceholders(htmlBody);
 
             bool anySuccess = false;
             foreach (var roomId in roomIds)
@@ -185,10 +183,8 @@ public class MatrixClient(IServerApplicationHost appHost,
 
                     var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, matrixConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     var htmlBody = builder.BuildMessageFromNewsletterData(applicationHost.SystemId, matrixConfig);
-                    string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-                    
                     htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
-                    htmlBody = htmlBody.Replace("{Date}", currDate, StringComparison.Ordinal);
+                    htmlBody = builder.ReplaceDatePlaceholders(htmlBody);
 
                     foreach (var roomId in roomIds)
                     {

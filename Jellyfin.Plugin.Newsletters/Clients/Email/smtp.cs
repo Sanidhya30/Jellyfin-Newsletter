@@ -119,8 +119,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
             string body = hb.GetDefaultHTMLBody(emailConfig);
             string builtString = hb.BuildHtmlStringsForTest(emailConfig);
             builtString = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
-            string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-            builtString = builtString.Replace("{Date}", currDate, StringComparison.Ordinal);
+            builtString = hb.ReplaceDatePlaceholders(builtString);
 
             var mail = new MimeMessage();
             mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));
@@ -290,8 +289,6 @@ public class SmtpMailer(IServerApplicationHost appHost,
             string body = hb.GetDefaultHTMLBody(emailConfig);
             ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> InlineImages)> chunks = hb.BuildChunkedHtmlStringsFromNewsletterData(applicationHost.SystemId, emailConfig);
 
-            string currDate = DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-
             int partNum = 1; // for multi-part email subjects if needed
             foreach (var (builtString, inlineImages) in chunks)
             {
@@ -299,8 +296,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 {
                     Logger.Debug($"Email part {partNum} for '{emailConfig.Name}' image count: {inlineImages.Count}");
                     // Add template substitutions
-                    string finalBody = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname)
-                                        .Replace("{Date}", currDate, StringComparison.Ordinal);
+                    string finalBody = hb.ReplaceDatePlaceholders(
+                        hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname));
 
                     var mail = new MimeMessage();
                     mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));
