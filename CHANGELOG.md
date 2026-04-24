@@ -1,3 +1,7 @@
+# 1.6.2.1
+
+- **Security Fix**: Updated MailKit from 4.14.1 to 4.16.0 to resolve moderate severity vulnerability
+
 # 1.6.2.0
 
 - **Feature**: Added customizable header templates for HTML clients
