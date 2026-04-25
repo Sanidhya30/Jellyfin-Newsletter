@@ -433,7 +433,16 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 ## Recommended Tags
 
 ```
-- {Date} - Auto-generated date of Newsletter email generation
+- {Date} - Auto-generated date (yyyy-MM-dd format)
+- {d} - Day of the month (e.g. 9, 23)
+- {dd} - Zero-padded day of the month (e.g. 09, 23)
+- {day} - Full day name (e.g. Wednesday)
+- {dy} - Short day name (e.g. Wed)
+- {mm} - Zero-padded month (e.g. 04)
+- {month} - Full month name (e.g. April)
+- {mon} - Short month name (e.g. Apr)
+- {yy} - Two-digit year (e.g. 26)
+- {yyyy} - Four-digit year (e.g. 2026)
 - {ServerURL} - The configured server URL for Jellyfin
 - {SeasonEpsInfo} - This tag is the Plugin-generated Season/Episode data
 - {Title} - Title of Movie/Series
