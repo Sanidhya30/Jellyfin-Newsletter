@@ -150,6 +150,12 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public bool DebugMode { get; set; }
 
+    /// <summary>
+    /// Gets or sets the date the last newsletter was successfully published.
+    /// Null if no newsletter has been sent yet.
+    /// </summary>
+    public DateTime? LastPublishedDate { get; set; } = null;
+
     // Server Details
 
     /// <summary>

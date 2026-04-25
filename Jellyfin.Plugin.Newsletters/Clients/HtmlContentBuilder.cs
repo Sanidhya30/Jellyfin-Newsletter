@@ -155,25 +155,33 @@ public abstract class HtmlContentBuilder(
 
     /// <summary>
     /// Replaces all date-related placeholders in the given string using the server's configured culture.
-    /// Supported: {Date}, {dd}, {d}, {day}, {dy}, {mm}, {month}, {mon}, {yy}, {yyyy}.
     /// </summary>
     /// <param name="html">The string containing date placeholders to replace.</param>
     /// <returns>The string with all date placeholders resolved.</returns>
     public string ReplaceDatePlaceholders(string html)
     {
-        var culture = GetConfiguredCulture();
-        var today = DateTime.Today;
+        html = ReplaceDatePlaceholdersInternal(html, DateTime.Today, string.Empty);
+        html = ReplaceDatePlaceholdersInternal(html, Config.LastPublishedDate, "prev");
+        return html;
+    }
 
-        html = this.TemplateReplace(html, "{Date}", today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        html = this.TemplateReplace(html, "{dd}", today.ToString("dd", culture));
-        html = this.TemplateReplace(html, "{d}", today.Day.ToString(culture));
-        html = this.TemplateReplace(html, "{day}", today.ToString("dddd", culture));
-        html = this.TemplateReplace(html, "{dy}", today.ToString("ddd", culture));
-        html = this.TemplateReplace(html, "{mm}", today.ToString("MM", culture));
-        html = this.TemplateReplace(html, "{month}", today.ToString("MMMM", culture));
-        html = this.TemplateReplace(html, "{mon}", today.ToString("MMM", culture));
-        html = this.TemplateReplace(html, "{yy}", today.ToString("yy", culture));
-        html = this.TemplateReplace(html, "{yyyy}", today.ToString("yyyy", culture));
+    private string ReplaceDatePlaceholdersInternal(string html, DateTime? date, string prefix)
+    {
+        // Default to Unix Epoch (Jan 1, 1970) if no previous date is found
+        var d = date ?? DateTime.UnixEpoch;
+        var culture = GetConfiguredCulture();
+
+        html = this.TemplateReplace(html, $"{{{prefix}Date}}",  d.ToString("d", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}d}}",     d.Day.ToString(culture));
+        html = this.TemplateReplace(html, $"{{{prefix}dd}}",    d.ToString("dd", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}day}}",   d.ToString("dddd", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}dy}}",    d.ToString("ddd", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}m}}",     d.Month.ToString(culture));
+        html = this.TemplateReplace(html, $"{{{prefix}mm}}",    d.ToString("MM", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}month}}", d.ToString("MMMM", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}mon}}",   d.ToString("MMM", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}yy}}",    d.ToString("yy", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}yyyy}}",  d.ToString("yyyy", culture));
 
         return html;
     }

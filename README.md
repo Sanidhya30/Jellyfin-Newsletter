@@ -432,17 +432,37 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 
 ## Recommended Tags
 
+<details>
+<summary><b>Date Formatting Tags (Click to expand)</b></summary>
+
 ```
 - {Date} - Auto-generated date (yyyy-MM-dd format)
 - {d} - Day of the month (e.g. 9, 23)
 - {dd} - Zero-padded day of the month (e.g. 09, 23)
 - {day} - Full day name (e.g. Wednesday)
 - {dy} - Short day name (e.g. Wed)
-- {mm} - Zero-padded month (e.g. 04)
+- {m} - Month of the year (e.g. 4, 11)
+- {mm} - Zero-padded month (e.g. 04, 11)
 - {month} - Full month name (e.g. April)
 - {mon} - Short month name (e.g. Apr)
 - {yy} - Two-digit year (e.g. 26)
 - {yyyy} - Four-digit year (e.g. 2026)
+
+- {prevDate} - Date of previous newsletter (legacy yyyy-MM-dd format)
+- {prevd} - Day of the month of previous newsletter (e.g. 9, 23)
+- {prevdd} - Zero-padded day of the month of previous newsletter (e.g. 09, 23)
+- {prevday} - Full day name of previous newsletter (e.g. Wednesday)
+- {prevdy} - Short day name of previous newsletter (e.g. Wed)
+- {prevm} - Month of the year of previous newsletter (e.g. 4, 11)
+- {prevmm} - Zero-padded month of previous newsletter (e.g. 04, 11)
+- {prevmonth} - Full month name of previous newsletter (e.g. April)
+- {prevmon} - Short month name of previous newsletter (e.g. Apr)
+- {prevyy} - Two-digit year of previous newsletter (e.g. 26)
+- {prevyyyy} - Four-digit year of previous newsletter (e.g. 2026)
+```
+</details>
+
+```
 - {ServerURL} - The configured server URL for Jellyfin
 - {SeasonEpsInfo} - This tag is the Plugin-generated Season/Episode data
 - {Title} - Title of Movie/Series
