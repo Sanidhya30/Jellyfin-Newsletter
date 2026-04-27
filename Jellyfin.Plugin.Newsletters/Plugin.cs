@@ -4,6 +4,7 @@ using System.Globalization;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
@@ -19,10 +20,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// </summary>
     /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
     /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
-    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+    /// <param name="serverConfigManager">Instance of the <see cref="IServerConfigurationManager"/> interface.</param>
+    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, IServerConfigurationManager serverConfigManager)
         : base(applicationPaths, xmlSerializer)
     {
         Instance = this;
+        ServerConfigurationManager = serverConfigManager;
 
         static void SetConfigPaths(IApplicationPaths dataPaths)
         {
@@ -57,6 +60,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// Gets the current plugin instance.
     /// </summary>
     public static Plugin? Instance { get; private set; }
+
+    /// <summary>
+    /// Gets the server configuration manager instance for accessing server-wide settings.
+    /// </summary>
+    public static IServerConfigurationManager? ServerConfigurationManager { get; private set; }
 
     /// <inheritdoc />
     public IEnumerable<PluginPageInfo> GetPages()

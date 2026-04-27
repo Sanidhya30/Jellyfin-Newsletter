@@ -44,6 +44,11 @@
                             </div>
                         </div>
 
+                        <div class="fieldDescription" style="margin-bottom: 15px;">
+                            <b>Last Newsletter Sent:</b> <span id="LastPublishedDateDisplay"
+                                style="color: #00a4dc;">Never</span>
+                        </div>
+
                         <div class="inputContainer" id="CommunityRatingDecimals">
                             <label class="inputLabel inputLabelUnfocused" for="CommunityRatingDecimalPlaces">Community
                                 Rating Decimal Places:</label>
@@ -1455,6 +1460,17 @@
             function loadConfig() {
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     console.log("Loading config...", config);
+
+                    // Display Last Published Date
+                    var dateDisplayEl = document.getElementById('LastPublishedDateDisplay');
+                    if (dateDisplayEl) {
+                        if (config.LastPublishedDate) {
+                            var date = new Date(config.LastPublishedDate);
+                            dateDisplayEl.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                        } else {
+                            dateDisplayEl.textContent = 'Never';
+                        }
+                    }
 
                     // General tab fields
                     FIELDS.checkboxes.forEach(function (id) {

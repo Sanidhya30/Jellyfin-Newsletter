@@ -60,6 +60,10 @@ public class Client(Logger loggerInstance,
             // copy tables - use INSERT OR REPLACE to handle potential conflicts
             Db.ExecuteSQL("INSERT OR REPLACE INTO ArchiveData SELECT * FROM CurrNewsletterData;");
             Db.ExecuteSQL("DELETE FROM CurrNewsletterData;");
+
+            // Update and save the last published date
+            Config.LastPublishedDate = DateTime.Now;
+            Plugin.Instance!.SaveConfiguration();
         }
         catch (Exception e)
         {

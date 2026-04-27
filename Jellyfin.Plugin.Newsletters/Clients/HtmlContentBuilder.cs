@@ -154,6 +154,63 @@ public abstract class HtmlContentBuilder(
     }
 
     /// <summary>
+    /// Replaces all date-related placeholders in the given string using the server's configured culture.
+    /// </summary>
+    /// <param name="html">The string containing date placeholders to replace.</param>
+    /// <returns>The string with all date placeholders resolved.</returns>
+    public string ReplaceDatePlaceholders(string html)
+    {
+        html = ReplaceDatePlaceholdersInternal(html, DateTime.Today, string.Empty);
+        html = ReplaceDatePlaceholdersInternal(html, Config.LastPublishedDate, "prev");
+        return html;
+    }
+
+    private string ReplaceDatePlaceholdersInternal(string html, DateTime? date, string prefix)
+    {
+        // Default to Unix Epoch (Jan 1, 1970) if no previous date is found
+        var d = date ?? DateTime.UnixEpoch;
+        var culture = GetConfiguredCulture();
+
+        html = this.TemplateReplace(html, $"{{{prefix}Date}}",  d.ToString("d", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}d}}",     d.Day.ToString(culture));
+        html = this.TemplateReplace(html, $"{{{prefix}dd}}",    d.ToString("dd", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}day}}",   d.ToString("dddd", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}dy}}",    d.ToString("ddd", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}m}}",     d.Month.ToString(culture));
+        html = this.TemplateReplace(html, $"{{{prefix}mm}}",    d.ToString("MM", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}month}}", d.ToString("MMMM", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}mon}}",   d.ToString("MMM", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}yy}}",    d.ToString("yy", culture));
+        html = this.TemplateReplace(html, $"{{{prefix}yyyy}}",  d.ToString("yyyy", culture));
+
+        return html;
+    }
+
+    /// <summary>
+    /// Resolves the culture to use for date formatting.
+    /// Reads from the Jellyfin server's UICulture setting, falling back to InvariantCulture.
+    /// </summary>
+    /// <returns>The resolved CultureInfo.</returns>
+    private CultureInfo GetConfiguredCulture()
+    {
+        try
+        {
+            var uiCulture = Plugin.ServerConfigurationManager?.Configuration?.UICulture;
+            if (!string.IsNullOrWhiteSpace(uiCulture))
+            {
+                Logger.Debug($"Using Jellyfin server UICulture for date formatting: {uiCulture}");
+                return new CultureInfo(uiCulture);
+            }
+        }
+        catch (CultureNotFoundException ex)
+        {
+            Logger.Warn($"Jellyfin server UICulture could not be resolved: {ex.Message}. Falling back to InvariantCulture.");
+        }
+
+        return CultureInfo.InvariantCulture;
+    }
+
+    /// <summary>
     /// Replaces the {EntryData} placeholder in the newsletter body with the provided newsletter data string.
     /// </summary>
     /// <param name="body">The HTML body template containing the {EntryData} placeholder.</param>
