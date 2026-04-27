@@ -11,3 +11,4 @@ updates:
       interval: "daily"
       time: "20:00"
       timezone: "Asia/Kolkata"
+    target-branch: "development"
