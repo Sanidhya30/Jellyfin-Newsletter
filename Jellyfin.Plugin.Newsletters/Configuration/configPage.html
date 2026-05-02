@@ -628,6 +628,15 @@
                 });
             }
 
+            function formatMessage(msg) {
+                if (typeof msg !== 'string') return msg;
+                try {
+                    var parsed = JSON.parse(msg);
+                    if (typeof parsed === 'string') return parsed;
+                } catch (e) { }
+                return msg;
+            }
+
             // Global libraries storage
             var allLibraries = [];
 
@@ -737,17 +746,17 @@
                 var url = ApiClient.getUrl('Discord/SendDiscordTestMessage') + '?configurationId=' + encodeURIComponent(id);
                 ApiClient.ajax({ type: 'POST', url: url, dataType: 'text' }).then(function (response) {
                     Dashboard.hideLoadingMsg();
-                    alert(response || "Test Discord message sent! Check your webhook channel.");
+                    alert(formatMessage(response) || "Test Discord message sent! Check your webhook channel.");
                 }).catch(function (err) {
                     Dashboard.hideLoadingMsg();
                     var defaultMsg = "Failed to send test message. Check server logs for details.";
                     if (err && typeof err.text === 'function') {
-                        err.text().then(function (text) { alert(text || defaultMsg); }).catch(function () { alert(defaultMsg); });
+                        err.text().then(function (text) { alert(formatMessage(text) || defaultMsg); }).catch(function () { alert(defaultMsg); });
                     } else {
                         var msg = defaultMsg;
                         if (err && err.responseText) msg = err.responseText;
                         else if (typeof err === 'string') msg = err;
-                        alert(msg);
+                        alert(formatMessage(msg));
                     }
                 });
             }
@@ -911,17 +920,17 @@
                 var url = ApiClient.getUrl('Telegram/SendTelegramTestMessage') + '?configurationId=' + encodeURIComponent(id);
                 ApiClient.ajax({ type: 'POST', url: url, dataType: 'text' }).then(function (response) {
                     Dashboard.hideLoadingMsg();
-                    alert(response || "Test Telegram message sent! Check your chat.");
+                    alert(formatMessage(response) || "Test Telegram message sent! Check your chat.");
                 }).catch(function (err) {
                     Dashboard.hideLoadingMsg();
                     var defaultMsg = "Failed to send test message. Check server logs for details.";
                     if (err && typeof err.text === 'function') {
-                        err.text().then(function (text) { alert(text || defaultMsg); }).catch(function () { alert(defaultMsg); });
+                        err.text().then(function (text) { alert(formatMessage(text) || defaultMsg); }).catch(function () { alert(defaultMsg); });
                     } else {
                         var msg = defaultMsg;
                         if (err && err.responseText) msg = err.responseText;
                         else if (typeof err === 'string') msg = err;
-                        alert(msg);
+                        alert(formatMessage(msg));
                     }
                 });
             }
@@ -1068,17 +1077,17 @@
                 var url = ApiClient.getUrl('SmtpMailer/SendTestMail') + '?configurationId=' + encodeURIComponent(id);
                 ApiClient.ajax({ type: 'POST', url: url, dataType: 'text' }).then(function (response) {
                     Dashboard.hideLoadingMsg();
-                    alert(response || "Test email sent! Check your inbox.");
+                    alert(formatMessage(response) || "Test email sent! Check your inbox.");
                 }).catch(function (err) {
                     Dashboard.hideLoadingMsg();
                     var defaultMsg = "Failed to send test email. Check server logs for details.";
                     if (err && typeof err.text === 'function') {
-                        err.text().then(function (text) { alert(text || defaultMsg); }).catch(function () { alert(defaultMsg); });
+                        err.text().then(function (text) { alert(formatMessage(text) || defaultMsg); }).catch(function () { alert(defaultMsg); });
                     } else {
                         var msg = defaultMsg;
                         if (err && err.responseText) msg = err.responseText;
                         else if (typeof err === 'string') msg = err;
-                        alert(msg);
+                        alert(formatMessage(msg));
                     }
                 });
             }
@@ -1280,17 +1289,17 @@
                 var url = ApiClient.getUrl('Matrix/SendMatrixTestMessage') + '?configurationId=' + encodeURIComponent(id);
                 ApiClient.ajax({ type: 'POST', url: url, dataType: 'text' }).then(function (response) {
                     Dashboard.hideLoadingMsg();
-                    alert(response || "Test Matrix message sent! Check your room.");
+                    alert(formatMessage(response) || "Test Matrix message sent! Check your room.");
                 }).catch(function (err) {
                     Dashboard.hideLoadingMsg();
                     var defaultMsg = "Failed to send test message. Check server logs for details.";
                     if (err && typeof err.text === 'function') {
-                        err.text().then(function (text) { alert(text || defaultMsg); }).catch(function () { alert(defaultMsg); });
+                        err.text().then(function (text) { alert(formatMessage(text) || defaultMsg); }).catch(function () { alert(defaultMsg); });
                     } else {
                         var msg = defaultMsg;
                         if (err && err.responseText) msg = err.responseText;
                         else if (typeof err === 'string') msg = err;
-                        alert(msg);
+                        alert(formatMessage(msg));
                     }
                 });
             }
