@@ -1,3 +1,11 @@
+# 1.6.3.0
+
+- **Feature**: Added new date formatting tags for HTML clients newsletter template
+- **Feature**: Added display of the last published newsletter date in the plugin configuration page
+- **Bug Fix**: Improved test-message alert handling in the configuration UI when Jellyfin returns JSON-encoded responses
+- **Maintenance**: Updated Newtonsoft.Json from 13.0.3 to 13.0.4 and SixLabors.ImageSharp from 3.1.11 to 3.1.12
+- **Maintenance**: Cleaned up StyleCop type and filename warnings
+
 # 1.6.2.1
 
 - **Security Fix**: Updated MailKit from 4.14.1 to 4.16.0 to resolve moderate severity vulnerability

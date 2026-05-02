@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.6.2.1"
+version: "1.6.3.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated/upcoming media"
@@ -17,5 +17,9 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Security Fix: Updated MailKit from 4.14.1 to 4.16.0 to resolve moderate severity vulnerability.
+  - Feature: Added new date formatting tags for HTML clients newsletter template.
+  - Feature: Added display of the last published newsletter date in the plugin configuration page.
+  - Bug Fix: Improved test-message alert handling in the configuration UI when Jellyfin returns JSON-encoded responses.
+  - Maintenance: Updated Newtonsoft.Json from 13.0.3 to 13.0.4 and SixLabors.ImageSharp from 3.1.11 to 3.1.12.
+  - Maintenance: Cleaned up StyleCop type and filename warnings.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md

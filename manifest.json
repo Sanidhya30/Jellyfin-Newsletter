@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.6.3.0",
+                "changelog": "- Feature: Added new date formatting tags for HTML clients newsletter template.\n- Feature: Added display of the last published newsletter date in the plugin configuration page.\n- Bug Fix: Improved test-message alert handling in the configuration UI when Jellyfin returns JSON-encoded responses.\n- Maintenance: Updated Newtonsoft.Json from 13.0.3 to 13.0.4 and SixLabors.ImageSharp from 3.1.11 to 3.1.12.\n- Maintenance: Cleaned up StyleCop type and filename warnings.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.6.3.0/newsletters_1.6.3.0.zip",
+                "checksum": "c04430914e66d7ba99bbf16e966a1221",
+                "timestamp": "2026-05-02T18:03:57Z"
+            },
+            {
                 "version": "1.6.2.1",
                 "changelog": "- Security Fix: Updated MailKit from 4.14.1 to 4.16.0 to resolve moderate severity vulnerability.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",
