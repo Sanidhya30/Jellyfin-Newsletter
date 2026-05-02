@@ -4,13 +4,11 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json.Serialization;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
-using Newtonsoft.Json;
 
 namespace Jellyfin.Plugin.Newsletters.Clients.Discord;
 
@@ -298,106 +296,4 @@ public class EmbedBuilder(
                         .Replace($"Updated in {libDisplay}", $"**Updated in {libDisplay}**", StringComparison.Ordinal)
                         .Replace($"Upcoming in {libDisplay}", $"**Upcoming in {libDisplay}**", StringComparison.Ordinal);
     }
-}
-
-/// <summary>
-/// Represents a field within a Discord embed with name, value, and inline properties.
-/// </summary>
-public class EmbedField
-{
-    /// <summary>
-    /// Gets or sets the name of the embed field.
-    /// </summary>
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the value of the embed field.
-    /// </summary>
-    [JsonPropertyName("value")]
-    public string? Value { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the field should be displayed inline.
-    /// </summary>
-    [JsonPropertyName("inline")]
-    public bool Inline { get; set; }
-}
-
-/// <summary>
-/// Represents a Discord embed message with title, description, fields, and other formatting options.
-/// </summary>
-public class Embed
-{
-    /// <summary>
-    /// Gets or sets the title of the embed.
-    /// </summary>
-    [JsonPropertyName("title")]
-    public string? Title { get; set; }
-
-    /// <summary>
-    /// Gets or sets the URL that the embed title links to.
-    /// </summary>
-    [JsonPropertyName("url")]
-    public string? Url { get; set; }
-
-    /// <summary>
-    /// Gets or sets the color of the embed as an integer value.
-    /// </summary>
-    [JsonPropertyName("color")]
-    public int Color { get; set; }
-
-    /// <summary>
-    /// Gets or sets the timestamp of the embed in ISO 8601 format.
-    /// </summary>
-    [JsonPropertyName("timestamp")]
-    public string? Timestamp { get; set; }
-
-    /// <summary>
-    /// Gets or sets the description text of the embed.
-    /// </summary>
-    [JsonPropertyName("description")]
-    public string? Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets the collection of fields to display in the embed.
-    /// </summary>
-    [JsonPropertyName("fields")]
-    public ReadOnlyCollection<EmbedField>? Fields { get; set; }
-
-    /// <summary>
-    /// Gets or sets the thumbnail image for the embed.
-    /// </summary>
-    [JsonPropertyName("thumbnail")]
-    public Thumbnail? Thumbnail { get; set; }
-}
-
-/// <summary>
-/// Represents the payload structure for sending messages to Discord webhooks.
-/// </summary>
-public class DiscordPayload
-{
-    /// <summary>
-    /// Gets or sets the username to display for the webhook message.
-    /// </summary>
-    [JsonPropertyName("username")]
-    public string? Username { get; set; }
-
-    /// <summary>
-    /// Gets or sets the collection of embeds to include in the webhook message.
-    /// </summary>
-    [JsonPropertyName("embeds")]
-    public ReadOnlyCollection<Embed>? Embeds { get; set; }
-}
-
-/// <summary>
-/// Represents a thumbnail image for a Discord embed.
-/// </summary>
-public class Thumbnail
-{
-    /// <summary>
-    /// Gets or sets the URL of the thumbnail image.
-    /// </summary>
-    [JsonPropertyName("url")]
-    public string? Url { get; set; }
 }
