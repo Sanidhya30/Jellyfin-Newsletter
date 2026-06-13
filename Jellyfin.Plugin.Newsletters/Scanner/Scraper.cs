@@ -118,190 +118,24 @@ public class Scraper
     public void BuildObjs(IReadOnlyCollection<(BaseItem Item, EventType EventType)> items, string type)
     {
         logger.Info($"Parsing {type}..");
-        BaseItem episode, season, series;
         totalLibCount = items.Count;
         logger.Info($"Scan Size: {totalLibCount}");
         logger.Info($"Scanning '{type}'");
-
-        var allowedExternalIds = new Dictionary<string, string>
-        {
-            { "Imdb", "imdb_id" },
-            { "Tmdb", "tmdb" },
-            { "Tvdb", "tvdb_id" },
-        };
 
         foreach (var (item, eventType) in items)
         {
             logger.Debug("---------------");
             if (item is not null)
             {
-                try
+                if (type == "Series" && eventType == EventType.Delete && item.ParentId.Equals(Guid.Empty))
                 {
-                    if (type == "Series")
-                    {
-                        episode = item;
-
-                        if (eventType == EventType.Delete && item.ParentId.Equals(Guid.Empty))
-                        {
-                            item.ParentId = ((Episode)item).SeasonId;
-                        }
-
-                        season = item.GetParent();
-                        if (season is null) 
-                        { 
-                            logger.Debug("No season parent; skipping"); 
-                            continue; 
-                        }
-                        
-                        series = season.GetParent();
-                        if (series is null) 
-                        { 
-                            logger.Debug("No series parent; skipping");
-                            continue; 
-                        }
-                    }
-                    else if (type == "Movie")
-                    {
-                        episode = season = series = item;
-                    }
-                    else
-                    {
-                        logger.Error("Something went wrong..");
-                        continue;
-                    }
-
-                    logger.Debug("EventType: " + eventType.ToString());
-                    logger.Debug($"ItemId: " + series.Id.ToString("N")); // series ItemId
-                    logger.Debug($"{type}: {series.Name}"); // Title
-                    logger.Debug($"LocationType: " + episode.LocationType.ToString());
-                    if (episode.LocationType.ToString() == "Virtual")
-                    {
-                        logger.Debug($"No physical path.. Skipping...");
-                        continue;
-                    }
-
-                    logger.Debug($"Season: {season.Name}"); // Season Name
-                    logger.Debug($"Episode Name: {episode.Name}"); // episode Name
-                    logger.Debug($"Episode Number: {episode.IndexNumber}"); // episode Name
-                    logger.Debug($"Overview: {series.Overview}"); // series overview
-                    logger.Debug($"ImageInfo: {series.PrimaryImagePath}");
-                    logger.Debug($"Filepath: " + episode.Path); // Filepath, episode.Path is cleaner, but may be empty
-
-                    // NEW PARAMS
-                    logger.Debug($"PremiereDate: {series.PremiereDate}"); // series PremiereDate
-                    logger.Debug($"OfficialRating: " + series.OfficialRating); // TV-14, TV-PG, etc
-                    // logger.Info($"CriticRating: " + series.CriticRating);
-                    // logger.Info($"CustomRating: " + series.CustomRating);
-
-                    var runtimeMinutes = episode.RunTimeTicks.HasValue ? (int)(episode.RunTimeTicks.Value / 10000 / 60000) : 0;
-                    var communityRating = (series.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture);
-                    logger.Debug($"CommunityRating: " + communityRating); // 8.5, 9.2, etc
-                    logger.Debug($"RunTime: " + runtimeMinutes + " minutes");
-
-                    foreach (var kvp in series.ProviderIds)
-                    {
-                        if (allowedExternalIds.TryGetValue(kvp.Key, out var mappedKey))
-                        {
-                            logger.Debug($"External ID: {allowedExternalIds[kvp.Key]} => {kvp.Value}");
-                        }
-                    }
+                    item.ParentId = ((Episode)item).SeasonId;
                 }
-                catch (Exception e)
+
+                var currFileObj = BuildJsonFileObjFromItem(item);
+                if (currFileObj is null)
                 {
-                    logger.Error("Error processing item..");
-                    logger.Error(e);
                     continue;
-                }
-
-                JsonFileObj currFileObj = new JsonFileObj();
-
-                foreach (var kvp in series.ProviderIds)
-                {
-                    if (allowedExternalIds.TryGetValue(kvp.Key, out var mappedKey))
-                    {
-                        // logger.Debug($"External ID: {kvp.Key} => {kvp.Value}");
-                        currFileObj.ExternalIds[allowedExternalIds[kvp.Key]] = kvp.Value;
-                    }                    
-                }
-
-                currFileObj.Filename = episode.Path;
-                currFileObj.Title = series.Name;
-                currFileObj.Type = type;
-
-                if (series.PremiereDate is not null)
-                {
-                    // currFileObj.PremiereYear = series.PremiereDate.ToString()!.Split(' ')[0].Split('/')[2]; // NEW {PremierYear}
-                    try 
-                    {
-                        currFileObj.PremiereYear = (series.PremiereDate?.Year ?? 0).ToString(CultureInfo.InvariantCulture);
-                        logger.Debug($"PremiereYear: {currFileObj.PremiereYear}");
-                    }
-                    catch (Exception e)
-                    {
-                        logger.Warn($"Encountered an error parsing PremiereYear for: {currFileObj.Filename}");
-                        logger.Debug(e);
-                        currFileObj.PremiereYear = "0"; // Set to 0 if parsing fails
-                    }
-                }
-
-                currFileObj.RunTime = episode.RunTimeTicks.HasValue ? (int)(episode.RunTimeTicks.Value / 10000 / 60000) : 0;
-                currFileObj.OfficialRating = series.OfficialRating;
-                currFileObj.CommunityRating = series.CommunityRating;
-                currFileObj.ItemID = series.Id.ToString("N");
-                currFileObj.LibraryId = GetLibraryId(episode);
-                
-                if (episode.IndexNumber is int && episode.IndexNumber is not null)
-                {
-                    currFileObj.Episode = (int)episode.IndexNumber;
-                }
-
-                if (type == "Series")
-                {
-                    if (season.IndexNumber.HasValue)
-                    {
-                        logger.Debug("Parsing Season Number from IndexNumber");
-                        currFileObj.Season = season.IndexNumber.Value;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            logger.Debug("Parsing Season Number from name");
-                            currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
-                            logger.Debug(e);
-                            logger.Warn("Setting Season number to 0 (SPECIALS)");
-                            currFileObj.Season = 0;
-                        }
-                    }
-                }
-                else if (type == "Movie")
-                {
-                    currFileObj.Season = 0;
-                }
-
-                currFileObj.SeriesOverview = series.Overview;
-
-                logger.Debug("Checking if Primary Image Exists for series");
-                if (series.PrimaryImagePath != null)
-                {
-                    logger.Debug("Primary Image series found!");
-                    currFileObj.PosterPath = series.PrimaryImagePath;
-                }
-                else if (episode.PrimaryImagePath != null)
-                {
-                    logger.Debug("Primary Image series not found. Pulling from Episode");
-                    currFileObj.PosterPath = episode.PrimaryImagePath;
-                }
-                else
-                {
-                    logger.Warn("Primary Poster not found..");
-                    logger.Warn("This may be due to filesystem not being formatted properly.");
-                    logger.Warn($"Make sure {currFileObj.Filename} follows the correct formatting below:");
-                    logger.Warn(".../MyLibraryName/Series_Name/Season#_or_Specials/Episode.{ext}");
                 }
 
                 string url = SetImageURL(currFileObj);
@@ -504,6 +338,250 @@ public class Scraper
         currFileObj.ItemID ??= string.Empty;
 
         currFileObj.PosterPath ??= string.Empty;
+
+        return currFileObj;
+    }
+
+    /// <summary>
+    /// Updates metadata for an existing item in the newsletter database tables.
+    /// Called when Jellyfin fires an ItemUpdated event for an item we're already tracking.
+    /// </summary>
+    /// <param name="item">The item whose metadata has been updated.</param>
+    public void UpdateItemMetadata(BaseItem item)
+    {
+        logger.Info($"Applying metadata updates to database for: {item.Name}");
+        try
+        {
+            db.CreateConnection();
+
+            var updatedObj = BuildJsonFileObjFromItem(item);
+            if (updatedObj is null)
+            {
+                return;
+            }
+
+            string[] tables = { "CurrRunData", "CurrNewsletterData" };
+            foreach (var table in tables)
+            {
+                UpdateMetadataInTable(table, updatedObj);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.Error("Error updating metadata: " + e);
+        }
+        finally
+        {
+            db.CloseConnection();
+        }
+    }
+
+    private void UpdateMetadataInTable(string table, JsonFileObj item)
+    {
+        // Check if item exists in this table and get its current ImageURL
+        string sanitizedFilename = SanitizeDbItem(item.Filename);
+
+        bool exists = false;
+        string currentImageURL = string.Empty;
+
+        foreach (var row in db.Query($"SELECT ImageURL FROM {table} WHERE Filename={sanitizedFilename};"))
+        {
+            if (row is not null)
+            {
+                exists = true;
+                currentImageURL = row[0].ToString();
+                break;
+            }
+        }
+
+        if (!exists)
+        {
+            logger.Debug($"Item '{item.Title}' not in {table} - skipping metadata update");
+            return; // Item not in our DB
+        }
+
+        if (string.IsNullOrEmpty(currentImageURL))
+        {
+            if (string.IsNullOrEmpty(item.ImageURL))
+            {
+                logger.Debug($"ImageURL for '{item.Title}' is empty in {table}. Attempting to set it.");
+                string url = imageHandler.FetchImagePoster(item);
+                if (url == "429" || url == "ERR" || string.IsNullOrEmpty(url))
+                {
+                    logger.Warn($"Could not obtain ImageURL for '{item.Title}' during metadata update.");
+                }
+                else
+                {
+                    item.ImageURL = url;
+                }
+            }
+        }
+        else
+        {
+            // Preserve the existing valid URL during the update
+            item.ImageURL = currentImageURL;
+        }
+
+        // Update all mutable metadata fields
+        db.ExecuteSQL($"UPDATE {table} SET " +
+            $"Title={SanitizeDbItem(item.Title)}, " +
+            $"Season={item.Season}, " +
+            $"Episode={item.Episode}, " +
+            $"SeriesOverview={SanitizeDbItem(item.SeriesOverview)}, " +
+            $"ImageURL={SanitizeDbItem(item.ImageURL)}, " +
+            $"OfficialRating={SanitizeDbItem(item.OfficialRating)}, " +
+            $"CommunityRating={(item.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture)}, " +
+            $"RunTime={item.RunTime}, " +
+            $"PremiereYear={SanitizeDbItem(item.PremiereYear)}, " +
+            $"PosterPath={SanitizeDbItem(item.PosterPath)} " +
+            $"WHERE Filename={sanitizedFilename};");
+
+        logger.Info($"Updated metadata for '{item.Title}' in {table}");
+    }
+
+    /// <summary>
+    /// Builds a JsonFileObj from a Jellyfin BaseItem by extracting metadata
+    /// from the item and its parent hierarchy (episode → season → series).
+    /// </summary>
+    private JsonFileObj? BuildJsonFileObjFromItem(BaseItem item)
+    {
+        BaseItem episode, season, series;
+        string type;
+
+        var allowedExternalIds = new Dictionary<string, string>
+        {
+            { "Imdb", "imdb_id" },
+            { "Tmdb", "tmdb" },
+            { "Tvdb", "tvdb_id" },
+        };
+
+        if (item is Episode)
+        {
+            type = "Series";
+            episode = item;
+
+            if (episode.LocationType.ToString() == "Virtual")
+            {
+                logger.Debug($"No physical path for {episode.Name}.. Skipping...");
+                return null;
+            }
+
+            season = item.GetParent();
+            if (season is null) 
+            { 
+                logger.Debug("No season parent; skipping"); 
+                return null; 
+            }
+            
+            series = season.GetParent();
+            if (series is null) 
+            { 
+                logger.Debug("No series parent; skipping");
+                return null; 
+            }
+        }
+        else if (item is Movie)
+        {
+            type = "Movie";
+            episode = season = series = item;
+
+            if (episode.LocationType.ToString() == "Virtual")
+            {
+                logger.Debug($"No physical path for {episode.Name}.. Skipping...");
+                return null;
+            }
+        }
+        else
+        {
+            logger.Error("Something went wrong..");
+            return null;
+        }
+
+        JsonFileObj currFileObj = new JsonFileObj();
+
+        foreach (var kvp in series.ProviderIds)
+        {
+            if (allowedExternalIds.TryGetValue(kvp.Key, out var mappedKey))
+            {
+                currFileObj.ExternalIds[allowedExternalIds[kvp.Key]] = kvp.Value;
+            }                    
+        }
+
+        currFileObj.Filename = episode.Path ?? string.Empty;
+        currFileObj.Title = series.Name ?? string.Empty;
+        currFileObj.Type = type;
+
+        if (series.PremiereDate is not null)
+        {
+            try 
+            {
+                currFileObj.PremiereYear = (series.PremiereDate?.Year ?? 0).ToString(CultureInfo.InvariantCulture);
+            }
+            catch (Exception e)
+            {
+                logger.Warn($"Encountered an error parsing PremiereYear for: {currFileObj.Filename}");
+                logger.Debug(e);
+                currFileObj.PremiereYear = "0"; // Set to 0 if parsing fails
+            }
+        }
+
+        currFileObj.RunTime = episode.RunTimeTicks.HasValue ? (int)(episode.RunTimeTicks.Value / 10000 / 60000) : 0;
+        currFileObj.OfficialRating = series.OfficialRating ?? string.Empty;
+        currFileObj.CommunityRating = series.CommunityRating;
+        currFileObj.ItemID = series.Id.ToString("N");
+        currFileObj.LibraryId = GetLibraryId(episode);
+        
+        if (episode.IndexNumber is int && episode.IndexNumber is not null)
+        {
+            currFileObj.Episode = (int)episode.IndexNumber;
+        }
+
+        if (type == "Series")
+        {
+            if (season.IndexNumber.HasValue)
+            {
+                currFileObj.Season = season.IndexNumber.Value;
+            }
+            else
+            {
+                try
+                {
+                    currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
+                }
+                catch (Exception e)
+                {
+                    logger.Warn($"Encountered an error parsing Season Number for: {currFileObj.Filename}");
+                    logger.Debug(e);
+                    logger.Warn("Setting Season number to 0 (SPECIALS)");
+                    currFileObj.Season = 0;
+                }
+            }
+        }
+        else if (type == "Movie")
+        {
+            currFileObj.Season = 0;
+        }
+
+        currFileObj.SeriesOverview = series.Overview ?? string.Empty;
+
+        if (series.PrimaryImagePath != null)
+        {
+            currFileObj.PosterPath = series.PrimaryImagePath;
+        }
+        else if (episode.PrimaryImagePath != null)
+        {
+            currFileObj.PosterPath = episode.PrimaryImagePath;
+        }
+        else
+        {
+            logger.Warn("Primary Poster not found..");
+            logger.Warn("This may be due to filesystem not being formatted properly.");
+            logger.Warn($"Make sure {currFileObj.Filename} follows the correct formatting below:");
+            logger.Warn(".../MyLibraryName/Series_Name/Season#_or_Specials/Episode.{ext}");
+            currFileObj.PosterPath = string.Empty;
+        }
+
+        currFileObj.ImageURL = string.Empty;
 
         return currFileObj;
     }

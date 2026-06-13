@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using MediaBrowser.Controller.Entities;
 
 namespace Jellyfin.Plugin.Newsletters.Shared.Models;
@@ -21,7 +21,12 @@ public enum EventType
     /// <summary>
     /// Item was updated in the library.
     /// </summary>
-    Update
+    Update,
+
+    /// <summary>
+    /// Item metadata was updated in the library.
+    /// </summary>
+    MetadataUpdate
 }
 
 /// <summary>

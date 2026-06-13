@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,6 +34,7 @@ public class ItemEventManager(
     private readonly IServerApplicationHost applicationHost = appHost;
     private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemAddedQueue = new();
     private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemDeletedQueue = new();
+    private readonly ConcurrentDictionary<Guid, QueuedItemContainer> itemMetadataUpdatedQueue = new();
     private readonly Scraper myScraper = scraperInstance;
     private readonly Logger logger = loggerInstance;
 
@@ -47,8 +48,9 @@ public class ItemEventManager(
 
         var addedItems = itemAddedQueue.ToArray();
         var deletedItems = itemDeletedQueue.ToArray();
+        var metadataUpdatedItems = itemMetadataUpdatedQueue.ToArray();
 
-        if (addedItems.Length == 0 && deletedItems.Length == 0)
+        if (addedItems.Length == 0 && deletedItems.Length == 0 && metadataUpdatedItems.Length == 0)
         {
             return;
         }
@@ -65,6 +67,12 @@ public class ItemEventManager(
         {
             combinedList.Add(container);
             itemDeletedQueue.TryRemove(container.ItemId, out _);
+        }
+
+        foreach (var (_, container) in metadataUpdatedItems)
+        {
+            combinedList.Add(container);
+            itemMetadataUpdatedQueue.TryRemove(container.ItemId, out _);
         }
 
         var sortedList = combinedList.OrderBy(i => i.Timestamp).ToList();
@@ -101,6 +109,15 @@ public class ItemEventManager(
                     {
                         logger.Debug($"Adding {queueItem.Item.Name} to process list for deletion");
                         itemsToProcess.Add((queueItem.Item, queueItem.EventType));
+                    }
+                    else if (queueItem.EventType == EventType.MetadataUpdate)
+                    {
+                        var item = libManager.GetItemById(queueItem.ItemId);
+                        if (item is not null)
+                        {
+                            logger.Debug($"Processing metadata update for {item.Name}");
+                            myScraper.UpdateItemMetadata(item);
+                        }
                     }
                 }
 
@@ -174,5 +191,18 @@ public class ItemEventManager(
     {
         itemDeletedQueue.TryAdd(item.Id, new QueuedItemContainer(item, EventType.Delete));
         logger.Debug($"Queued {item.Name} for deletion notification");
+    }
+
+    /// <summary>
+    /// Update metadata for an item in the notification queue.
+    /// </summary>
+    /// <param name="item">The item to be added to the metadata update queue.</param>
+    public void MetadataUpdated(BaseItem item)
+    {
+        itemMetadataUpdatedQueue.AddOrUpdate(
+            item.Id, 
+            new QueuedItemContainer(item, EventType.MetadataUpdate),
+            (_, existing) => new QueuedItemContainer(item, EventType.MetadataUpdate));
+        logger.Debug($"Queued {item.Name} for metadata update");
     }
 }
