@@ -112,6 +112,14 @@ public class ItemEventManager(
                     }
                     else if (queueItem.EventType == EventType.MetadataUpdate)
                     {
+                        // If the item is already queued for Add or Delete in this batch, 
+                        // those operations will inherently use the fresh metadata (or delete it).
+                        if (addedItems.Any(x => x.Key == queueItem.ItemId) || deletedItems.Any(x => x.Key == queueItem.ItemId))
+                        {
+                            logger.Debug($"Skipping redundant metadata update for item {queueItem.ItemId} (Add/Delete handles it)");
+                            continue;
+                        }
+
                         var item = libManager.GetItemById(queueItem.ItemId);
                         if (item is not null)
                         {
