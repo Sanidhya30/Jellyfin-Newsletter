@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,6 +44,11 @@ public class ItemEventNotifierEntryPoint(
         HandleItemChange(itemChangeEventArgs, "delete", itemManager.DeleteItem);
     }
 
+    private void ItemUpdatedHandler(object? sender, ItemChangeEventArgs itemChangeEventArgs)
+    {
+        HandleItemChange(itemChangeEventArgs, "metadata-update", itemManager.MetadataUpdated);
+    }
+
     private void HandleItemChange(ItemChangeEventArgs e, string eventName, Action<BaseItem> action)
     {
         var item = e.Item;
@@ -79,6 +84,7 @@ public class ItemEventNotifierEntryPoint(
     {
         libManager.ItemAdded += ItemAddedHandler;
         libManager.ItemRemoved += ItemDeletedHandler;
+        libManager.ItemUpdated += ItemUpdatedHandler;
         return Task.CompletedTask;
     }
 
@@ -87,6 +93,7 @@ public class ItemEventNotifierEntryPoint(
     {
         libManager.ItemAdded -= ItemAddedHandler;
         libManager.ItemRemoved -= ItemDeletedHandler;
+        libManager.ItemUpdated -= ItemUpdatedHandler;
         return Task.CompletedTask;
     }
 }
