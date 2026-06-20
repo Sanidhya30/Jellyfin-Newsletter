@@ -127,12 +127,7 @@ public class Scraper
             logger.Debug("---------------");
             if (item is not null)
             {
-                if (type == "Series" && eventType == EventType.Delete && item.ParentId.Equals(Guid.Empty))
-                {
-                    item.ParentId = ((Episode)item).SeasonId;
-                }
-
-                var currFileObj = BuildJsonFileObjFromItem(item);
+                var currFileObj = BuildJsonFileObjFromItem(item, eventType);
                 if (currFileObj is null)
                 {
                     continue;
@@ -354,7 +349,7 @@ public class Scraper
         {
             db.CreateConnection();
 
-            var updatedObj = BuildJsonFileObjFromItem(item);
+            var updatedObj = BuildJsonFileObjFromItem(item, EventType.MetadataUpdate);
             if (updatedObj is null)
             {
                 return;
@@ -443,10 +438,10 @@ public class Scraper
     /// Builds a JsonFileObj from a Jellyfin BaseItem by extracting metadata
     /// from the item and its parent hierarchy (episode → season → series).
     /// </summary>
-    private JsonFileObj? BuildJsonFileObjFromItem(BaseItem item)
+    private JsonFileObj? BuildJsonFileObjFromItem(BaseItem item, EventType? eventType = null)
     {
         BaseItem episode, season, series;
-        string type;
+        string type = item is Movie ? "Movie" : "Series";
 
         var allowedExternalIds = new Dictionary<string, string>
         {
@@ -455,45 +450,85 @@ public class Scraper
             { "Tvdb", "tvdb_id" },
         };
 
-        if (item is Episode)
+        try
         {
-            type = "Series";
-            episode = item;
-
-            if (episode.LocationType.ToString() == "Virtual")
+            if (type == "Series")
             {
-                logger.Debug($"No physical path for {episode.Name}.. Skipping...");
+                episode = item;
+
+                if (eventType == EventType.Delete && item.ParentId.Equals(Guid.Empty))
+                {
+                    item.ParentId = ((Episode)item).SeasonId;
+                }
+
+                season = item.GetParent();
+                if (season is null) 
+                { 
+                    logger.Debug("No season parent; skipping"); 
+                    return null; 
+                }
+                
+                series = season.GetParent();
+                if (series is null) 
+                { 
+                    logger.Debug("No series parent; skipping");
+                    return null; 
+                }
+            }
+            else if (type == "Movie")
+            {
+                episode = season = series = item;
+            }
+            else
+            {
+                logger.Error("Something went wrong..");
                 return null;
             }
 
-            season = item.GetParent();
-            if (season is null) 
-            { 
-                logger.Debug("No season parent; skipping"); 
-                return null; 
+            if (eventType.HasValue)
+            {
+                logger.Debug("EventType: " + eventType.Value.ToString());
             }
             
-            series = season.GetParent();
-            if (series is null) 
-            { 
-                logger.Debug("No series parent; skipping");
-                return null; 
-            }
-        }
-        else if (item is Movie)
-        {
-            type = "Movie";
-            episode = season = series = item;
-
+            logger.Debug($"ItemId: " + series.Id.ToString("N")); // series ItemId
+            logger.Debug($"{type}: {series.Name}"); // Title
+            logger.Debug($"LocationType: " + episode.LocationType.ToString());
             if (episode.LocationType.ToString() == "Virtual")
             {
-                logger.Debug($"No physical path for {episode.Name}.. Skipping...");
+                logger.Debug($"No physical path.. Skipping...");
                 return null;
             }
+
+            logger.Debug($"Season: {season.Name}"); // Season Name
+            logger.Debug($"Episode Name: {episode.Name}"); // episode Name
+            logger.Debug($"Episode Number: {episode.IndexNumber}"); // episode Name
+            logger.Debug($"Overview: {series.Overview}"); // series overview
+            logger.Debug($"ImageInfo: {series.PrimaryImagePath}");
+            logger.Debug($"Filepath: " + episode.Path); // Filepath, episode.Path is cleaner, but may be empty
+
+            // NEW PARAMS
+            logger.Debug($"PremiereDate: {series.PremiereDate}"); // series PremiereDate
+            logger.Debug($"OfficialRating: " + series.OfficialRating); // TV-14, TV-PG, etc
+            // logger.Info($"CriticRating: " + series.CriticRating);
+            // logger.Info($"CustomRating: " + series.CustomRating);
+
+            var runtimeMinutes = episode.RunTimeTicks.HasValue ? (int)(episode.RunTimeTicks.Value / 10000 / 60000) : 0;
+            var communityRating = (series.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture);
+            logger.Debug($"CommunityRating: " + communityRating); // 8.5, 9.2, etc
+            logger.Debug($"RunTime: " + runtimeMinutes + " minutes");
+
+            foreach (var kvp in series.ProviderIds)
+            {
+                if (allowedExternalIds.TryGetValue(kvp.Key, out var mappedKey))
+                {
+                    logger.Debug($"External ID: {allowedExternalIds[kvp.Key]} => {kvp.Value}");
+                }
+            }
         }
-        else
+        catch (Exception e)
         {
-            logger.Error("Something went wrong..");
+            logger.Error("Error processing item..");
+            logger.Error(e);
             return null;
         }
 
@@ -503,19 +538,22 @@ public class Scraper
         {
             if (allowedExternalIds.TryGetValue(kvp.Key, out var mappedKey))
             {
+                // logger.Debug($"External ID: {kvp.Key} => {kvp.Value}");
                 currFileObj.ExternalIds[allowedExternalIds[kvp.Key]] = kvp.Value;
             }                    
         }
 
-        currFileObj.Filename = episode.Path ?? string.Empty;
-        currFileObj.Title = series.Name ?? string.Empty;
+        currFileObj.Filename = episode.Path;
+        currFileObj.Title = series.Name;
         currFileObj.Type = type;
 
         if (series.PremiereDate is not null)
         {
+            // currFileObj.PremiereYear = series.PremiereDate.ToString()!.Split(' ')[0].Split('/')[2]; // NEW {PremierYear}
             try 
             {
                 currFileObj.PremiereYear = (series.PremiereDate?.Year ?? 0).ToString(CultureInfo.InvariantCulture);
+                logger.Debug($"PremiereYear: {currFileObj.PremiereYear}");
             }
             catch (Exception e)
             {
@@ -526,7 +564,7 @@ public class Scraper
         }
 
         currFileObj.RunTime = episode.RunTimeTicks.HasValue ? (int)(episode.RunTimeTicks.Value / 10000 / 60000) : 0;
-        currFileObj.OfficialRating = series.OfficialRating ?? string.Empty;
+        currFileObj.OfficialRating = series.OfficialRating;
         currFileObj.CommunityRating = series.CommunityRating;
         currFileObj.ItemID = series.Id.ToString("N");
         currFileObj.LibraryId = GetLibraryId(episode);
@@ -540,12 +578,14 @@ public class Scraper
         {
             if (season.IndexNumber.HasValue)
             {
+                logger.Debug("Parsing Season Number from IndexNumber");
                 currFileObj.Season = season.IndexNumber.Value;
             }
             else
             {
                 try
                 {
+                    logger.Debug("Parsing Season Number from name");
                     currFileObj.Season = int.Parse(season.Name.Split(' ')[1], CultureInfo.CurrentCulture);
                 }
                 catch (Exception e)
@@ -562,14 +602,17 @@ public class Scraper
             currFileObj.Season = 0;
         }
 
-        currFileObj.SeriesOverview = series.Overview ?? string.Empty;
+        currFileObj.SeriesOverview = series.Overview;
 
+        logger.Debug("Checking if Primary Image Exists for series");
         if (series.PrimaryImagePath != null)
         {
+            logger.Debug("Primary Image series found!");
             currFileObj.PosterPath = series.PrimaryImagePath;
         }
         else if (episode.PrimaryImagePath != null)
         {
+            logger.Debug("Primary Image series not found. Pulling from Episode");
             currFileObj.PosterPath = episode.PrimaryImagePath;
         }
         else
@@ -578,7 +621,6 @@ public class Scraper
             logger.Warn("This may be due to filesystem not being formatted properly.");
             logger.Warn($"Make sure {currFileObj.Filename} follows the correct formatting below:");
             logger.Warn(".../MyLibraryName/Series_Name/Season#_or_Specials/Episode.{ext}");
-            currFileObj.PosterPath = string.Empty;
         }
 
         currFileObj.ImageURL = string.Empty;
