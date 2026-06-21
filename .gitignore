@@ -5,3 +5,4 @@ RELEASES
 artifacts
 Jellyfin.Plugin.Newsletters/newsletters/
 *.bak
+*.lic

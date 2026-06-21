@@ -500,9 +500,9 @@ The following features are planned for future releases:
   - Deletion tracking for series and individual seasons
   - Cleanup of related data
 
-- [ ] **Support for update events to update the database**
-  - Database synchronization for item updates
-  - Better handling of metadata changes and file upgrades
+- [x] ~~**Support for update events to update the database**~~
+  - ~~Database synchronization for item updates~~
+  - ~~Better handling of metadata changes and file upgrades~~
 
 - [ ] **Support for music/audio items**
   - Extend newsletter functionality to music libraries
@@ -520,4 +520,4 @@ The following features are planned for future releases:
 
 # Contribute
 
-If you would like to collaborate/contribute, feel free! Make all PR's to the 'development' branch and please note clearly what was added/fixed, thanks!
+If you would like to collaborate/contribute, feel free! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to set up the project locally, build it, and submit your Pull Requests.
