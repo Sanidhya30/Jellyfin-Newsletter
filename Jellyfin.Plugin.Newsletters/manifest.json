@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.6.4.0",
+                "changelog": "- Feature: Added support for metadata update for items.\n- Maintenance: Updated MailKit from 4.16.0 to 4.17.0 and SixLabors.ImageSharp from 3.1.12 to 4.0.0.\n- Maintenance: Added CONTRIBUTING.md, stale issue/PR workflow, and updated logs.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.6.4.0/newsletters_1.6.4.0.zip",
+                "checksum": "14bffcd11b1b0b559caa0dbe25670bf3",
+                "timestamp": "2026-06-21T06:47:47Z"
+            },
+            {
                 "version": "1.6.3.0",
                 "changelog": "- Feature: Added new date formatting tags for HTML clients newsletter template.\n- Feature: Added display of the last published newsletter date in the plugin configuration page.\n- Bug Fix: Improved test-message alert handling in the configuration UI when Jellyfin returns JSON-encoded responses.\n- Maintenance: Updated Newtonsoft.Json from 13.0.3 to 13.0.4 and SixLabors.ImageSharp from 3.1.11 to 3.1.12.\n- Maintenance: Cleaned up StyleCop type and filename warnings.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",

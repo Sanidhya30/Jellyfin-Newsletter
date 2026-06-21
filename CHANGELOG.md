@@ -1,3 +1,9 @@
+# 1.6.4.0
+
+- **Feature**: Added support for metadata update for items
+- **Maintenance**: Updated MailKit from 4.16.0 to 4.17.0 and SixLabors.ImageSharp from 3.1.12 to 4.0.0
+- **Maintenance**: Added CONTRIBUTING.md, stale issue/PR workflow, and updated logs
+
 # 1.6.3.0
 
 - **Feature**: Added new date formatting tags for HTML clients newsletter template
