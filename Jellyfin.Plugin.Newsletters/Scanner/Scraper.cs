@@ -300,7 +300,7 @@ public class Scraper
     private void AddItemToDatabase(JsonFileObj item, string eventType)
     {
         item = NoNull(item);
-        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType, LibraryId) " +
+        db.ExecuteSQL("INSERT INTO CurrRunData (Filename, Title, Season, Episode, SeriesOverview, ImageURL, ItemID, PosterPath, Type, PremiereYear, RunTime, OfficialRating, CommunityRating, EventType, LibraryId, Genres) " +
                 "VALUES (" +
                     SanitizeDbItem(item.Filename) +
                     "," + SanitizeDbItem(item.Title) +
@@ -317,6 +317,7 @@ public class Scraper
                     "," + (item.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture) +
                     "," + SanitizeDbItem(eventType) +
                     "," + SanitizeDbItem(item!.LibraryId) +
+                    "," + SanitizeDbItem(item.Genres) +
                 ");");
     }
 
@@ -428,7 +429,8 @@ public class Scraper
             $"CommunityRating={(item.CommunityRating ?? -1).ToString(CultureInfo.InvariantCulture)}, " +
             $"RunTime={item.RunTime}, " +
             $"PremiereYear={SanitizeDbItem(item.PremiereYear)}, " +
-            $"PosterPath={SanitizeDbItem(item.PosterPath)} " +
+            $"PosterPath={SanitizeDbItem(item.PosterPath)}, " +
+            $"Genres={SanitizeDbItem(item.Genres)} " +
             $"WHERE Filename={sanitizedFilename};");
 
         logger.Info($"Updated metadata for '{item.Title}' in {table}");
@@ -568,7 +570,8 @@ public class Scraper
         currFileObj.CommunityRating = series.CommunityRating;
         currFileObj.ItemID = series.Id.ToString("N");
         currFileObj.LibraryId = GetLibraryId(episode);
-        
+        currFileObj.Genres = series.Genres != null ? string.Join(", ", series.Genres) : string.Empty;
+
         if (episode.IndexNumber is int && episode.IndexNumber is not null)
         {
             currFileObj.Episode = (int)episode.IndexNumber;

@@ -64,6 +64,11 @@ public class DiscordConfiguration : INewsletterConfiguration
     public bool EpisodesEnabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether genres should be visible in Discord embed.
+    /// </summary>
+    public bool GenresEnabled { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets the embed color for series add events.
     /// </summary>
     public string SeriesAddEmbedColor { get; set; } = "#00ff00";

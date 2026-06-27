@@ -114,6 +114,7 @@ public class SQLiteDatabase
             new_cols.Add("CommunityRating", "REAL");
             new_cols.Add("EventType", "TEXT");
             new_cols.Add("LibraryId", "TEXT");
+            new_cols.Add("Genres", "TEXT");
 
             var existingColumns = GetTableColumns(table);
 
