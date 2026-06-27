@@ -211,6 +211,11 @@ public class TelegramMessageBuilder(
             messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Duration: {(item.RunTime > 0 ? $"{item.RunTime} min" : "N/A")}");
         }
 
+        if (telegramConfig.GenresEnabled && !string.IsNullOrWhiteSpace(item.Genres))
+        {
+            messageBuilder.AppendLine(CultureInfo.InvariantCulture, $"Genres: {EscapeMarkdown(item.Genres)}");
+        }
+
         return messageBuilder.ToString().Trim();
     }
 

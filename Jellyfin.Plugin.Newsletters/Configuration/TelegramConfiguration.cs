@@ -64,6 +64,11 @@ public class TelegramConfiguration : INewsletterConfiguration
     public bool EpisodesEnabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether genres should be visible in Telegram messages.
+    /// </summary>
+    public bool GenresEnabled { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets the collection of selected series libraries.
     /// </summary>
     public Collection<string> SelectedSeriesLibraries { get; set; } = new Collection<string>();

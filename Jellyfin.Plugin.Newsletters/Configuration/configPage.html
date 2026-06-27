@@ -717,6 +717,7 @@
                     PGRatingEnabled: true,
                     DurationEnabled: true,
                     EpisodesEnabled: true,
+                    GenresEnabled: false,
                     SeriesAddEmbedColor: '#00FF00',
                     SeriesDeleteEmbedColor: '#FF0000',
                     SeriesUpdateEmbedColor: '#0000FF',
@@ -782,6 +783,7 @@
                 config.PGRatingEnabled = document.getElementById('discord-pgrating-' + id).checked;
                 config.DurationEnabled = document.getElementById('discord-duration-' + id).checked;
                 config.EpisodesEnabled = document.getElementById('discord-episodes-' + id).checked;
+                config.GenresEnabled = document.getElementById('discord-genres-' + id).checked;
                 config.SeriesAddEmbedColor = document.getElementById('discord-series-add-color-' + id).value;
                 config.SeriesDeleteEmbedColor = document.getElementById('discord-series-delete-color-' + id).value;
                 config.SeriesUpdateEmbedColor = document.getElementById('discord-series-update-color-' + id).value;
@@ -853,9 +855,10 @@
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-desc-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Description</span></label></div></td>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-thumb-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Thumbnail</span></label></div></td>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-rating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Rating</span></label></div></td>';
-                    html += '      </tr><tr>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-pgrating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>PG Rating</span></label></div></td>';
+                    html += '      </tr><tr>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-duration-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Duration</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-genres-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.GenresEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Genres</span></label></div></td>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="discord-episodes-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"><span>Episodes</span></label></div></td>';
                     html += '      </tr></table>';
                     html += '    </div>';
@@ -897,6 +900,7 @@
                     PGRatingEnabled: true,
                     DurationEnabled: true,
                     EpisodesEnabled: true,
+                    GenresEnabled: false,
                     SelectedSeriesLibraries: [],
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
@@ -956,6 +960,7 @@
                 config.PGRatingEnabled = document.getElementById('telegram-pgrating-' + id).checked;
                 config.DurationEnabled = document.getElementById('telegram-duration-' + id).checked;
                 config.EpisodesEnabled = document.getElementById('telegram-episodes-' + id).checked;
+                config.GenresEnabled = document.getElementById('telegram-genres-' + id).checked;
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('telegram-event-add-' + id).checked;
@@ -1021,9 +1026,10 @@
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-desc-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DescriptionEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Description</span></label></div></td>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-thumb-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.ThumbnailEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Thumbnail</span></label></div></td>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-rating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.RatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Rating</span></label></div></td>';
-                    html += '      </tr><tr>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-pgrating-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.PGRatingEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>PG Rating</span></label></div></td>';
+                    html += '      </tr><tr>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-duration-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.DurationEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Duration</span></label></div></td>';
+                    html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-genres-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.GenresEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Genres</span></label></div></td>';
                     html += '        <td><div class="checkboxContainer"><label class="emby-checkbox-label"><input id="telegram-episodes-' + config.Id + '" type="checkbox" is="emby-checkbox" ' + (config.EpisodesEnabled ? 'checked' : '') + ' onchange="updateTelegramConfigFromUI(\'' + config.Id + '\')"><span>Episodes</span></label></div></td>';
                     html += '      </tr></table>';
                     html += '    </div>';

@@ -30,6 +30,7 @@ public class JsonFileObj
         EventType = string.Empty;
         ExternalIds = new Dictionary<string, string>();
         LibraryId = string.Empty;
+        Genres = string.Empty;
     }
 
     /// <summary>
@@ -113,6 +114,11 @@ public class JsonFileObj
     public Dictionary<string, string> ExternalIds { get; }
 
     /// <summary>
+    /// Gets or sets the genres of the item.
+    /// </summary>
+    public string Genres { get; set; }
+
+    /// <summary>
     /// Converts a database row to a <see cref="JsonFileObj"/> instance.
     /// </summary>
     /// <param name="row">The database row as a list of <see cref="ResultSetValue"/>.</param>
@@ -135,7 +141,8 @@ public class JsonFileObj
             OfficialRating = row[11].ToString(),
             CommunityRating = string.IsNullOrEmpty(row[12].ToString()) ? 0.0f : float.Parse(row[12].ToString(), CultureInfo.InvariantCulture),
             EventType = row[13].ToString(),
-            LibraryId = row[14].ToString()
+            LibraryId = row[14].ToString(),
+            Genres = row[15].ToString()
         };
 
         return obj;
@@ -163,6 +170,7 @@ public class JsonFileObj
         item_dict.Add("{CommunityRating}", this.CommunityRating);
         item_dict.Add("{EventType}", this.EventType);
         item_dict.Add("{LibraryId}", this.LibraryId);
+        item_dict.Add("{Genres}", this.Genres);
 
         return item_dict;
     }
@@ -187,7 +195,8 @@ public class JsonFileObj
             PremiereYear = "2025",
             RunTime = 60,
             OfficialRating = "TV-14",
-            CommunityRating = 8.413f
+            CommunityRating = 8.413f,
+            Genres = "Action, Drama"
         };
 
         return obj;
