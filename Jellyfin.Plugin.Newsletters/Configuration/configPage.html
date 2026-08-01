@@ -702,6 +702,16 @@
                 return html;
             }
 
+            function getMaxItemsHtml(clientId, configType, maxItems) {
+                var updateFn = 'update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')';
+                var html = '<div class="inputContainer">';
+                html += '  <label class="inputLabel inputLabelUnfocused">Max Items Per Section:</label>';
+                html += '  <input id="' + configType + '-max-items-' + clientId + '" type="number" is="emby-input" min="0" value="' + (maxItems || 0) + '" onchange="' + updateFn + '" />';
+                html += '  <div class="fieldDescription">Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond this limit are left out of the newsletter entirely (they are not sent, just skipped). Set to 0 to show all items.</div>';
+                html += '</div>';
+                return html;
+            }
+
             // ===================== DISCORD CONFIG FUNCTIONS =====================
 
             function addDiscordConfig() {
@@ -729,7 +739,8 @@
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
-                    NewsletterOnUpcomingItemEnabled: false
+                    NewsletterOnUpcomingItemEnabled: false,
+                    MaxItemsPerSection: 0
                 };
                 discordConfigs.push(newConfig);
                 renderDiscordConfigs();
@@ -790,6 +801,7 @@
                 config.MoviesAddEmbedColor = document.getElementById('discord-movies-add-color-' + id).value;
                 config.MoviesDeleteEmbedColor = document.getElementById('discord-movies-delete-color-' + id).value;
                 config.MoviesUpdateEmbedColor = document.getElementById('discord-movies-update-color-' + id).value;
+                config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('discord-max-items-' + id).value) || 0);
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('discord-event-add-' + id).checked;
@@ -849,6 +861,7 @@
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'discord', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getMaxItemsHtml(config.Id, 'discord', config.MaxItemsPerSection);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
@@ -906,7 +919,8 @@
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
-                    NewsletterOnUpcomingItemEnabled: false
+                    NewsletterOnUpcomingItemEnabled: false,
+                    MaxItemsPerSection: 0
                 };
                 telegramConfigs.push(newConfig);
                 renderTelegramConfigs();
@@ -961,6 +975,7 @@
                 config.DurationEnabled = document.getElementById('telegram-duration-' + id).checked;
                 config.EpisodesEnabled = document.getElementById('telegram-episodes-' + id).checked;
                 config.GenresEnabled = document.getElementById('telegram-genres-' + id).checked;
+                config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('telegram-max-items-' + id).value) || 0);
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('telegram-event-add-' + id).checked;
@@ -1020,6 +1035,7 @@
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'telegram', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getMaxItemsHtml(config.Id, 'telegram', config.MaxItemsPerSection);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
@@ -1065,7 +1081,8 @@
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
                     EnableSsl: true,
-                    UseAuthentication: true
+                    UseAuthentication: true,
+                    MaxItemsPerSection: 0
                 };
                 emailConfigs.push(newConfig);
                 renderEmailConfigs();
@@ -1125,6 +1142,7 @@
                 config.TemplateCategory = document.getElementById('email-category-' + id).value;
                 config.EnableSsl = document.getElementById('email-ssl-' + id).checked;
                 config.UseAuthentication = document.getElementById('email-auth-' + id).checked;
+                config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('email-max-items-' + id).value) || 0);
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('email-event-add-' + id).checked;
@@ -1228,6 +1246,7 @@
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getMaxItemsHtml(config.Id, 'email', config.MaxItemsPerSection);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="email-category-' + config.Id + '">Template Category:</label>';
                     html += '      <select id="email-category-' + config.Id + '" is="emby-select" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';
@@ -1277,7 +1296,8 @@
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
-                    NewsletterOnUpcomingItemEnabled: false
+                    NewsletterOnUpcomingItemEnabled: false,
+                    MaxItemsPerSection: 0
                 };
                 matrixConfigs.push(newConfig);
                 renderMatrixConfigs();
@@ -1328,6 +1348,7 @@
                 config.Entry = document.getElementById('matrix-entry-' + id).value;
                 config.Header = document.getElementById('matrix-header-' + id).value;
                 config.TemplateCategory = document.getElementById('matrix-category-' + id).value;
+                config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('matrix-max-items-' + id).value) || 0);
 
                 config.NewsletterOnItemAddedEnabled = document.getElementById('matrix-event-add-' + id).checked;
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('matrix-event-update-' + id).checked;
@@ -1389,6 +1410,7 @@
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'matrix', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getMaxItemsHtml(config.Id, 'matrix', config.MaxItemsPerSection);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="matrix-category-' + config.Id + '">Template Category:</label>';
                     html += '      <select id="matrix-category-' + config.Id + '" is="emby-select" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';
