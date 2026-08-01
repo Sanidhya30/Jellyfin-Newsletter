@@ -151,7 +151,19 @@ public class HtmlBuilder(
         string serverId,
         EmailConfiguration config)
     {
-        foreach (var item in items)
+        int maxItemsPerSection = config.MaxItemsPerSection;
+
+        // Drop overflow items up front (also skips image resizing for them)
+        IReadOnlyList<JsonFileObj> itemsToProcess = items;
+        bool overflowed = false;
+        if (maxItemsPerSection > 0 && items.Count > maxItemsPerSection)
+        {
+            Logger.Debug($"Truncating section - Event: {eventType}, Library: {libraryName}, Items: {items.Count} -> {maxItemsPerSection}");
+            itemsToProcess = items.Take(maxItemsPerSection).ToList();
+            overflowed = true;
+        }
+
+        foreach (var item in itemsToProcess)
         {
             // Track image size if needed
             int entryImageBytes = 0;
@@ -191,6 +203,26 @@ public class HtmlBuilder(
             currentChunkImages.Add(imgToAdd);
             currentChunkBytes += entryBytes;
         }
+
+        if (overflowed)
+        {
+            string notice = BuildOverflowNoticeHtml();
+            currentChunkBuilder.Append(notice);
+            currentChunkBytes += Encoding.UTF8.GetByteCount(notice);
+        }
+    }
+
+    /// <summary>
+    /// Builds a plain "…" line shown after a truncated section.
+    /// Wrapped in a table row when the active entry template is itself a table row
+    /// (the built-in templates are), so it renders predictably inside the body table.
+    /// </summary>
+    private string BuildOverflowNoticeHtml()
+    {
+        const string Notice = "<div style='padding: 12px 10px 20px 10px; text-align: center; color: #9E9E9E; font-size: 1.5em;'>&#8230;</div>";
+        return GetEntryHtml().TrimStart().StartsWith("<tr", StringComparison.OrdinalIgnoreCase)
+            ? $"<tr><td colspan='2'>{Notice}</td></tr>"
+            : Notice;
     }
 
     /// <summary>

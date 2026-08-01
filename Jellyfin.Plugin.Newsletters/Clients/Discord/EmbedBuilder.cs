@@ -48,11 +48,33 @@ public class EmbedBuilder(
             // Open connection for ParseSeriesInfo calls inside the item loop
             Db.CreateConnection();
 
+            int maxItemsPerSection = discordConfig.MaxItemsPerSection;
+            var sectionItemCounts = new Dictionary<string, int>();
+
             // Build embeds from sorted items
             foreach (var item in sortedItems)
             {
                 string eventType = item.EventType?.ToLowerInvariant() ?? "add";
                 string libraryName = eventType == "upcoming" ? (item.LibraryId ?? string.Empty) : GetLibraryName(item.LibraryId, libraryNameMap);
+
+                // Skip items beyond the per-section cap
+                if (maxItemsPerSection > 0)
+                {
+                    string sectionKey = $"{eventType}|{libraryName}";
+                    sectionItemCounts.TryGetValue(sectionKey, out int sectionItemCount);
+                    sectionItemCounts[sectionKey] = sectionItemCount + 1;
+
+                    if (sectionItemCount >= maxItemsPerSection)
+                    {
+                        // Log once per section, when the cap is first crossed
+                        if (sectionItemCount == maxItemsPerSection)
+                        {
+                            Logger.Debug($"Truncating section - Event: {eventType}, Library: {libraryName}, Max items: {maxItemsPerSection}");
+                        }
+
+                        continue;
+                    }
+                }
 
                 int embedColor = GetEventColor(item.EventType, item.Type, discordConfig);
                 var fieldsList = new Collection<EmbedField>();

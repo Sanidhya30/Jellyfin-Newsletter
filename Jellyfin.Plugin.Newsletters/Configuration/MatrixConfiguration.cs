@@ -59,21 +59,39 @@ public class MatrixConfiguration : ITemplatedConfiguration
     /// </summary>
     public string Header { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public Collection<string> SelectedSeriesLibraries { get; set; } = new();
+    /// <summary>
+    /// Gets or sets the collection of selected series libraries.
+    /// </summary>
+    public Collection<string> SelectedSeriesLibraries { get; set; } = new Collection<string>();
 
-    /// <inheritdoc/>
-    public Collection<string> SelectedMoviesLibraries { get; set; } = new();
+    /// <summary>
+    /// Gets or sets the collection of selected movies libraries.
+    /// </summary>
+    public Collection<string> SelectedMoviesLibraries { get; set; } = new Collection<string>();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item added.
+    /// </summary>
     public bool NewsletterOnItemAddedEnabled { get; set; } = true;
 
-    /// <inheritdoc/>
-    public bool NewsletterOnItemUpdatedEnabled { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item updated.
+    /// </summary>
+    public bool NewsletterOnItemUpdatedEnabled { get; set; } = false;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets or sets a value indicating whether to send newsletter on item deleted.
+    /// </summary>
     public bool NewsletterOnItemDeletedEnabled { get; set; } = true;
 
-    /// <inheritdoc/>
-    public bool NewsletterOnUpcomingItemEnabled { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating whether to include upcoming items in the newsletter.
+    /// </summary>
+    public bool NewsletterOnUpcomingItemEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the maximum number of items shown per newsletter section.
+    /// A value of 0 means unlimited (default).
+    /// </summary>
+    public int MaxItemsPerSection { get; set; } = 0;
 }

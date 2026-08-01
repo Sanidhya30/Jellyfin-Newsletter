@@ -266,6 +266,10 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
 
+### Max Items Per Section
+
+- Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are left out of the newsletter entirely (they are not sent, just skipped), and a small "…" note is shown at the end of the section. Set to 0 to show all items (default).
+
 ### Newsletter Template Category
 
 You can select between different email templates:
@@ -317,6 +321,10 @@ You can select between different email templates:
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
 
+### Max Items Per Section
+
+- Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are left out of the newsletter entirely (they are not sent, just skipped). Set to 0 to show all items (default).
+
 ### Fields & Color selection
 
 - Select the fields that you want as part of your embed.
@@ -348,6 +356,10 @@ You can select between different email templates:
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
+
+### Max Items Per Section
+
+- Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are left out of the newsletter entirely (they are not sent, just skipped). Set to 0 to show all items (default).
 
 ### Fields selection
 
@@ -386,6 +398,10 @@ You can select between different email templates:
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
+
+### Max Items Per Section
+
+- Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are skipped and a small "…" note is shown at the end of the section. Set to 0 to show all items (default).
 
 ### Newsletter Template Category
 

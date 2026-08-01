@@ -97,4 +97,10 @@ public class TelegramConfiguration : INewsletterConfiguration
     /// Gets or sets a value indicating whether to include upcoming items in the newsletter.
     /// </summary>
     public bool NewsletterOnUpcomingItemEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the maximum number of items shown per newsletter section.
+    /// A value of 0 means unlimited (default).
+    /// </summary>
+    public int MaxItemsPerSection { get; set; } = 0;
 }

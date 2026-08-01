@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -48,6 +49,8 @@ public class MatrixMessageBuilder(
             // Open connection for ParseSeriesInfo calls inside BuildEntryHtml
             Db.CreateConnection();
 
+            int maxItemsPerSection = config.MaxItemsPerSection;
+
             foreach (var eventGroup in groupedItems)
             {
                 foreach (var library in eventGroup.Libraries)
@@ -59,9 +62,17 @@ public class MatrixMessageBuilder(
 
                     contentBuilderHtml.Append(GetEventSectionHeader(eventGroup.EventType, library.LibraryName));
 
-                    foreach (var item in library.Items)
+                    // Drop overflow items beyond the per-section cap
+                    bool overflowed = maxItemsPerSection > 0 && library.Items.Count > maxItemsPerSection;
+                    foreach (var item in overflowed ? library.Items.Take(maxItemsPerSection) : library.Items)
                     {
                         contentBuilderHtml.Append(BuildEntryHtml(item, eventGroup.EventType, serverId));
+                    }
+
+                    if (overflowed)
+                    {
+                        Logger.Debug($"Truncating section - Event: {eventGroup.EventType}, Library: {library.LibraryName}, Items: {library.Items.Count} -> {maxItemsPerSection}");
+                        contentBuilderHtml.Append("<div>&#8230;</div>");
                     }
                 }
             }

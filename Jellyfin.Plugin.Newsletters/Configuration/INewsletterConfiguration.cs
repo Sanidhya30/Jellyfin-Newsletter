@@ -41,4 +41,10 @@ public interface INewsletterConfiguration
     /// Gets a value indicating whether to include upcoming items in the newsletter.
     /// </summary>
     bool NewsletterOnUpcomingItemEnabled { get; }
+
+    /// <summary>
+    /// Gets the maximum number of items shown per newsletter section.
+    /// A value of 0 means unlimited.
+    /// </summary>
+    int MaxItemsPerSection { get; }
 }
