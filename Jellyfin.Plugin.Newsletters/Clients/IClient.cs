@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace Jellyfin.Plugin.Newsletters.Clients;
 
 /// <summary>
@@ -9,7 +11,7 @@ public interface IClient
     /// Sends the newsletter.
     /// </summary>
     /// <returns>True if the newsletter was sent successfully; otherwise, false.</returns>
-    bool Send();
+    Task<bool> SendAsync();
 
     /// <summary>
     /// Copies the newsletter data to the archive.

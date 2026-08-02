@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -42,7 +43,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
     /// <param name="configurationId">The ID of the Email configuration to test.</param>
     /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendTestMail")]
-    public ActionResult SendTestMail([FromQuery] string configurationId)
+    public async Task<ActionResult> SendTestMailAsync([FromQuery] string configurationId)
     {
         try
         {
@@ -155,14 +156,14 @@ public class SmtpMailer(IServerApplicationHost appHost,
             {
                 client.CheckCertificateRevocation = false;
                 var secureOptions = enableSSL ? SecureSocketOptions.Auto : SecureSocketOptions.None;
-                client.Connect(smtpAddress, portNumber, secureOptions);
+                await client.ConnectAsync(smtpAddress, portNumber, secureOptions).ConfigureAwait(false);
                 if (emailConfig.UseAuthentication)
                 {
-                    client.Authenticate(username, password);
+                    await client.AuthenticateAsync(username, password).ConfigureAwait(false);
                 }
 
-                client.Send(mail);
-                client.Disconnect(true);
+                await client.SendAsync(mail).ConfigureAwait(false);
+                await client.DisconnectAsync(true).ConfigureAwait(false);
             }
 
             Logger.Debug($"Test email sent successfully for '{emailConfig.Name}'.");
@@ -182,7 +183,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
     /// True if at least one email was sent successfully; otherwise, false.
     /// </returns>
     [HttpPost("SendSmtp")]
-    public bool SendEmail()
+    public async Task<bool> SendEmailAsync()
     {
         bool anySuccess = false;
 
@@ -194,7 +195,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
         try
         {
-            var (hasData, upcomingItems) = HasDataToSendAsync().GetAwaiter().GetResult();
+            var (hasData, upcomingItems) = await HasDataToSendAsync().ConfigureAwait(false);
             if (hasData)
             {
                 // Iterate over all Email configurations
@@ -208,7 +209,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
                     
                     Logger.Debug($"Sending email to '{emailConfig.Name}'!");
 
-                    bool anyResult = SendToSmtp(emailConfig, emailConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
+                    bool anyResult = await SendToSmtpAsync(emailConfig, emailConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>()).ConfigureAwait(false);
                     anySuccess |= anyResult;
                 }
             }
@@ -231,7 +232,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
     /// <param name="emailConfig">The Email configuration to use.</param>
     /// <param name="upcomingItems">The prefetched list of upcoming media items.</param>
     /// <returns>True if the email was sent successfully; otherwise, false.</returns>
-    private bool SendToSmtp(EmailConfiguration emailConfig, IReadOnlyList<JsonFileObj> upcomingItems)
+    private async Task<bool> SendToSmtpAsync(EmailConfiguration emailConfig, IReadOnlyList<JsonFileObj> upcomingItems)
     {
         bool anyResult = false;
         try
@@ -344,7 +345,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
                             }
 
                             stream.Position = 0;
-                            var image = bodyBuilder.LinkedResources.Add(cid, stream.ToArray(), new ContentType("image", "jpeg"));
+                            var image = await bodyBuilder.LinkedResources
+                                .AddAsync(cid, stream, new ContentType("image", "jpeg")).ConfigureAwait(false);
                             image.ContentId = cid;
                         }
 
@@ -363,15 +365,15 @@ public class SmtpMailer(IServerApplicationHost appHost,
                         client.Timeout = smtpTimeout;
                         client.CheckCertificateRevocation = false;
                         var secureOptions = enableSSL ? SecureSocketOptions.Auto : SecureSocketOptions.None;
-                        client.Connect(smtpAddress, portNumber, secureOptions);
+                        await client.ConnectAsync(smtpAddress, portNumber, secureOptions).ConfigureAwait(false);
                         if (emailConfig.UseAuthentication)
                         {
-                            client.Authenticate(username, password);
+                            await client.AuthenticateAsync(username, password).ConfigureAwait(false);
                         }
-                        
+
                         Logger.Debug($"Sending email part {partNum} for '{emailConfig.Name}' with finalBody: {finalBody}");
-                        client.Send(mail);
-                        client.Disconnect(true);
+                        await client.SendAsync(mail).ConfigureAwait(false);
+                        await client.DisconnectAsync(true).ConfigureAwait(false);
                     }
 
                     Logger.Debug($"Email part {partNum} for '{emailConfig.Name}' sent successfully.");
@@ -402,8 +404,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
     /// <returns>
     /// True if at least one email was sent successfully; otherwise, false.
     /// </returns>
-    public bool Send()
+    public Task<bool> SendAsync()
     {
-        return SendEmail();
+        return SendEmailAsync();
     }
 }

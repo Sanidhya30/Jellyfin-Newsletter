@@ -42,28 +42,28 @@ namespace Jellyfin.Plugin.Newsletters.ScheduledTasks
         }
 
         /// <inheritdoc />
-        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             progress.Report(0);
             
             // Call the Notify/Send for each client
-            NotifyAll();
+            await NotifyAllAsync().ConfigureAwait(false);
 
             progress.Report(100);
-            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Sends newsletters using all configured clients and archives the data if at least one send is successful.
         /// </summary>
-        public void NotifyAll()
+        /// <returns>A task representing the asynchronous operation.</returns>
+        public async Task NotifyAllAsync()
         {
             bool result = false;
             foreach (var client in clients)
             {
                 logger.Debug($"Send triggered for the {client}");
-                result |= client.Send();
+                result |= await client.SendAsync().ConfigureAwait(false);
             }
 
             // If we the result is True i.e. even if any one client was successful

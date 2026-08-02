@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -60,7 +61,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// <param name="configurationId">The ID of the Discord configuration to test.</param>
     /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendDiscordTestMessage")]
-    public ActionResult SendDiscordTestMessage([FromQuery] string configurationId)
+    public async Task<ActionResult> SendDiscordTestMessageAsync([FromQuery] string configurationId)
     {
         if (string.IsNullOrEmpty(configurationId))
         {
@@ -114,7 +115,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                 Logger.Debug($"Sending Discord test message to '{discordConfig.Name}' (URL: {webhookUrl}): " + jsonPayload);
 
                 using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                var response = _httpClient.PostAsync(webhookUrl, content).GetAwaiter().GetResult();
+                var response = await _httpClient.PostAsync(webhookUrl, content).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -123,7 +124,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                 }
                 else
                 {
-                    var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     Logger.Error($"Discord test message failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error}");
                 }
             }
@@ -150,7 +151,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// </summary>
     /// <returns>True if at least one message was sent successfully; otherwise, false.</returns>
     [HttpPost("SendDiscordMessage")]
-    public bool SendDiscordMessage()
+    public async Task<bool> SendDiscordMessageAsync()
     {
         bool anySuccess = false;
 
@@ -162,7 +163,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
         try
         {
-            var (hasData, upcomingItems) = HasDataToSendAsync().GetAwaiter().GetResult();
+            var (hasData, upcomingItems) = await HasDataToSendAsync().ConfigureAwait(false);
             if (hasData)
             {
                 // Iterate over all Discord configurations
@@ -182,7 +183,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending Discord message to '{discordConfig.Name}'!");
 
-                    bool result = SendToWebhook(discordConfig, discordConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
+                    bool result = await SendToWebhookAsync(discordConfig, discordConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>()).ConfigureAwait(false);
                     anySuccess |= result;
                 }
             }
@@ -205,7 +206,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// <param name="discordConfig">The Discord configuration to use.</param>
     /// <param name="upcomingItems">The prefetched list of upcoming media items.</param>
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
-    private bool SendToWebhook(DiscordConfiguration discordConfig, IReadOnlyList<JsonFileObj> upcomingItems)
+    private async Task<bool> SendToWebhookAsync(DiscordConfiguration discordConfig, IReadOnlyList<JsonFileObj> upcomingItems)
     {
         bool anyResult = false; // true if at least one chunk was sent successfully across all webhooks
         
@@ -297,7 +298,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                             }
                         }
 
-                        var response = _httpClient.PostAsync(webhookUrl, multipartContent).GetAwaiter().GetResult();
+                        var response = await _httpClient.PostAsync(webhookUrl, multipartContent).ConfigureAwait(false);
 
                         if (response.IsSuccessStatusCode)
                         {
@@ -307,7 +308,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                         }
                         else
                         {
-                            var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                            var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                             Logger.Error($"Discord webhook failed for '{discordConfig.Name}' (URL: {webhookUrl}): {response.StatusCode} - {error} - Continuing to next chunk.");
                         }
                     }
@@ -330,8 +331,8 @@ public class DiscordWebhook(IServerApplicationHost appHost,
     /// Sends a Discord message using the configured webhooks and newsletter data.
     /// </summary>
     /// <returns>True if at least one message was sent successfully; otherwise, false.</returns>
-    public bool Send()
+    public Task<bool> SendAsync()
     {
-        return SendDiscordMessage();
+        return SendDiscordMessageAsync();
     }
 }
