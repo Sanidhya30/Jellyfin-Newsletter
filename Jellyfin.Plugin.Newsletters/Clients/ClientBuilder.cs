@@ -83,7 +83,7 @@ public class ClientBuilder(Logger loggerInstance,
         {
             Db.CreateConnection();
 
-            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData;"))
+            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE " + SQLiteDatabase.NotExcludedClause + ";"))
             {
                 if (row is not null)
                 {
@@ -173,7 +173,7 @@ public class ClientBuilder(Logger loggerInstance,
         else
         {
             // Query by title and event type to avoid conflicts when same title exists with different events
-            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "' AND EventType='" + currObj.EventType.Replace("'", "''", StringComparison.Ordinal) + "';"))
+            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "' AND EventType='" + currObj.EventType.Replace("'", "''", StringComparison.Ordinal) + "' AND " + SQLiteDatabase.NotExcludedClause + ";"))
             {
                 if (row is not null)
                 {

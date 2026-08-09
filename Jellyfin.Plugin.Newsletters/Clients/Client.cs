@@ -85,7 +85,7 @@ public class Client(Logger loggerInstance,
         {
             Db.CreateConnection();
 
-            foreach (var row in Db.Query("SELECT COUNT(*) FROM CurrNewsletterData;"))
+            foreach (var row in Db.Query("SELECT COUNT(*) FROM CurrNewsletterData WHERE " + SQLiteDatabase.NotExcludedClause + ";"))
             {
                 if (row is not null)
                 {
