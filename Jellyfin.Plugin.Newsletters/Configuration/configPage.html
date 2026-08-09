@@ -576,6 +576,16 @@
                 width: 100%;
                 font-size: 1.2em;
                 text-align: center;
+                padding: 6px;
+                border-radius: 4px;
+                border: 1px solid #444;
+                background: rgba(255, 255, 255, 0.05);
+                color: inherit;
+            }
+
+            .emoji-lib-input input:focus {
+                outline: none;
+                border-color: #00a4dc;
             }
 
             .emoji-lib-default {
@@ -1650,7 +1660,7 @@
                     var fallback = defaultEmojiFor(lib.CollectionType);
                     html += '<tr>';
                     html += '  <td class="emoji-lib-name">' + escapeHtml(lib.Name) + '</td>';
-                    html += '  <td class="emoji-lib-input"><input type="text" is="emby-input" maxlength="8"'
+                    html += '  <td class="emoji-lib-input"><input type="text" maxlength="8"'
                         + ' class="library-emoji" data-library-id="' + escapeHtml(lib.Id) + '"'
                         + ' value="' + escapeHtml(byId[lib.Id] || '') + '"'
                         + ' placeholder="' + escapeHtml(fallback) + '" /></td>';
