@@ -1,3 +1,10 @@
+# 1.7.0.0
+
+- **Feature**: Made all newsletter clients asynchronous and added rate-limiting for the Telegram client
+- **Feature**: Added a configurable maximum number of items per section for each client
+- **Feature**: Added a Genres tag for newsletters
+- **Maintenance**: Added explicit permissions to the stale issue/PR workflow
+
 # 1.6.4.0
 
 - **Feature**: Added support for metadata update for items

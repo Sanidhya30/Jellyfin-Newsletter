@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.6.4.0"
+version: "1.7.0.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated/upcoming media"
@@ -17,7 +17,8 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Feature: Added support for metadata update for items.
-  - Maintenance: Updated MailKit from 4.16.0 to 4.17.0 and SixLabors.ImageSharp from 3.1.12 to 4.0.0.
-  - Maintenance: Added CONTRIBUTING.md, stale issue/PR workflow, and updated logs.
+  - Feature: Made all newsletter clients asynchronous and added rate-limiting for the Telegram client.
+  - Feature: Added a configurable maximum number of items per section for each client.
+  - Feature: Added a Genres tag for newsletters.
+  - Maintenance: Added explicit permissions to the stale issue/PR workflow.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md
