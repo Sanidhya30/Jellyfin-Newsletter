@@ -56,7 +56,7 @@ public class MatrixClient(IServerApplicationHost appHost,
     /// <param name="configurationId">The configuration GUID to test.</param>
     /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendMatrixTestMessage")]
-    public ActionResult SendMatrixTestMessage([FromQuery] string configurationId)
+    public async Task<ActionResult> SendMatrixTestMessageAsync([FromQuery] string configurationId)
     {
         if (string.IsNullOrEmpty(configurationId))
         {
@@ -108,7 +108,7 @@ public class MatrixClient(IServerApplicationHost appHost,
             bool anySuccess = false;
             foreach (var roomId in roomIds)
             {
-                bool success = SendToMatrixApi(matrixConfig, htmlBody, roomId);
+                bool success = await SendToMatrixApiAsync(matrixConfig, htmlBody, roomId).ConfigureAwait(false);
                 if (success)
                 {
                     anySuccess = true;
@@ -136,7 +136,7 @@ public class MatrixClient(IServerApplicationHost appHost,
     /// </summary>
     /// <returns>True if at least one message succeeded.</returns>
     [HttpPost("SendMatrixMessage")]
-    public bool SendMatrixMessage()
+    public async Task<bool> SendMatrixMessageAsync()
     {
         bool anySuccess = false;
 
@@ -148,7 +148,7 @@ public class MatrixClient(IServerApplicationHost appHost,
 
         try
         {
-            var (hasData, upcomingItems) = HasDataToSendAsync().GetAwaiter().GetResult();
+            var (hasData, upcomingItems) = await HasDataToSendAsync().ConfigureAwait(false);
             if (hasData)
             {
                 foreach (var matrixConfig in Config.MatrixConfigurations)
@@ -187,7 +187,7 @@ public class MatrixClient(IServerApplicationHost appHost,
 
                     foreach (var roomId in roomIds)
                     {
-                        bool result = SendToMatrixApi(matrixConfig, htmlBody, roomId);
+                        bool result = await SendToMatrixApiAsync(matrixConfig, htmlBody, roomId).ConfigureAwait(false);
                         anySuccess |= result;
                     }
                 }
@@ -205,7 +205,7 @@ public class MatrixClient(IServerApplicationHost appHost,
         return anySuccess;
     }
 
-    private bool SendToMatrixApi(MatrixConfiguration matrixConfig, string htmlBody, string roomId)
+    private async Task<bool> SendToMatrixApiAsync(MatrixConfiguration matrixConfig, string htmlBody, string roomId)
     {
         try
         {
@@ -231,7 +231,7 @@ public class MatrixClient(IServerApplicationHost appHost,
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", matrixConfig.AccessToken);
             request.Content = content;
 
-            var response = _httpClient.SendAsync(request).GetAwaiter().GetResult();
+            using var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -240,7 +240,7 @@ public class MatrixClient(IServerApplicationHost appHost,
             }
             else
             {
-                var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 Logger.Error($"Matrix message failed for '{matrixConfig.Name}': {response.StatusCode} - {error}");
                 Logger.Debug("Failed Matrix URL: " + requestUrl);
                 return false;
@@ -254,8 +254,8 @@ public class MatrixClient(IServerApplicationHost appHost,
     }
 
     /// <inheritdoc/>
-    public bool Send()
+    public Task<bool> SendAsync()
     {
-        return SendMatrixMessage();
+        return SendMatrixMessageAsync();
     }
 }

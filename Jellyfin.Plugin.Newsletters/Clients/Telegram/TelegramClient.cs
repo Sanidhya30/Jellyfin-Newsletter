@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
+using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -31,6 +32,27 @@ public class TelegramClient(IServerApplicationHost appHost,
     UpcomingMediaService upcomingMediaService)
     : Client(loggerInstance, dbInstance, libraryManager, upcomingMediaService), IClient, IDisposable
 {
+    /// <summary>
+    /// Number of times a single message is attempted before giving up.
+    /// </summary>
+    private const int MaxSendAttempts = 3;
+
+    /// <summary>
+    /// Wait applied when Telegram reports a rate limit without a usable retry_after value.
+    /// </summary>
+    private const int DefaultRetryAfterSeconds = 30;
+
+    /// <summary>
+    /// Longest retry_after we are willing to wait out. Beyond this the bot is likely flood-banned,
+    /// so we fail fast rather than stalling the newsletter task.
+    /// </summary>
+    private const int MaxRetryAfterSeconds = 90;
+
+    /// <summary>
+    /// Pause between consecutive messages. Telegram allows roughly one message per second per chat.
+    /// </summary>
+    private const int MessageDelayMs = 1000;
+
     private readonly HttpClient _httpClient = new();
     private readonly IServerApplicationHost applicationHost = appHost;
 
@@ -61,7 +83,7 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// <param name="configurationId">The ID of the Telegram configuration to test.</param>
     /// <returns>An <see cref="ActionResult"/> indicating success or failure.</returns>
     [HttpPost("SendTelegramTestMessage")]
-    public ActionResult SendTelegramTestMessage([FromQuery] string configurationId)
+    public async Task<ActionResult> SendTelegramTestMessageAsync([FromQuery] string configurationId)
     {
         if (string.IsNullOrEmpty(configurationId))
         {
@@ -106,7 +128,7 @@ public class TelegramClient(IServerApplicationHost appHost,
         {
             TelegramMessageBuilder builder = new(Logger, Db, LibraryManager, new List<JsonFileObj>());
             var (testMessage, imageUrl) = builder.BuildTestMessage(telegramConfig);
-            
+
             if (string.IsNullOrEmpty(testMessage))
             {
                 Logger.Error("Failed to build test message.");
@@ -117,16 +139,16 @@ public class TelegramClient(IServerApplicationHost appHost,
 
             foreach (var chatId in chatIds)
             {
-                bool messageSent = false;
+                bool messageSent;
                 if (telegramConfig.ThumbnailEnabled && !string.IsNullOrEmpty(imageUrl))
                 {
                     // Send using external URL
-                    messageSent = SendPhotoWithUrl(telegramConfig.BotToken, chatId, imageUrl, testMessage);
+                    messageSent = await SendPhotoWithUrlAsync(telegramConfig.BotToken, chatId, imageUrl, testMessage).ConfigureAwait(false);
                 }
                 else
                 {
                     // Otherwise send text message
-                    messageSent = SendTextMessage(telegramConfig.BotToken, chatId, testMessage);
+                    messageSent = await SendTextMessageAsync(telegramConfig.BotToken, chatId, testMessage).ConfigureAwait(false);
                 }
 
                 if (messageSent)
@@ -163,7 +185,7 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// </summary>
     /// <returns>True if at least one message was sent successfully; otherwise, false.</returns>
     [HttpPost("SendTelegramMessage")]
-    public bool SendTelegramMessage()
+    public async Task<bool> SendTelegramMessageAsync()
     {
         bool anySuccess = false;
 
@@ -175,7 +197,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
         try
         {
-            var (hasData, upcomingItems) = HasDataToSendAsync().GetAwaiter().GetResult();
+            var (hasData, upcomingItems) = await HasDataToSendAsync().ConfigureAwait(false);
             if (hasData)
             {
                 // Iterate over all Telegram configurations
@@ -195,7 +217,7 @@ public class TelegramClient(IServerApplicationHost appHost,
 
                     Logger.Debug($"Sending Telegram message to '{telegramConfig.Name}'!");
 
-                    bool result = SendToBot(telegramConfig, telegramConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
+                    bool result = await SendToBotAsync(telegramConfig, telegramConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>()).ConfigureAwait(false);
                     anySuccess |= result;
                 }
             }
@@ -218,7 +240,7 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// <param name="telegramConfig">The Telegram configuration to use.</param>
     /// <param name="upcomingItems">The prefetched list of upcoming media items.</param>
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
-    private bool SendToBot(TelegramConfiguration telegramConfig, IReadOnlyList<JsonFileObj> upcomingItems)
+    private async Task<bool> SendToBotAsync(TelegramConfiguration telegramConfig, IReadOnlyList<JsonFileObj> upcomingItems)
     {
         bool anyResult = false; // true if at least one message was sent successfully across all chat IDs
         string botToken = telegramConfig.BotToken;
@@ -245,7 +267,7 @@ public class TelegramClient(IServerApplicationHost appHost,
             foreach (var chatId in chatIds)
             {
                 Logger.Debug($"Sending Telegram newsletter to '{telegramConfig.Name}' (ChatID: {chatId})");
-                
+
                 foreach (var (messageText, imageUrl, imageStream, uniqueImageName) in messageTuples)
                 {
                     bool messageSent = false;
@@ -259,31 +281,33 @@ public class TelegramClient(IServerApplicationHost appHost,
                             imageStream.Position = 0;
 
                             // Send as multipart file upload
-                            messageSent = SendPhotoMessage(botToken, chatId, imageStream, messageText, uniqueImageName);
+                            messageSent = await SendPhotoMessageAsync(botToken, chatId, imageStream, messageText, uniqueImageName).ConfigureAwait(false);
                         }
                         else if (!string.IsNullOrEmpty(imageUrl))
                         {
                             // Send using external URL
-                            messageSent = SendPhotoWithUrl(botToken, chatId, imageUrl, messageText);
+                            messageSent = await SendPhotoWithUrlAsync(botToken, chatId, imageUrl, messageText).ConfigureAwait(false);
                         } 
                     }
                     else
                     {
                         // Otherwise send text message
-                        messageSent = SendTextMessage(botToken, chatId, messageText);
+                        messageSent = await SendTextMessageAsync(botToken, chatId, messageText).ConfigureAwait(false);
                     }
 
                     if (messageSent)
                     {
                         // Track any successful send
                         anyResult = true;
-                        // Add small delay between messages to avoid rate limiting
-                        Thread.Sleep(100);
                     }
                     else
                     {
                         Logger.Error($"Failed to send message part to '{telegramConfig.Name}' (ChatID: {chatId}). Continuing to next part.");
                     }
+
+                    // Telegram allows roughly one message per second per chat. This also runs after
+                    // a failed send, so the next message does not immediately retrip the limit.
+                    await Task.Delay(MessageDelayMs).ConfigureAwait(false);
                 }
             }
         }
@@ -296,18 +320,97 @@ public class TelegramClient(IServerApplicationHost appHost,
     }
 
     /// <summary>
+    /// Posts to the Telegram Bot API, waiting out and retrying HTTP 429 rate limit responses.
+    /// </summary>
+    /// <param name="requestUri">The Bot API endpoint to post to.</param>
+    /// <param name="contentFactory">Builds the request body. Called once per attempt, since an
+    /// <see cref="HttpContent"/> instance cannot be reused after being sent.</param>
+    /// <param name="messageKind">Description of the message used in log output.</param>
+    /// <returns>True if the request succeeded; otherwise, false.</returns>
+    private async Task<bool> PostWithRateLimitRetryAsync(string requestUri, Func<HttpContent> contentFactory, string messageKind)
+    {
+        for (int attempt = 1; attempt <= MaxSendAttempts; attempt++)
+        {
+            using var content = contentFactory();
+            using var response = await _httpClient.PostAsync(requestUri, content).ConfigureAwait(false);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+            if (response.StatusCode != HttpStatusCode.TooManyRequests)
+            {
+                Logger.Error($"Telegram {messageKind} failed: {response.StatusCode} - {error}");
+                return false;
+            }
+
+            int retryAfter = ParseRetryAfterSeconds(error);
+
+            if (retryAfter > MaxRetryAfterSeconds)
+            {
+                Logger.Error($"Telegram {messageKind} rate limited for {retryAfter}s, longer than the {MaxRetryAfterSeconds}s we are willing to wait. Giving up: {error}");
+                return false;
+            }
+
+            if (attempt == MaxSendAttempts)
+            {
+                Logger.Error($"Telegram {messageKind} still rate limited after {MaxSendAttempts} attempts. Giving up: {error}");
+                return false;
+            }
+
+            Logger.Warn($"Telegram rate limit hit for {messageKind}, retrying after {retryAfter}s (attempt {attempt}/{MaxSendAttempts})");
+
+            // Telegram counts the retry_after window from its own clock, so add a second of slack.
+            await Task.Delay(TimeSpan.FromSeconds(retryAfter + 1)).ConfigureAwait(false);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Reads the retry_after hint out of a Telegram error body.
+    /// </summary>
+    /// <param name="errorBody">The raw JSON error response.</param>
+    /// <returns>The number of seconds to wait, or <see cref="DefaultRetryAfterSeconds"/> if the body has no usable value.</returns>
+    private int ParseRetryAfterSeconds(string errorBody)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(errorBody);
+
+            if (document.RootElement.TryGetProperty("parameters", out var parameters) &&
+                parameters.TryGetProperty("retry_after", out var retryAfter) &&
+                retryAfter.TryGetInt32(out int seconds) &&
+                seconds > 0)
+            {
+                return seconds;
+            }
+        }
+        catch (JsonException)
+        {
+            Logger.Debug("Telegram rate limit response was not valid JSON, falling back to the default wait.");
+        }
+
+        return DefaultRetryAfterSeconds;
+    }
+
+    /// <summary>
     /// Sends a text message to Telegram.
     /// </summary>
     /// <param name="botToken">The Telegram bot token.</param>
     /// <param name="chatId">The chat ID to send to.</param>
     /// <param name="messageText">The message text to send.</param>
     /// <returns>True if sent successfully; otherwise, false.</returns>
-    private bool SendTextMessage(string botToken, string chatId, string messageText)
+    private async Task<bool> SendTextMessageAsync(string botToken, string chatId, string messageText)
     {
         try
         {
             // Split message if it exceeds Telegram's 4096 character limit
             var messages = SplitMessage(messageText, 4096);
+            var requestUri = $"https://api.telegram.org/bot{botToken}/sendMessage";
 
             foreach (var message in messages)
             {
@@ -320,15 +423,12 @@ public class TelegramClient(IServerApplicationHost appHost,
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
                 Logger.Debug("Sending Telegram text message: " + jsonPayload);
-                
-                var requestUri = $"https://api.telegram.org/bot{botToken}/sendMessage";
-                using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                var response = _httpClient.PostAsync(requestUri, content).GetAwaiter().GetResult();
 
-                if (!response.IsSuccessStatusCode)
+                if (!await PostWithRateLimitRetryAsync(
+                        requestUri,
+                        () => new StringContent(jsonPayload, Encoding.UTF8, "application/json"),
+                        "text message").ConfigureAwait(false))
                 {
-                    var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    Logger.Error($"Telegram text message failed: {response.StatusCode} - {error}");
                     return false;
                 }
             }
@@ -352,7 +452,7 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// <param name="caption">The caption for the photo.</param>
     /// <param name="uniqueImageName">The unique name for the image.</param>
     /// <returns>True if sent successfully; otherwise, false.</returns>
-    private bool SendPhotoMessage(string botToken, string chatId, MemoryStream imageStream, string caption, string uniqueImageName)
+    private async Task<bool> SendPhotoMessageAsync(string botToken, string chatId, MemoryStream imageStream, string caption, string uniqueImageName)
     {
         try
         {
@@ -371,36 +471,39 @@ public class TelegramClient(IServerApplicationHost appHost,
                 remainingText = caption.AsSpan(1020).ToString();
             }
 
-            // Reset stream position to beginning
+            // Buffer the image up front so each retry attempt can rebuild the multipart body
             imageStream.Position = 0;
+            var imageBytes = imageStream.ToArray();
 
-            using var multipartContent = new MultipartFormDataContent();
-
-            // Add chat_id as form field
-            multipartContent.Add(new StringContent(chatId), "chat_id");
-
-            // Add caption if provided
-            if (!string.IsNullOrEmpty(photoCaption))
+            // Built per attempt rather than once: a sent HttpContent cannot be posted again
+            MultipartFormDataContent BuildPhotoContent()
             {
-                multipartContent.Add(new StringContent(photoCaption), "caption");
-                multipartContent.Add(new StringContent("MarkdownV2"), "parse_mode");
-            }
+                var multipartContent = new MultipartFormDataContent();
 
-            // Add photo file
-            var fileContent = new ByteArrayContent(imageStream.ToArray());
-            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-            
-            // The field name MUST be "photo" for sendPhoto
-            multipartContent.Add(fileContent, "photo", uniqueImageName);
+                // Add chat_id as form field
+                multipartContent.Add(new StringContent(chatId), "chat_id");
+
+                // Add caption if provided
+                if (!string.IsNullOrEmpty(photoCaption))
+                {
+                    multipartContent.Add(new StringContent(photoCaption), "caption");
+                    multipartContent.Add(new StringContent("MarkdownV2"), "parse_mode");
+                }
+
+                // Add photo file
+                var fileContent = new ByteArrayContent(imageBytes);
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+
+                // The field name MUST be "photo" for sendPhoto
+                multipartContent.Add(fileContent, "photo", uniqueImageName);
+
+                return multipartContent;
+            }
 
             Logger.Debug("Sending Telegram photo with caption: " + photoCaption);
 
-            var response = _httpClient.PostAsync(requestUri, multipartContent).GetAwaiter().GetResult();
-
-            if (!response.IsSuccessStatusCode)
+            if (!await PostWithRateLimitRetryAsync(requestUri, BuildPhotoContent, "photo message").ConfigureAwait(false))
             {
-                var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                Logger.Error($"Telegram photo message failed: {response.StatusCode} - {error}");
                 return false;
             }
 
@@ -410,8 +513,8 @@ public class TelegramClient(IServerApplicationHost appHost,
             if (!string.IsNullOrEmpty(remainingText))
             {
                 Logger.Debug("Sending remaining caption text as separate message");
-                Thread.Sleep(100); // Small delay before follow-up
-                return SendTextMessage(botToken, chatId, remainingText);
+                await Task.Delay(MessageDelayMs).ConfigureAwait(false);
+                return await SendTextMessageAsync(botToken, chatId, remainingText).ConfigureAwait(false);
             }
 
             return true;
@@ -431,14 +534,14 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// <param name="photoUrl">The URL of the photo to send.</param>
     /// <param name="caption">The caption for the photo.</param>
     /// <returns>True if sent successfully; otherwise, false.</returns>
-    private bool SendPhotoWithUrl(string botToken, string chatId, string photoUrl, string caption)
+    private async Task<bool> SendPhotoWithUrlAsync(string botToken, string chatId, string photoUrl, string caption)
     {
         try
         {
             // Telegram caption limit is 1024 characters
             string photoCaption = caption;
             string remainingText = string.Empty;
-            
+
             if (caption.Length > 1024)
             {
                 photoCaption = string.Concat(caption.AsSpan(0, 1020), "\\.\\.\\.");
@@ -455,15 +558,14 @@ public class TelegramClient(IServerApplicationHost appHost,
 
             var jsonPayload = JsonSerializer.Serialize(payload);
             Logger.Debug("Sending Telegram photo via URL: " + jsonPayload);
-            
-            var requestUri = $"https://api.telegram.org/bot{botToken}/sendPhoto";
-            using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-            var response = _httpClient.PostAsync(requestUri, content).GetAwaiter().GetResult();
 
-            if (!response.IsSuccessStatusCode)
+            var requestUri = $"https://api.telegram.org/bot{botToken}/sendPhoto";
+
+            if (!await PostWithRateLimitRetryAsync(
+                    requestUri,
+                    () => new StringContent(jsonPayload, Encoding.UTF8, "application/json"),
+                    "photo via URL").ConfigureAwait(false))
             {
-                var error = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                Logger.Error($"Telegram sendPhoto via URL failed: {response.StatusCode} - {error}");
                 return false;
             }
 
@@ -472,8 +574,8 @@ public class TelegramClient(IServerApplicationHost appHost,
             // Send remaining text if any
             if (!string.IsNullOrEmpty(remainingText))
             {
-                Thread.Sleep(100);
-                return SendTextMessage(botToken, chatId, remainingText);
+                await Task.Delay(MessageDelayMs).ConfigureAwait(false);
+                return await SendTextMessageAsync(botToken, chatId, remainingText).ConfigureAwait(false);
             }
 
             return true;
@@ -550,8 +652,8 @@ public class TelegramClient(IServerApplicationHost appHost,
     /// Sends a Telegram message using the configured bot and newsletter data.
     /// </summary>
     /// <returns>True if the message was sent successfully; otherwise, false.</returns>
-    public bool Send()
+    public Task<bool> SendAsync()
     {
-        return SendTelegramMessage();
+        return SendTelegramMessageAsync();
     }
 }
