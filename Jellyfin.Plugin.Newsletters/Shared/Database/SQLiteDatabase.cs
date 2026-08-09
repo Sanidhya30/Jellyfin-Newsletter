@@ -11,6 +11,12 @@ namespace Jellyfin.Plugin.Newsletters.Shared.Database;
 /// </summary>
 public class SQLiteDatabase
 {
+    /// <summary>
+    /// SQL predicate matching only rows that have not been excluded from the next newsletter.
+    /// Older databases predate the column, so NULL counts as "not excluded".
+    /// </summary>
+    public const string NotExcludedClause = "(Excluded IS NULL OR Excluded = 0)";
+
     private readonly PluginConfiguration config;
     private readonly string dbFilePath;
     private readonly string dbLockPath;
@@ -115,6 +121,7 @@ public class SQLiteDatabase
             new_cols.Add("EventType", "TEXT");
             new_cols.Add("LibraryId", "TEXT");
             new_cols.Add("Genres", "TEXT");
+            new_cols.Add("Excluded", "INT");
 
             var existingColumns = GetTableColumns(table);
 
@@ -133,6 +140,12 @@ public class SQLiteDatabase
                             // For backward compatibility, set existing records to "Add" since previous version only had additions
                             logger.Debug($"Setting default EventType='Add' for existing records in {table}");
                             ExecuteSQL($"UPDATE {table} SET EventType='Add' WHERE EventType IS NULL;");
+                        }
+
+                        if (col.Key == "Excluded")
+                        {
+                            logger.Debug($"Setting default Excluded=0 for existing records in {table}");
+                            ExecuteSQL($"UPDATE {table} SET Excluded=0 WHERE Excluded IS NULL;");
                         }
                     }
                     catch (SQLiteException sle)
