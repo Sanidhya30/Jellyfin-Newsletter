@@ -129,6 +129,11 @@ public class DiscordConfiguration : INewsletterConfiguration
     public bool NewsletterOnUpcomingItemEnabled { get; set; } = false;
 
     /// <summary>
+    /// Gets or sets a value indicating whether to include the featured section in the newsletter.
+    /// </summary>
+    public bool NewsletterOnFeaturedEnabled { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the maximum number of items shown per newsletter section.
     /// A value of 0 means unlimited (default).
     /// </summary>
