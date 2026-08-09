@@ -24,6 +24,8 @@ public class ClientBuilder(Logger loggerInstance,
     SQLiteDatabase dbInstance,
     ILibraryManager libraryManagerInstance)
 {
+    private Dictionary<string, string>? libraryEmojiMap;
+
     /// <summary>
     /// Gets the plugin configuration instance.
     /// </summary>
@@ -43,6 +45,12 @@ public class ClientBuilder(Logger loggerInstance,
     /// Gets the library manager instance.
     /// </summary>
     protected ILibraryManager LibraryManager { get; } = libraryManagerInstance;
+
+    /// <summary>
+    /// Gets the map of library name to section-header emoji, built once per newsletter run.
+    /// </summary>
+    protected Dictionary<string, string> LibraryEmojiMap =>
+        libraryEmojiMap ??= LibraryEmojis.BuildMap(LibraryManager, Logger, Config.LibraryEmojis);
 
     /// <summary>
     /// Queries newsletter data from the database, merges upcoming items, deduplicates,
