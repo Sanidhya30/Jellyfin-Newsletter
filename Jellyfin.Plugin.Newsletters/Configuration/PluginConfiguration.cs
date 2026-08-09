@@ -481,6 +481,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public Collection<RadarrConfiguration> RadarrConfigurations { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the per-library emoji overrides used in newsletter section headers.
+    /// Libraries without an entry use the default for their collection type.
+    /// </summary>
+    public Collection<LibraryEmojiConfiguration> LibraryEmojis { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the collection of Sonarr instance configurations.
     /// </summary>
     public Collection<SonarrConfiguration> SonarrConfigurations { get; set; } = new();
