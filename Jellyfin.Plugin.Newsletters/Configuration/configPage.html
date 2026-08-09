@@ -88,6 +88,20 @@
                         </div>
 
                         <hr>
+                        <h3>Section Emojis</h3>
+                        <div class="fieldDescription" style="margin-bottom: 15px;">
+                            The emoji shown beside each section heading in the newsletter, per library.
+                            Leave a box empty to use the default for that library's type.
+                            <br>
+                            Applies wherever a header template uses <b>{LibraryEmoji}</b> &mdash; the bundled
+                            templates do. If you have pasted your own Header HTML into a client below, add the
+                            placeholder there to pick these up.
+                        </div>
+                        <div id="LibraryEmojiList" class="config-list">
+                            <p class="no-configs-text">Loading libraries&hellip;</p>
+                        </div>
+
+                        <hr>
                         <h3>Upcoming Media Integration</h3>
                         <div class="fieldDescription" style="margin-bottom: 15px;">
                             Connect to Radarr and/or Sonarr to include an "Upcoming" section in your newsletters
@@ -538,6 +552,37 @@
             .preview-excluded .preview-episode-label {
                 opacity: 0.45;
                 text-decoration: line-through;
+            }
+            /* Section Emojis */
+            .emoji-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .emoji-table td {
+                padding: 6px 10px;
+                vertical-align: middle;
+            }
+
+            .emoji-lib-name {
+                width: 45%;
+            }
+
+            .emoji-lib-input {
+                width: 30%;
+            }
+
+            .emoji-lib-input input {
+                width: 100%;
+                font-size: 1.2em;
+                text-align: center;
+            }
+
+            .emoji-lib-default {
+                width: 25%;
+                opacity: 0.6;
+                font-size: 0.85em;
+                white-space: nowrap;
             }
         </style>
         <script type="text/javascript">
@@ -1565,6 +1610,78 @@
 
             // ===================== LIBRARY FUNCTIONS =====================
 
+            // ===================== SECTION EMOJIS =====================
+
+            // Mirrors LibraryEmojis.DefaultsByCollectionType on the server so the
+            // placeholder shows the emoji that will actually be used.
+            var EMOJI_DEFAULTS = {
+                movies: '🍿',
+                tvshows: '🎬',
+                music: '🎵',
+                musicvideos: '🎤',
+                books: '📚',
+                homevideos: '📹',
+                boxsets: '📦',
+                mixed: '🎞️'
+            };
+            var EMOJI_FALLBACK = '🎞️';
+
+            function defaultEmojiFor(collectionType) {
+                var key = (collectionType || '').toLowerCase();
+                return EMOJI_DEFAULTS[key] || EMOJI_FALLBACK;
+            }
+
+            function renderLibraryEmojis(configured) {
+                var container = document.getElementById('LibraryEmojiList');
+                if (!container) return;
+
+                if (!allLibraries || !allLibraries.length) {
+                    container.innerHTML = '<p class="no-configs-text">No libraries found.</p>';
+                    return;
+                }
+
+                var byId = {};
+                (configured || []).forEach(function (entry) {
+                    if (entry && entry.LibraryId) byId[entry.LibraryId] = entry.Emoji || '';
+                });
+
+                var html = '<table class="emoji-table">';
+                allLibraries.forEach(function (lib) {
+                    var fallback = defaultEmojiFor(lib.CollectionType);
+                    html += '<tr>';
+                    html += '  <td class="emoji-lib-name">' + escapeHtml(lib.Name) + '</td>';
+                    html += '  <td class="emoji-lib-input"><input type="text" is="emby-input" maxlength="8"'
+                        + ' class="library-emoji" data-library-id="' + escapeHtml(lib.Id) + '"'
+                        + ' value="' + escapeHtml(byId[lib.Id] || '') + '"'
+                        + ' placeholder="' + escapeHtml(fallback) + '" /></td>';
+                    html += '  <td class="emoji-lib-default">default ' + escapeHtml(fallback) + '</td>';
+                    html += '</tr>';
+                });
+                html += '</table>';
+
+                container.innerHTML = html;
+            }
+
+            function collectLibraryEmojis() {
+                var result = [];
+                document.querySelectorAll('.library-emoji').forEach(function (input) {
+                    var value = (input.value || '').trim();
+                    if (value) {
+                        result.push({ LibraryId: input.getAttribute('data-library-id'), Emoji: value });
+                    }
+                });
+                return result;
+            }
+
+            function escapeHtml(value) {
+                return String(value === null || value === undefined ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
             function loadLibraries() {
                 // Return a promise to ensure libraries are loaded before rendering client configs
                 return ApiClient.getJSON(ApiClient.getUrl('Library/MediaFolders')).then(function (result) {
@@ -1610,6 +1727,7 @@
                     config.EmailConfigurations = emailConfigs;
                     config.RadarrConfigurations = radarrConfigs;
                     config.SonarrConfigurations = sonarrConfigs;
+                    config.LibraryEmojis = collectLibraryEmojis();
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -1866,6 +1984,7 @@
                         renderRadarrConfigs();
                         renderSonarrConfigs();
                         loadPreview();
+                        renderLibraryEmojis(config.LibraryEmojis || []);
                         Dashboard.hideLoadingMsg();
                     });
                 });
