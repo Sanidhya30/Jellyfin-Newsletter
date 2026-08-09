@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.7.0.0",
+                "changelog": "- Feature: Made all newsletter clients asynchronous and added rate-limiting for the Telegram client.\n- Feature: Added a configurable maximum number of items per section for each client.\n- Feature: Added a Genres tag for newsletters.\n- Maintenance: Added explicit permissions to the stale issue/PR workflow.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.7.0.0/newsletters_1.7.0.0.zip",
+                "checksum": "b6b7c14900c1b69d3dafe01b8db2fac6",
+                "timestamp": "2026-08-09T08:21:09Z"
+            },
+            {
                 "version": "1.6.4.0",
                 "changelog": "- Feature: Added support for metadata update for items.\n- Maintenance: Updated MailKit from 4.16.0 to 4.17.0 and SixLabors.ImageSharp from 3.1.12 to 4.0.0.\n- Maintenance: Added CONTRIBUTING.md, stale issue/PR workflow, and updated logs.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",
