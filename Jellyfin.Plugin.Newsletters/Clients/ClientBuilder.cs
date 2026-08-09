@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -49,24 +50,7 @@ public class ClientBuilder(Logger loggerInstance,
     /// <returns>A dictionary mapping library IDs to library names.</returns>
     protected Dictionary<string, string> BuildLibraryNameMap()
     {
-        var map = new Dictionary<string, string>();
-        try
-        {
-            var virtualFolders = LibraryManager.GetVirtualFolders();
-            foreach (var folder in virtualFolders)
-            {
-                if (!string.IsNullOrEmpty(folder.ItemId) && !map.ContainsKey(folder.ItemId))
-                {
-                    map[folder.ItemId] = folder.Name;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Error building library name map: {ex.Message}");
-        }
-
-        return map;
+        return LibraryNames.BuildMap(LibraryManager, Logger);
     }
 
     /// <summary>
@@ -78,12 +62,7 @@ public class ClientBuilder(Logger loggerInstance,
     /// <returns>The library name, or "Library" if not found.</returns>
     protected static string GetLibraryName(string? libraryId, Dictionary<string, string> libraryNameMap)
     {
-        if (!string.IsNullOrEmpty(libraryId) && libraryNameMap.TryGetValue(libraryId, out var name))
-        {
-            return name;
-        }
-
-        return "Library";
+        return LibraryNames.Resolve(libraryId, libraryNameMap);
     }
 
     /// <summary>
