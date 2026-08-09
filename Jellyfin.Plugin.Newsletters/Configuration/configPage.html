@@ -1699,7 +1699,8 @@
                     if (group.TotalCount > 1) {
                         html += '  <div class="preview-episodes">';
                         group.Items.forEach(function (item) {
-                            var label = item.Season >= 0 && item.Episode >= 0
+                            var isEpisode = group.Type !== 'Movie' && item.Season >= 0 && item.Episode >= 0;
+                            var label = isEpisode
                                 ? 'S' + ('0' + item.Season).slice(-2) + 'E' + ('0' + item.Episode).slice(-2)
                                 : item.Filename.split('/').pop();
 

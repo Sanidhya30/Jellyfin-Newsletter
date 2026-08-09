@@ -109,7 +109,7 @@ public class NewsletterPreviewService(
             group.Items = groupItems;
             group.TotalCount = groupItems.Count;
             group.ExcludedCount = groupItems.Count(i => i.Excluded);
-            group.SeasonSummary = Preview.SeasonSummary.Format(groupItems.Select(i => (i.Season, i.Episode)).ToList());
+            group.SeasonSummary = BuildSeasonSummary(group.Type, groupItems);
         }
 
         var ordered = groups.Values
@@ -160,6 +160,29 @@ public class NewsletterPreviewService(
         {
             db.CloseConnection();
         }
+    }
+
+    /// <summary>
+    /// Summarises the seasons and episodes a group will actually send.
+    /// </summary>
+    /// <remarks>
+    /// Movies carry no season or episode, but the scanner stores 0 rather than a sentinel
+    /// (<see cref="Shared.Entities.JsonFileObj"/> initialises both to 0), so the media type is the
+    /// only reliable discriminator - season 0 is legitimately "Specials" for a series.
+    /// Excluded items are left out so the summary describes what will be sent, falling back to the
+    /// full set when everything is excluded so a struck-through card still says what it covers.
+    /// </remarks>
+    private static string BuildSeasonSummary(string type, List<PreviewItem> groupItems)
+    {
+        if (string.Equals(type, "Movie", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        var included = groupItems.Where(i => !i.Excluded).ToList();
+        var describing = included.Count > 0 ? included : groupItems;
+
+        return SeasonSummary.Format(describing.Select(i => (i.Season, i.Episode)).ToList());
     }
 
     private static string Sanitize(string value)
