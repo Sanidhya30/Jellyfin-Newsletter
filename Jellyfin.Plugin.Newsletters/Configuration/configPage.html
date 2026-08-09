@@ -588,6 +588,18 @@
                 border-color: #00a4dc;
             }
 
+            /* The box is centre-aligned, so on an empty field the caret lands on top of the
+               centred placeholder and the default reads as real, uneditable content. Emoji
+               ignore the CSS color that normally greys a placeholder out, so fade it instead,
+               and hide it entirely on focus so the field is visibly empty while typing. */
+            .emoji-lib-input input::placeholder {
+                opacity: 0.4;
+            }
+
+            .emoji-lib-input input:focus::placeholder {
+                opacity: 0;
+            }
+
             .emoji-lib-default {
                 width: 25%;
                 opacity: 0.6;
