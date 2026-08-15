@@ -1702,7 +1702,7 @@
                             var isEpisode = group.Type !== 'Movie' && item.Season >= 0 && item.Episode >= 0;
                             var label = isEpisode
                                 ? 'S' + ('0' + item.Season).slice(-2) + 'E' + ('0' + item.Episode).slice(-2)
-                                : item.Filename.split('/').pop();
+                                : item.Filename.split(/[\\/]/).pop();
 
                             html += '<div class="preview-episode' + (item.Excluded ? ' preview-excluded' : '') + '"'
                                 + ' data-preview-file="' + escapeHtml(item.Filename) + '">';

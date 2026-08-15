@@ -133,7 +133,10 @@ public class NewsletterPreviewService(
     /// </summary>
     /// <param name="filenames">The filenames to act on.</param>
     /// <param name="excluded">True to exclude, false to re-include.</param>
-    /// <returns>The number of filenames acted on.</returns>
+    /// <returns>The number of queued rows actually updated, which is less than the number of
+    /// filenames supplied when some of them are no longer queued.</returns>
+    /// <exception cref="Exception">Thrown when the queue could not be updated, so that the caller
+    /// reports the failure instead of silently reporting success.</exception>
     public int SetExcluded(IReadOnlyList<string> filenames, bool excluded)
     {
         if (filenames is null || filenames.Count == 0)
@@ -148,13 +151,22 @@ public class NewsletterPreviewService(
             string list = string.Join(",", filenames.Select(Sanitize));
             db.ExecuteSQL($"UPDATE CurrNewsletterData SET Excluded={(excluded ? 1 : 0)} WHERE Filename IN ({list});");
 
-            logger.Info($"{(excluded ? "Excluded" : "Re-included")} {filenames.Count} item(s) for the next newsletter");
-            return filenames.Count;
+            int changed = 0;
+            foreach (var row in db.Query("SELECT changes();"))
+            {
+                if (row is not null)
+                {
+                    changed = ParseInt(row[0].ToString());
+                }
+            }
+
+            logger.Info($"{(excluded ? "Excluded" : "Re-included")} {changed} of {filenames.Count} requested item(s) for the next newsletter");
+            return changed;
         }
         catch (Exception e)
         {
             logger.Error("An error has occured: " + e);
-            return 0;
+            throw;
         }
         finally
         {

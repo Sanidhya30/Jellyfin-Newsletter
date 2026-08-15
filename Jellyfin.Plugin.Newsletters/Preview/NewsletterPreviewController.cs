@@ -1,3 +1,4 @@
+using System;
 using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -48,6 +49,7 @@ public class NewsletterPreviewController : ControllerBase
     [HttpPost("Exclude")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public IActionResult Exclude([FromBody] PreviewSelection selection)
     {
         if (selection?.Filenames is null || selection.Filenames.Count == 0)
@@ -55,8 +57,16 @@ public class NewsletterPreviewController : ControllerBase
             return BadRequest(new { Message = "No items specified." });
         }
 
-        int count = previewService.SetExcluded(selection.Filenames, true);
-        return Ok(new { Message = $"Excluded {count} item(s) from the next newsletter.", Count = count });
+        try
+        {
+            int count = previewService.SetExcluded(selection.Filenames, true);
+            return Ok(new { Message = $"Excluded {count} item(s) from the next newsletter.", Count = count });
+        }
+        catch (Exception e)
+        {
+            logger.Error("Could not exclude items from the next newsletter: " + e);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "Could not update the newsletter queue." });
+        }
     }
 
     /// <summary>
@@ -67,6 +77,7 @@ public class NewsletterPreviewController : ControllerBase
     [HttpPost("Include")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public IActionResult Include([FromBody] PreviewSelection selection)
     {
         if (selection?.Filenames is null || selection.Filenames.Count == 0)
@@ -74,7 +85,15 @@ public class NewsletterPreviewController : ControllerBase
             return BadRequest(new { Message = "No items specified." });
         }
 
-        int count = previewService.SetExcluded(selection.Filenames, false);
-        return Ok(new { Message = $"Restored {count} item(s) to the next newsletter.", Count = count });
+        try
+        {
+            int count = previewService.SetExcluded(selection.Filenames, false);
+            return Ok(new { Message = $"Restored {count} item(s) to the next newsletter.", Count = count });
+        }
+        catch (Exception e)
+        {
+            logger.Error("Could not restore items to the next newsletter: " + e);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "Could not update the newsletter queue." });
+        }
     }
 }
