@@ -45,27 +45,6 @@ public class ClientBuilder(Logger loggerInstance,
     protected ILibraryManager LibraryManager { get; } = libraryManagerInstance;
 
     /// <summary>
-    /// Builds a dictionary mapping LibraryId to LibraryName using the Jellyfin library manager.
-    /// </summary>
-    /// <returns>A dictionary mapping library IDs to library names.</returns>
-    protected Dictionary<string, string> BuildLibraryNameMap()
-    {
-        return LibraryNames.BuildMap(LibraryManager, Logger);
-    }
-
-    /// <summary>
-    /// Gets the library name for a given library ID using the provided map.
-    /// Falls back to "Library" if the ID is not found.
-    /// </summary>
-    /// <param name="libraryId">The library ID to look up.</param>
-    /// <param name="libraryNameMap">The dictionary mapping library IDs to names.</param>
-    /// <returns>The library name, or "Library" if not found.</returns>
-    protected static string GetLibraryName(string? libraryId, Dictionary<string, string> libraryNameMap)
-    {
-        return LibraryNames.Resolve(libraryId, libraryNameMap);
-    }
-
-    /// <summary>
     /// Queries newsletter data from the database, merges upcoming items, deduplicates,
     /// and sorts by event type → media type → library name.
     /// This is the shared data pipeline used by all client builders.
@@ -76,7 +55,7 @@ public class ClientBuilder(Logger loggerInstance,
     /// <returns>A sorted, deduplicated list of items ready for rendering.</returns>
     protected IReadOnlyList<JsonFileObj> BuildSortedItems(INewsletterConfiguration config, IReadOnlyList<JsonFileObj> upcomingItems, string clientName)
     {
-        var libraryNameMap = BuildLibraryNameMap();
+        var libraryNameMap = LibraryNames.BuildMap(LibraryManager, Logger);
         var itemsByKey = new Dictionary<string, JsonFileObj>();
 
         try
@@ -137,7 +116,7 @@ public class ClientBuilder(Logger loggerInstance,
         return allItems
             .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
             .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-            .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
+            .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : LibraryNames.Resolve(i.LibraryId, libraryNameMap))
             .ToList();
     }
 

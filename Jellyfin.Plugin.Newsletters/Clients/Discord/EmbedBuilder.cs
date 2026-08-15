@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Integrations;
+using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -38,7 +39,7 @@ public class EmbedBuilder(
         var result = new List<(Embed, MemoryStream?, string)>();
 
         // Build library name map
-        var libraryNameMap = BuildLibraryNameMap();
+        var libraryNameMap = LibraryNames.BuildMap(LibraryManager, Logger);
 
         // BuildSortedItems manages its own DB connection for querying/deduplication
         var sortedItems = BuildSortedItems(discordConfig, upcomingItems, "Discord");
@@ -55,7 +56,7 @@ public class EmbedBuilder(
             foreach (var item in sortedItems)
             {
                 string eventType = item.EventType?.ToLowerInvariant() ?? "add";
-                string libraryName = eventType == "upcoming" ? (item.LibraryId ?? string.Empty) : GetLibraryName(item.LibraryId, libraryNameMap);
+                string libraryName = eventType == "upcoming" ? (item.LibraryId ?? string.Empty) : LibraryNames.Resolve(item.LibraryId, libraryNameMap);
 
                 // Skip items beyond the per-section cap
                 if (maxItemsPerSection > 0)

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Integrations;
+using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -241,7 +242,7 @@ public abstract class HtmlContentBuilder(
     /// <returns>The grouped items structure.</returns>
     protected IEnumerable<EventGroupResult> BuildGroupedItems(INewsletterConfiguration config, string clientName)
     {
-        var libraryNameMap = BuildLibraryNameMap();
+        var libraryNameMap = LibraryNames.BuildMap(LibraryManager, Logger);
         var sortedItems = BuildSortedItems(config, UpcomingItems, clientName);
 
         return sortedItems
@@ -250,7 +251,7 @@ public abstract class HtmlContentBuilder(
             {
                 EventType = eventGroup.Key,
                 Libraries = eventGroup
-                    .GroupBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
+                    .GroupBy(i => i.EventType == "upcoming" ? i.LibraryId : LibraryNames.Resolve(i.LibraryId, libraryNameMap))
                     .Select(libGroup => new LibraryGroupResult { LibraryName = libGroup.Key, Items = libGroup.ToList() })
             });
     }
