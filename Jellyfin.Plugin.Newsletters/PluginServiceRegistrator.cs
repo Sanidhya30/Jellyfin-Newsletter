@@ -5,6 +5,7 @@ using Jellyfin.Plugin.Newsletters.Clients.Matrix;
 using Jellyfin.Plugin.Newsletters.Clients.Telegram;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.ItemEventNotifier;
+using Jellyfin.Plugin.Newsletters.Preview;
 using Jellyfin.Plugin.Newsletters.Scanner;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using MediaBrowser.Controller;
@@ -38,6 +39,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
         // Register the integration services
         serviceCollection.AddSingleton<UpcomingMediaService>();
+
+        // Register the newsletter preview service
+        serviceCollection.AddSingleton<NewsletterPreviewService>();
 
         // Register the entry point for item event notifications
         serviceCollection.AddHostedService<ItemEventNotifierEntryPoint>();

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -44,49 +45,6 @@ public class ClientBuilder(Logger loggerInstance,
     protected ILibraryManager LibraryManager { get; } = libraryManagerInstance;
 
     /// <summary>
-    /// Builds a dictionary mapping LibraryId to LibraryName using the Jellyfin library manager.
-    /// </summary>
-    /// <returns>A dictionary mapping library IDs to library names.</returns>
-    protected Dictionary<string, string> BuildLibraryNameMap()
-    {
-        var map = new Dictionary<string, string>();
-        try
-        {
-            var virtualFolders = LibraryManager.GetVirtualFolders();
-            foreach (var folder in virtualFolders)
-            {
-                if (!string.IsNullOrEmpty(folder.ItemId) && !map.ContainsKey(folder.ItemId))
-                {
-                    map[folder.ItemId] = folder.Name;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Error building library name map: {ex.Message}");
-        }
-
-        return map;
-    }
-
-    /// <summary>
-    /// Gets the library name for a given library ID using the provided map.
-    /// Falls back to "Library" if the ID is not found.
-    /// </summary>
-    /// <param name="libraryId">The library ID to look up.</param>
-    /// <param name="libraryNameMap">The dictionary mapping library IDs to names.</param>
-    /// <returns>The library name, or "Library" if not found.</returns>
-    protected static string GetLibraryName(string? libraryId, Dictionary<string, string> libraryNameMap)
-    {
-        if (!string.IsNullOrEmpty(libraryId) && libraryNameMap.TryGetValue(libraryId, out var name))
-        {
-            return name;
-        }
-
-        return "Library";
-    }
-
-    /// <summary>
     /// Queries newsletter data from the database, merges upcoming items, deduplicates,
     /// and sorts by event type → media type → library name.
     /// This is the shared data pipeline used by all client builders.
@@ -97,14 +55,14 @@ public class ClientBuilder(Logger loggerInstance,
     /// <returns>A sorted, deduplicated list of items ready for rendering.</returns>
     protected IReadOnlyList<JsonFileObj> BuildSortedItems(INewsletterConfiguration config, IReadOnlyList<JsonFileObj> upcomingItems, string clientName)
     {
-        var libraryNameMap = BuildLibraryNameMap();
+        var libraryNameMap = LibraryNames.BuildMap(LibraryManager, Logger);
         var itemsByKey = new Dictionary<string, JsonFileObj>();
 
         try
         {
             Db.CreateConnection();
 
-            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData;"))
+            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE " + SQLiteDatabase.NotExcludedClause + ";"))
             {
                 if (row is not null)
                 {
@@ -158,7 +116,7 @@ public class ClientBuilder(Logger loggerInstance,
         return allItems
             .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
             .ThenBy(i => i.Type == "Movie" ? 0 : 1)
-            .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : GetLibraryName(i.LibraryId, libraryNameMap))
+            .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : LibraryNames.Resolve(i.LibraryId, libraryNameMap))
             .ToList();
     }
 
@@ -194,7 +152,7 @@ public class ClientBuilder(Logger loggerInstance,
         else
         {
             // Query by title and event type to avoid conflicts when same title exists with different events
-            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "' AND EventType='" + currObj.EventType.Replace("'", "''", StringComparison.Ordinal) + "';"))
+            foreach (var row in Db.Query("SELECT * FROM CurrNewsletterData WHERE Title='" + currObj.Title.Replace("'", "''", StringComparison.Ordinal) + "' AND EventType='" + currObj.EventType.Replace("'", "''", StringComparison.Ordinal) + "' AND " + SQLiteDatabase.NotExcludedClause + ";"))
             {
                 if (row is not null)
                 {

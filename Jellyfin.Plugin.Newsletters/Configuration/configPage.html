@@ -16,6 +16,7 @@
                     <div class="tab-bar">
                         <button type="button" class="tab-link active"
                             onclick="openTab(event, 'General')">General</button>
+                        <button type="button" class="tab-link" onclick="openTab(event, 'Preview')">Preview</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Email')">Email</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Discord')">Discord</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Telegram')">Telegram</button>
@@ -130,6 +131,29 @@
                                 <p class="no-configs-text">No Sonarr instances configured. Click "Add Sonarr Instance"
                                     to create one.</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Tab -->
+                    <div id="Preview" class="tab-content">
+                        <div class="config-header">
+                            <h3>Next Newsletter</h3>
+                            <button type="button" is="emby-button" class="raised button-submit"
+                                onclick="loadPreview()">
+                                <span>Refresh</span>
+                            </button>
+                        </div>
+                        <div class="fieldDescription" style="margin-bottom: 15px;">
+                            Everything queued for the next newsletter. Removing an entry here excludes it
+                            from every client and takes effect immediately &mdash; you do not need to press Save.
+                            Excluded entries can be restored until the newsletter sends.
+                            <br>
+                            Upcoming items from Radarr/Sonarr are fetched live when the newsletter is built and
+                            are not listed here.
+                        </div>
+                        <div id="PreviewSummary" class="fieldDescription" style="margin-bottom: 10px;"></div>
+                        <div id="PreviewList" class="config-list">
+                            <p class="no-configs-text">Loading&hellip;</p>
                         </div>
                     </div>
 
@@ -414,6 +438,98 @@
             .config-field-row>.inputContainer {
                 flex: 1;
                 min-width: 200px;
+            }
+
+            /* Preview Tab */
+            .preview-group {
+                border: 1px solid #444;
+                border-radius: 4px;
+                margin-bottom: 8px;
+            }
+
+            .preview-group-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                cursor: pointer;
+            }
+
+            .preview-group .expand-icon {
+                transition: transform 0.3s;
+                display: inline-block;
+                width: 1em;
+            }
+
+            .preview-group.expanded .expand-icon {
+                transform: rotate(90deg);
+            }
+
+            .preview-title {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .preview-meta {
+                opacity: 0.7;
+                font-size: 0.85em;
+                white-space: nowrap;
+            }
+
+            .preview-badge {
+                border-radius: 3px;
+                padding: 2px 7px;
+                font-size: 0.72em;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: #fff;
+            }
+
+            .preview-badge.add {
+                background: #2e7d32;
+            }
+
+            .preview-badge.update {
+                background: #1565c0;
+            }
+
+            .preview-badge.delete {
+                background: #c62828;
+            }
+
+            .preview-episodes {
+                display: none;
+                border-top: 1px solid #444;
+                padding: 6px 12px 10px 12px;
+            }
+
+            .preview-group.expanded .preview-episodes {
+                display: block;
+            }
+
+            .preview-episode {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 4px 0;
+            }
+
+            .preview-episode-label {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: 0.9em;
+            }
+
+            .preview-excluded .preview-title,
+            .preview-excluded .preview-episode-label {
+                opacity: 0.45;
+                text-decoration: line-through;
             }
         </style>
         <script type="text/javascript">
@@ -1494,6 +1610,165 @@
                 });
             }
 
+            // ===================== PREVIEW TAB =====================
+
+            var previewData = null;
+            var previewExpanded = {};
+
+            function escapeHtml(value) {
+                return String(value === null || value === undefined ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function previewGroupKey(group) {
+                return group.Title + ' ' + group.EventType;
+            }
+
+            function loadPreview() {
+                var list = document.getElementById('PreviewList');
+                if (!list) return;
+
+                list.innerHTML = '<p class="no-configs-text">Loading&hellip;</p>';
+
+                ApiClient.getJSON(ApiClient.getUrl('Newsletters/Preview')).then(function (data) {
+                    previewData = data;
+                    renderPreview();
+                }).catch(function (error) {
+                    console.error('Error loading newsletter preview:', error);
+                    list.innerHTML = '<p class="no-configs-text">Could not load the preview. Check the Jellyfin logs.</p>';
+                });
+            }
+
+            function renderPreview() {
+                var list = document.getElementById('PreviewList');
+                var summary = document.getElementById('PreviewSummary');
+                if (!list || !previewData) return;
+
+                var groups = previewData.Groups || [];
+                var included = (previewData.TotalItems || 0) - (previewData.ExcludedItems || 0);
+
+                if (summary) {
+                    var sent = previewData.LastPublishedDate
+                        ? new Date(previewData.LastPublishedDate).toLocaleString()
+                        : 'never';
+                    summary.innerHTML = '<b>' + included + '</b> item(s) will be sent'
+                        + (previewData.ExcludedItems ? ', <b>' + previewData.ExcludedItems + '</b> excluded' : '')
+                        + '. Last newsletter sent: ' + escapeHtml(sent) + '.';
+                }
+
+                if (!groups.length) {
+                    list.innerHTML = '<p class="no-configs-text">Nothing queued for the next newsletter.</p>';
+                    return;
+                }
+
+                var html = '';
+                groups.forEach(function (group) {
+                    var key = previewGroupKey(group);
+                    var allExcluded = group.ExcludedCount === group.TotalCount;
+                    var eventType = (group.EventType || 'add').toLowerCase();
+                    var classes = 'preview-group' + (previewExpanded[key] ? ' expanded' : '')
+                        + (allExcluded ? ' preview-excluded' : '');
+
+                    var meta = [];
+                    if (group.SeasonSummary) meta.push(group.SeasonSummary);
+                    if (group.PremiereYear) meta.push(group.PremiereYear);
+                    if (group.LibraryName) meta.push(group.LibraryName);
+                    if (group.ExcludedCount && !allExcluded) {
+                        meta.push(group.ExcludedCount + ' of ' + group.TotalCount + ' excluded');
+                    }
+
+                    html += '<div class="' + classes + '" data-preview-key="' + escapeHtml(key) + '">';
+                    html += '  <div class="preview-group-header" onclick="togglePreviewGroup(this)">';
+                    html += '    <span class="expand-icon">' + (group.TotalCount > 1 ? '&#9656;' : '&nbsp;') + '</span>';
+                    html += '    <span class="preview-badge ' + escapeHtml(eventType) + '">' + escapeHtml(eventType) + '</span>';
+                    html += '    <span class="preview-title">' + escapeHtml(group.Title) + '</span>';
+                    html += '    <span class="preview-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
+
+                    if (allExcluded) {
+                        html += '    <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, false)">Restore</button>';
+                    } else {
+                        html += '    <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, true)">Remove</button>';
+                    }
+
+                    html += '  </div>';
+
+                    if (group.TotalCount > 1) {
+                        html += '  <div class="preview-episodes">';
+                        group.Items.forEach(function (item) {
+                            var isEpisode = group.Type !== 'Movie' && item.Season >= 0 && item.Episode >= 0;
+                            var label = isEpisode
+                                ? 'S' + ('0' + item.Season).slice(-2) + 'E' + ('0' + item.Episode).slice(-2)
+                                : item.Filename.split(/[\\/]/).pop();
+
+                            html += '<div class="preview-episode' + (item.Excluded ? ' preview-excluded' : '') + '"'
+                                + ' data-preview-file="' + escapeHtml(item.Filename) + '">';
+                            html += '  <span class="preview-episode-label" title="' + escapeHtml(item.Filename) + '">'
+                                + escapeHtml(label) + '</span>';
+                            html += item.Excluded
+                                ? '  <button type="button" class="config-action-btn test-btn" onclick="setPreviewItemExcluded(this, false)">Restore</button>'
+                                : '  <button type="button" class="config-action-btn delete-btn" onclick="setPreviewItemExcluded(this, true)">Remove</button>';
+                            html += '</div>';
+                        });
+                        html += '  </div>';
+                    }
+
+                    html += '</div>';
+                });
+
+                list.innerHTML = html;
+            }
+
+            function togglePreviewGroup(headerEl) {
+                var groupEl = headerEl.closest('.preview-group');
+                if (!groupEl || !groupEl.querySelector('.preview-episodes')) return;
+
+                var key = groupEl.getAttribute('data-preview-key');
+                previewExpanded[key] = !previewExpanded[key];
+                groupEl.classList.toggle('expanded');
+            }
+
+            function postPreviewChange(filenames, excluded) {
+                if (!filenames.length) return;
+
+                var url = ApiClient.getUrl('Newsletters/Preview/' + (excluded ? 'Exclude' : 'Include'));
+                ApiClient.ajax({
+                    type: 'POST',
+                    url: url,
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Filenames: filenames })
+                }).then(function () {
+                    loadPreview();
+                }).catch(function (error) {
+                    console.error('Error updating newsletter preview:', error);
+                    alert('Could not update the newsletter preview. Check the Jellyfin logs.');
+                    loadPreview();
+                });
+            }
+
+            function setPreviewGroupExcluded(buttonEl, excluded) {
+                var groupEl = buttonEl.closest('.preview-group');
+                if (!groupEl || !previewData) return;
+
+                var key = groupEl.getAttribute('data-preview-key');
+                var group = (previewData.Groups || []).filter(function (g) {
+                    return previewGroupKey(g) === key;
+                })[0];
+                if (!group) return;
+
+                postPreviewChange(group.Items.map(function (i) { return i.Filename; }), excluded);
+            }
+
+            function setPreviewItemExcluded(buttonEl, excluded) {
+                var episodeEl = buttonEl.closest('.preview-episode');
+                if (!episodeEl) return;
+
+                postPreviewChange([episodeEl.getAttribute('data-preview-file')], excluded);
+            }
+
             function loadConfig() {
                 ApiClient.getPluginConfiguration(NewsletterConfig.pluginUniqueId).then(function (config) {
                     console.log("Loading config...", config);
@@ -1549,6 +1824,7 @@
                         renderEmailConfigs();
                         renderRadarrConfigs();
                         renderSonarrConfigs();
+                        loadPreview();
                         Dashboard.hideLoadingMsg();
                     });
                 });
