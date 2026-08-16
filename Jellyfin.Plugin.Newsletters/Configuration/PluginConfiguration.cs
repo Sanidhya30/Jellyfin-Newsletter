@@ -487,6 +487,26 @@ public class PluginConfiguration : BasePluginConfiguration
     public Collection<LibraryEmojiConfiguration> LibraryEmojis { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the emoji shown beside "Added to ..." section headings. Empty uses the default.
+    /// </summary>
+    public string EventEmojiAdd { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the emoji shown beside "Updated in ..." section headings. Empty uses the default.
+    /// </summary>
+    public string EventEmojiUpdate { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the emoji shown beside "Removed from ..." section headings. Empty uses the default.
+    /// </summary>
+    public string EventEmojiDelete { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the emoji shown beside "Upcoming in ..." section headings. Empty uses the default.
+    /// </summary>
+    public string EventEmojiUpcoming { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the collection of Sonarr instance configurations.
     /// </summary>
     public Collection<SonarrConfiguration> SonarrConfigurations { get; set; } = new();

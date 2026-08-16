@@ -19,7 +19,7 @@ public static class LibraryEmojis
 
     private static readonly Dictionary<CollectionTypeOptions, string> DefaultsByCollectionType = new()
     {
-        { CollectionTypeOptions.movies, "🎬" },
+        { CollectionTypeOptions.movies, "🍿" },
         { CollectionTypeOptions.tvshows, "📺" },
         { CollectionTypeOptions.music, "🎵" },
         { CollectionTypeOptions.musicvideos, "🎤" },

@@ -50,7 +50,7 @@ public abstract class HtmlContentBuilder(
 
     /// <summary>
     /// Gets the HTML section header for an event type and library name.
-    /// Loads the header from the parsed template and substitutes {LibraryName} and {LibraryEmoji}.
+    /// Loads the header from the parsed template and substitutes {LibraryName}, {LibraryEmoji} and {EventEmoji}.
     /// </summary>
     /// <param name="eventType">The event type (add, update, delete, upcoming).</param>
     /// <param name="libraryName">The library name to display.</param>
@@ -73,7 +73,8 @@ public abstract class HtmlContentBuilder(
         }
 
         string header = this.TemplateReplace(headerTemplate, "{LibraryName}", libraryName);
-        return this.TemplateReplace(header, "{LibraryEmoji}", LibraryEmojis.Resolve(libraryName, LibraryEmojiMap));
+        header = this.TemplateReplace(header, "{LibraryEmoji}", LibraryEmojis.Resolve(libraryName, LibraryEmojiMap));
+        return this.TemplateReplace(header, "{EventEmoji}", EventEmojis.Resolve(eventType, Config));
     }
 
     /// <summary>

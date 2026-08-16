@@ -93,9 +93,18 @@
                             The emoji shown beside each section heading in the newsletter, per library.
                             Leave a box empty to use the default for that library's type.
                             <br>
-                            Applies wherever a header template uses <b>{LibraryEmoji}</b> &mdash; the bundled
-                            templates do. If you have pasted your own Header HTML into a client below, add the
-                            placeholder there to pick these up.
+                            Two icons per heading: one for the event, one for the library, e.g.
+                            &quot;🎬 Added to 🍿 Movies&quot;. Leave a box empty to use its default.
+                            <br>
+                            The bundled templates use both. If you have pasted your own Header HTML into a
+                            client below, add <b>{EventEmoji}</b> and <b>{LibraryEmoji}</b> there to pick these up.
+                        </div>
+                        <div class="fieldDescription" style="margin-bottom: 8px;">
+                            Per event &mdash; shown by <b>{EventEmoji}</b>, at the start of the heading.
+                        </div>
+                        <div id="EventEmojiList" class="config-list" style="margin-bottom: 15px;"></div>
+                        <div class="fieldDescription" style="margin-bottom: 8px;">
+                            Per library &mdash; shown by <b>{LibraryEmoji}</b>, beside the library name.
                         </div>
                         <div id="LibraryEmojiList" class="config-list">
                             <p class="no-configs-text">Loading libraries&hellip;</p>
@@ -572,7 +581,8 @@
                 width: 30%;
             }
 
-            .emoji-lib-input input {
+            .emoji-lib-input input,
+            .emoji-lib-input input.event-emoji {
                 width: 100%;
                 font-size: 1.2em;
                 text-align: center;
@@ -1653,6 +1663,38 @@
                 return EMOJI_DEFAULTS[key] || EMOJI_FALLBACK;
             }
 
+            var EVENT_EMOJI_FIELDS = [
+                { key: 'EventEmojiAdd', label: 'Added', fallback: '\uD83C\uDFAC' },
+                { key: 'EventEmojiUpdate', label: 'Updated', fallback: '\uD83D\uDD04' },
+                { key: 'EventEmojiDelete', label: 'Removed', fallback: '\uD83D\uDDD1\uFE0F' },
+                { key: 'EventEmojiUpcoming', label: 'Upcoming', fallback: '\uD83D\uDCC5' }
+            ];
+
+            function renderEventEmojis(config) {
+                var container = document.getElementById('EventEmojiList');
+                if (!container) return;
+
+                var html = '<table class="emoji-table">';
+                EVENT_EMOJI_FIELDS.forEach(function (f) {
+                    html += '<tr>';
+                    html += '  <td class="emoji-lib-name">' + escapeHtml(f.label) + '</td>';
+                    html += '  <td class="emoji-lib-input"><input type="text" class="event-emoji"'
+                        + ' data-emoji-key="' + f.key + '"'
+                        + ' value="' + escapeHtml(config[f.key] || '') + '"'
+                        + ' placeholder="' + escapeHtml(f.fallback) + '" /></td>';
+                    html += '  <td class="emoji-lib-default">default ' + escapeHtml(f.fallback) + '</td>';
+                    html += '</tr>';
+                });
+                html += '</table>';
+                container.innerHTML = html;
+            }
+
+            function collectEventEmojis(config) {
+                document.querySelectorAll('.event-emoji').forEach(function (input) {
+                    config[input.getAttribute('data-emoji-key')] = (input.value || '').trim();
+                });
+            }
+
             function renderLibraryEmojis(configured) {
                 var container = document.getElementById('LibraryEmojiList');
                 if (!container) return;
@@ -1750,6 +1792,7 @@
                     config.RadarrConfigurations = radarrConfigs;
                     config.SonarrConfigurations = sonarrConfigs;
                     config.LibraryEmojis = collectLibraryEmojis();
+                    collectEventEmojis(config);
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -1762,15 +1805,6 @@
 
             var previewData = null;
             var previewExpanded = {};
-
-            function escapeHtml(value) {
-                return String(value === null || value === undefined ? '' : value)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#39;');
-            }
 
             function previewGroupKey(group) {
                 return group.Title + ' ' + group.EventType;
@@ -2006,6 +2040,7 @@
                         renderRadarrConfigs();
                         renderSonarrConfigs();
                         loadPreview();
+                        renderEventEmojis(config);
                         renderLibraryEmojis(config.LibraryEmojis || []);
                         Dashboard.hideLoadingMsg();
                     });
