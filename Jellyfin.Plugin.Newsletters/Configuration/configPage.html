@@ -922,9 +922,13 @@
                     SeriesAddEmbedColor: '#00FF00',
                     SeriesDeleteEmbedColor: '#FF0000',
                     SeriesUpdateEmbedColor: '#0000FF',
+                    SeriesUpcomingEmbedColor: '#FF8C00',
+                    SeriesFeaturedEmbedColor: '#FFC107',
                     MoviesAddEmbedColor: '#00FF00',
                     MoviesDeleteEmbedColor: '#FF0000',
                     MoviesUpdateEmbedColor: '#0000FF',
+                    MoviesUpcomingEmbedColor: '#FF8C00',
+                    MoviesFeaturedEmbedColor: '#FFC107',
                     SelectedSeriesLibraries: [],
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
@@ -990,9 +994,13 @@
                 config.SeriesAddEmbedColor = document.getElementById('discord-series-add-color-' + id).value;
                 config.SeriesDeleteEmbedColor = document.getElementById('discord-series-delete-color-' + id).value;
                 config.SeriesUpdateEmbedColor = document.getElementById('discord-series-update-color-' + id).value;
+                config.SeriesUpcomingEmbedColor = document.getElementById('discord-series-upcoming-color-' + id).value;
+                config.SeriesFeaturedEmbedColor = document.getElementById('discord-series-featured-color-' + id).value;
                 config.MoviesAddEmbedColor = document.getElementById('discord-movies-add-color-' + id).value;
                 config.MoviesDeleteEmbedColor = document.getElementById('discord-movies-delete-color-' + id).value;
                 config.MoviesUpdateEmbedColor = document.getElementById('discord-movies-update-color-' + id).value;
+                config.MoviesUpcomingEmbedColor = document.getElementById('discord-movies-upcoming-color-' + id).value;
+                config.MoviesFeaturedEmbedColor = document.getElementById('discord-movies-featured-color-' + id).value;
                 config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('discord-max-items-' + id).value) || 0);
 
                 // Update Event Toggles
@@ -1071,17 +1079,21 @@
                     html += '    <div>';
                     html += '      <label class="inputLabel">Embed Colors:</label>';
                     html += '      <table class="color-table">';
-                    html += '        <tr><th>Series Add</th><th>Series Delete</th><th>Series Update</th></tr>';
+                    html += '        <tr><th>Series Add</th><th>Series Delete</th><th>Series Update</th><th>Series Upcoming</th><th>Series Featured</th></tr>';
                     html += '        <tr>';
                     html += '          <td><input id="discord-series-add-color-' + config.Id + '" type="color" value="' + (config.SeriesAddEmbedColor || '#00FF00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-series-delete-color-' + config.Id + '" type="color" value="' + (config.SeriesDeleteEmbedColor || '#FF0000') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-series-update-color-' + config.Id + '" type="color" value="' + (config.SeriesUpdateEmbedColor || '#0000FF') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-series-upcoming-color-' + config.Id + '" type="color" value="' + (config.SeriesUpcomingEmbedColor || '#FF8C00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-series-featured-color-' + config.Id + '" type="color" value="' + (config.SeriesFeaturedEmbedColor || '#FFC107') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '        </tr>';
-                    html += '        <tr><th>Movies Add</th><th>Movies Delete</th><th>Movies Update</th></tr>';
+                    html += '        <tr><th>Movies Add</th><th>Movies Delete</th><th>Movies Update</th><th>Movies Upcoming</th><th>Movies Featured</th></tr>';
                     html += '        <tr>';
                     html += '          <td><input id="discord-movies-add-color-' + config.Id + '" type="color" value="' + (config.MoviesAddEmbedColor || '#00FF00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-movies-delete-color-' + config.Id + '" type="color" value="' + (config.MoviesDeleteEmbedColor || '#FF0000') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-movies-update-color-' + config.Id + '" type="color" value="' + (config.MoviesUpdateEmbedColor || '#0000FF') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-movies-upcoming-color-' + config.Id + '" type="color" value="' + (config.MoviesUpcomingEmbedColor || '#FF8C00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-movies-featured-color-' + config.Id + '" type="color" value="' + (config.MoviesFeaturedEmbedColor || '#FFC107') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '        </tr>';
                     html += '      </table>';
                     html += '    </div>';

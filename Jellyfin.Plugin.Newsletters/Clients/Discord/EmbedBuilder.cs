@@ -277,11 +277,6 @@ public class EmbedBuilder(
 
         var eventLower = eventType.ToLowerInvariant();
 
-        if (eventLower == "upcoming")
-        {
-            return Convert.ToInt32("FF8C00", 16); // Orange for upcoming items
-        }
-        
         if (mediaType == "Series")
         {
             return eventLower switch
@@ -289,6 +284,8 @@ public class EmbedBuilder(
                 "add" => Convert.ToInt32(discordConfig.SeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "delete" => Convert.ToInt32(discordConfig.SeriesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "update" => Convert.ToInt32(discordConfig.SeriesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "upcoming" => Convert.ToInt32(discordConfig.SeriesUpcomingEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "featured" => Convert.ToInt32(discordConfig.SeriesFeaturedEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 _ => Convert.ToInt32(discordConfig.SeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
             };
         }
@@ -299,6 +296,8 @@ public class EmbedBuilder(
                 "add" => Convert.ToInt32(discordConfig.MoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "delete" => Convert.ToInt32(discordConfig.MoviesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "update" => Convert.ToInt32(discordConfig.MoviesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "upcoming" => Convert.ToInt32(discordConfig.MoviesUpcomingEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "featured" => Convert.ToInt32(discordConfig.MoviesFeaturedEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 _ => Convert.ToInt32(discordConfig.MoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
             };
         }
