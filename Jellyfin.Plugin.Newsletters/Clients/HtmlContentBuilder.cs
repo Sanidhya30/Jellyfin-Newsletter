@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Featured;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -36,6 +37,7 @@ public abstract class HtmlContentBuilder(
     private string headerUpdateHtml = string.Empty;
     private string headerDeleteHtml = string.Empty;
     private string headerUpcomingHtml = string.Empty;
+    private string headerFeaturedHtml = string.Empty;
     private bool _isSetup;
 
     /// <summary>
@@ -63,6 +65,7 @@ public abstract class HtmlContentBuilder(
             "update" => headerUpdateHtml,
             "delete" => headerDeleteHtml,
             "upcoming" => headerUpcomingHtml,
+            "featured" => headerFeaturedHtml,
             _ => headerAddHtml
         };
 
@@ -72,7 +75,8 @@ public abstract class HtmlContentBuilder(
             return string.Empty;
         }
 
-        return this.TemplateReplace(headerTemplate, "{LibraryName}", libraryName);
+        string header = this.TemplateReplace(headerTemplate, "{LibraryName}", libraryName);
+        return this.TemplateReplace(header, "{FeaturedEmoji}", Config.FeaturedEmoji);
     }
 
     /// <summary>
@@ -243,7 +247,15 @@ public abstract class HtmlContentBuilder(
     protected IEnumerable<EventGroupResult> BuildGroupedItems(INewsletterConfiguration config, string clientName)
     {
         var libraryNameMap = LibraryNames.BuildMap(LibraryManager, Logger);
-        var sortedItems = BuildSortedItems(config, UpcomingItems, clientName);
+        IEnumerable<JsonFileObj> sortedItems = BuildSortedItems(config, UpcomingItems, clientName);
+
+        // A custom header saved before the Featured section existed carries no header-featured
+        // template. Drop the picks rather than emitting them under no heading at all.
+        if (string.IsNullOrWhiteSpace(this.headerFeaturedHtml))
+        {
+            Logger.Warn($"[{clientName}] Header HTML has no 'header-featured' section - skipping the Featured section.");
+            sortedItems = sortedItems.Where(i => !string.Equals(i.EventType, FeaturedItems.EventType, StringComparison.OrdinalIgnoreCase));
+        }
 
         return sortedItems
             .GroupBy(i => i.EventType?.ToLowerInvariant() ?? "add")
@@ -251,7 +263,9 @@ public abstract class HtmlContentBuilder(
             {
                 EventType = eventGroup.Key,
                 Libraries = eventGroup
-                    .GroupBy(i => i.EventType == "upcoming" ? i.LibraryId : LibraryNames.Resolve(i.LibraryId, libraryNameMap))
+                    .GroupBy(i => i.EventType == FeaturedItems.EventType
+                        ? FeaturedItems.SectionName
+                        : i.EventType == "upcoming" ? i.LibraryId : LibraryNames.Resolve(i.LibraryId, libraryNameMap))
                     .Select(libGroup => new LibraryGroupResult { LibraryName = libGroup.Key, Items = libGroup.ToList() })
             });
     }
@@ -320,12 +334,17 @@ public abstract class HtmlContentBuilder(
 
         StringBuilder testHTML = new StringBuilder();
 
-        string[] eventTypes = { "add", "update", "delete", "upcoming" };
-        string[] titles = { "Test Added Series", "Test Updated Movie", "Test Deleted Series", "Test Upcoming Movie" };
+        string[] eventTypes = { FeaturedItems.EventType, "add", "update", "delete", "upcoming" };
+        string[] titles = { "Test Featured Movie", "Test Added Series", "Test Updated Movie", "Test Deleted Series", "Test Upcoming Movie" };
 
         for (int i = 0; i < eventTypes.Length; i++)
         {
             string eventType = eventTypes[i];
+
+            if (eventType == FeaturedItems.EventType && string.IsNullOrWhiteSpace(this.headerFeaturedHtml))
+            {
+                continue;
+            }
 
             testHTML.Append(GetEventSectionHeader(eventType));
 
@@ -465,8 +484,9 @@ public abstract class HtmlContentBuilder(
         this.headerUpdateHtml = ExtractTemplateSection(fullHeaderHtml, "header-update");
         this.headerDeleteHtml = ExtractTemplateSection(fullHeaderHtml, "header-delete");
         this.headerUpcomingHtml = ExtractTemplateSection(fullHeaderHtml, "header-upcoming");
+        this.headerFeaturedHtml = ExtractTemplateSection(fullHeaderHtml, "header-featured");
 
-        Logger.Debug($"Header sections parsed — Add: {!string.IsNullOrEmpty(this.headerAddHtml)}, Update: {!string.IsNullOrEmpty(this.headerUpdateHtml)}, Delete: {!string.IsNullOrEmpty(this.headerDeleteHtml)}, Upcoming: {!string.IsNullOrEmpty(this.headerUpcomingHtml)}");
+        Logger.Debug($"Header sections parsed — Featured: {!string.IsNullOrEmpty(this.headerFeaturedHtml)}, Add: {!string.IsNullOrEmpty(this.headerAddHtml)}, Update: {!string.IsNullOrEmpty(this.headerUpdateHtml)}, Delete: {!string.IsNullOrEmpty(this.headerDeleteHtml)}, Upcoming: {!string.IsNullOrEmpty(this.headerUpcomingHtml)}");
     }
 
     /// <summary>

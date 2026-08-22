@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Featured;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -61,7 +62,11 @@ public class EmbedBuilder(
                 // Skip items beyond the per-section cap
                 if (maxItemsPerSection > 0)
                 {
-                    string sectionKey = $"{eventType}|{libraryName}";
+                    // Featured picks form a single section spanning libraries, the way the HTML
+                    // clients group them, so the cap applies to that whole section.
+                    string sectionKey = eventType == FeaturedItems.EventType
+                        ? $"{eventType}|{FeaturedItems.SectionName}"
+                        : $"{eventType}|{libraryName}";
                     sectionItemCounts.TryGetValue(sectionKey, out int sectionItemCount);
                     sectionItemCounts[sectionKey] = sectionItemCount + 1;
 
@@ -277,11 +282,6 @@ public class EmbedBuilder(
 
         var eventLower = eventType.ToLowerInvariant();
 
-        if (eventLower == "upcoming")
-        {
-            return Convert.ToInt32("FF8C00", 16); // Orange for upcoming items
-        }
-        
         if (mediaType == "Series")
         {
             return eventLower switch
@@ -289,6 +289,8 @@ public class EmbedBuilder(
                 "add" => Convert.ToInt32(discordConfig.SeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "delete" => Convert.ToInt32(discordConfig.SeriesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "update" => Convert.ToInt32(discordConfig.SeriesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "upcoming" => Convert.ToInt32(discordConfig.SeriesUpcomingEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "featured" => Convert.ToInt32(discordConfig.SeriesFeaturedEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 _ => Convert.ToInt32(discordConfig.SeriesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
             };
         }
@@ -299,6 +301,8 @@ public class EmbedBuilder(
                 "add" => Convert.ToInt32(discordConfig.MoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "delete" => Convert.ToInt32(discordConfig.MoviesDeleteEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 "update" => Convert.ToInt32(discordConfig.MoviesUpdateEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "upcoming" => Convert.ToInt32(discordConfig.MoviesUpcomingEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
+                "featured" => Convert.ToInt32(discordConfig.MoviesFeaturedEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16),
                 _ => Convert.ToInt32(discordConfig.MoviesAddEmbedColor.Replace("#", string.Empty, StringComparison.Ordinal), 16)
             };
         }
@@ -319,6 +323,7 @@ public class EmbedBuilder(
         return basePrefix.Replace($"Added to {libDisplay}", $"**Added to {libDisplay}**", StringComparison.Ordinal)
                         .Replace($"Removed from {libDisplay}", $"**Removed from {libDisplay}**", StringComparison.Ordinal)
                         .Replace($"Updated in {libDisplay}", $"**Updated in {libDisplay}**", StringComparison.Ordinal)
-                        .Replace($"Upcoming in {libDisplay}", $"**Upcoming in {libDisplay}**", StringComparison.Ordinal);
+                        .Replace($"Upcoming in {libDisplay}", $"**Upcoming in {libDisplay}**", StringComparison.Ordinal)
+                        .Replace($"{Config.FeaturedEmoji} {FeaturedItems.SectionName}", $"{Config.FeaturedEmoji} **{FeaturedItems.SectionName}**", StringComparison.Ordinal);
     }
 }

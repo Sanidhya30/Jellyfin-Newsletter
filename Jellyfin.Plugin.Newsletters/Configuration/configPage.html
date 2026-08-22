@@ -17,6 +17,7 @@
                         <button type="button" class="tab-link active"
                             onclick="openTab(event, 'General')">General</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Preview')">Preview</button>
+                        <button type="button" class="tab-link" onclick="openTab(event, 'Featured')">Featured</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Email')">Email</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Discord')">Discord</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Telegram')">Telegram</button>
@@ -154,6 +155,34 @@
                         <div id="PreviewSummary" class="fieldDescription" style="margin-bottom: 10px;"></div>
                         <div id="PreviewList" class="config-list">
                             <p class="no-configs-text">Loading&hellip;</p>
+                        </div>
+                    </div>
+
+                    <!-- Featured Tab -->
+                    <div id="Featured" class="tab-content">
+                        <div class="config-header">
+                            <h3>Featured</h3>
+                        </div>
+                        <div class="fieldDescription" style="margin-bottom: 15px;">
+                            Pin hand-picked titles to the top of the next newsletter. Anything in your
+                            library can be featured, whether or not it was added recently.
+                            <br>
+                            <b>The list is cleared once a newsletter is sent</b>, so each issue is curated
+                            deliberately rather than repeating last week's pick.
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="FeaturedEmoji">Featured Emoji:</label>
+                            <input id="FeaturedEmoji" name="FeaturedEmoji" type="text" is="emby-input" />
+                            <div class="fieldDescription">Shown beside the Featured heading. Default: &#11088;</div>
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="FeaturedSearch">Add a title:</label>
+                            <input id="FeaturedSearch" type="text" is="emby-input" placeholder="Search your library&hellip;"
+                                oninput="searchFeatured(this.value)" autocomplete="off" />
+                        </div>
+                        <div id="FeaturedResults" class="config-list"></div>
+                        <div id="FeaturedList" class="config-list">
+                            <p class="no-configs-text">Nothing featured for the next newsletter.</p>
                         </div>
                     </div>
 
@@ -473,6 +502,31 @@
                 white-space: nowrap;
             }
 
+            /* Featured */
+            .featured-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                border: 1px solid #444;
+                border-radius: 4px;
+                margin-bottom: 6px;
+            }
+
+            .featured-row .featured-name {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .featured-row .featured-meta {
+                opacity: 0.65;
+                font-size: 0.85em;
+                white-space: nowrap;
+            }
+
             .preview-meta {
                 opacity: 0.7;
                 font-size: 0.85em;
@@ -538,6 +592,15 @@
             .preview-excluded .preview-episode-label {
                 opacity: 0.45;
                 text-decoration: line-through;
+            }
+
+            #FeaturedResults .featured-row {
+                cursor: pointer;
+                border-style: dashed;
+            }
+
+            #FeaturedResults .featured-row:hover {
+                background: rgba(255, 255, 255, 0.06);
             }
         </style>
         <script type="text/javascript">
@@ -800,7 +863,7 @@
                 return html;
             }
 
-            function getEventTogglesHtml(clientId, configType, added, updated, deleted, upcoming) {
+            function getEventTogglesHtml(clientId, configType, added, updated, deleted, upcoming, featured) {
                 var html = '<div>';
                 html += '  <label class="inputLabel">Events to Notify:</label>';
                 html += '  <table><tr>';
@@ -820,6 +883,10 @@
                 html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
                 html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-upcoming-' + clientId + '" ' + (upcoming === true ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
                 html += '    <span>Upcoming Item</span></label></div></td>';
+
+                html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
+                html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-featured-' + clientId + '" ' + (featured !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
+                html += '    <span>Featured</span></label></div></td>';
 
                 html += '  </tr></table>';
                 html += '</div>';
@@ -855,15 +922,20 @@
                     SeriesAddEmbedColor: '#00FF00',
                     SeriesDeleteEmbedColor: '#FF0000',
                     SeriesUpdateEmbedColor: '#0000FF',
+                    SeriesUpcomingEmbedColor: '#FF8C00',
+                    SeriesFeaturedEmbedColor: '#FFC107',
                     MoviesAddEmbedColor: '#00FF00',
                     MoviesDeleteEmbedColor: '#FF0000',
                     MoviesUpdateEmbedColor: '#0000FF',
+                    MoviesUpcomingEmbedColor: '#FF8C00',
+                    MoviesFeaturedEmbedColor: '#FFC107',
                     SelectedSeriesLibraries: [],
                     SelectedMoviesLibraries: [],
                     NewsletterOnItemAddedEnabled: true,
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     MaxItemsPerSection: 0
                 };
                 discordConfigs.push(newConfig);
@@ -922,9 +994,13 @@
                 config.SeriesAddEmbedColor = document.getElementById('discord-series-add-color-' + id).value;
                 config.SeriesDeleteEmbedColor = document.getElementById('discord-series-delete-color-' + id).value;
                 config.SeriesUpdateEmbedColor = document.getElementById('discord-series-update-color-' + id).value;
+                config.SeriesUpcomingEmbedColor = document.getElementById('discord-series-upcoming-color-' + id).value;
+                config.SeriesFeaturedEmbedColor = document.getElementById('discord-series-featured-color-' + id).value;
                 config.MoviesAddEmbedColor = document.getElementById('discord-movies-add-color-' + id).value;
                 config.MoviesDeleteEmbedColor = document.getElementById('discord-movies-delete-color-' + id).value;
                 config.MoviesUpdateEmbedColor = document.getElementById('discord-movies-update-color-' + id).value;
+                config.MoviesUpcomingEmbedColor = document.getElementById('discord-movies-upcoming-color-' + id).value;
+                config.MoviesFeaturedEmbedColor = document.getElementById('discord-movies-featured-color-' + id).value;
                 config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('discord-max-items-' + id).value) || 0);
 
                 // Update Event Toggles
@@ -932,6 +1008,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('discord-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('discord-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('discord-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('discord-event-featured-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.discord-series-lib-' + id + ':checked');
@@ -984,7 +1061,7 @@
                     html += '      <input id="discord-webhookname-' + config.Id + '" type="text" is="emby-input" value="' + (config.WebhookName || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'discord', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'discord', config.MaxItemsPerSection);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
@@ -1002,17 +1079,21 @@
                     html += '    <div>';
                     html += '      <label class="inputLabel">Embed Colors:</label>';
                     html += '      <table class="color-table">';
-                    html += '        <tr><th>Series Add</th><th>Series Delete</th><th>Series Update</th></tr>';
+                    html += '        <tr><th>Series Add</th><th>Series Delete</th><th>Series Update</th><th>Series Upcoming</th><th>Series Featured</th></tr>';
                     html += '        <tr>';
                     html += '          <td><input id="discord-series-add-color-' + config.Id + '" type="color" value="' + (config.SeriesAddEmbedColor || '#00FF00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-series-delete-color-' + config.Id + '" type="color" value="' + (config.SeriesDeleteEmbedColor || '#FF0000') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-series-update-color-' + config.Id + '" type="color" value="' + (config.SeriesUpdateEmbedColor || '#0000FF') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-series-upcoming-color-' + config.Id + '" type="color" value="' + (config.SeriesUpcomingEmbedColor || '#FF8C00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-series-featured-color-' + config.Id + '" type="color" value="' + (config.SeriesFeaturedEmbedColor || '#FFC107') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '        </tr>';
-                    html += '        <tr><th>Movies Add</th><th>Movies Delete</th><th>Movies Update</th></tr>';
+                    html += '        <tr><th>Movies Add</th><th>Movies Delete</th><th>Movies Update</th><th>Movies Upcoming</th><th>Movies Featured</th></tr>';
                     html += '        <tr>';
                     html += '          <td><input id="discord-movies-add-color-' + config.Id + '" type="color" value="' + (config.MoviesAddEmbedColor || '#00FF00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-movies-delete-color-' + config.Id + '" type="color" value="' + (config.MoviesDeleteEmbedColor || '#FF0000') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '          <td><input id="discord-movies-update-color-' + config.Id + '" type="color" value="' + (config.MoviesUpdateEmbedColor || '#0000FF') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-movies-upcoming-color-' + config.Id + '" type="color" value="' + (config.MoviesUpcomingEmbedColor || '#FF8C00') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
+                    html += '          <td><input id="discord-movies-featured-color-' + config.Id + '" type="color" value="' + (config.MoviesFeaturedEmbedColor || '#FFC107') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')"></td>';
                     html += '        </tr>';
                     html += '      </table>';
                     html += '    </div>';
@@ -1044,6 +1125,7 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     MaxItemsPerSection: 0
                 };
                 telegramConfigs.push(newConfig);
@@ -1106,6 +1188,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('telegram-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('telegram-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('telegram-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('telegram-event-featured-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.telegram-series-lib-' + id + ':checked');
@@ -1158,7 +1241,7 @@
                     html += '      <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Separate multiple IDs with commas.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'telegram', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'telegram', config.MaxItemsPerSection);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
@@ -1204,6 +1287,7 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     EnableSsl: true,
                     UseAuthentication: true,
                     MaxItemsPerSection: 0
@@ -1273,6 +1357,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('email-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('email-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('email-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('email-event-featured-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.email-series-lib-' + id + ':checked');
@@ -1369,7 +1454,7 @@
                     html += '      <input id="email-subject-' + config.Id + '" type="text" is="emby-input" value="' + (config.Subject || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'email', config.MaxItemsPerSection);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="email-category-' + config.Id + '">Template Category:</label>';
@@ -1421,6 +1506,7 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     MaxItemsPerSection: 0
                 };
                 matrixConfigs.push(newConfig);
@@ -1478,6 +1564,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('matrix-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('matrix-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('matrix-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('matrix-event-featured-' + id).checked;
 
                 var seriesChecked = document.querySelectorAll('.matrix-series-lib-' + id + ':checked');
                 config.SelectedSeriesLibraries = Array.from(seriesChecked).map(function (cb) { return cb.getAttribute('data-lib-id'); });
@@ -1533,7 +1620,7 @@
                     html += '      <div class="fieldDescription">The internal room ID (e.g., !yourRoomId:example.com). Separate multiple with commas.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'matrix', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'matrix', config.MaxItemsPerSection);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="matrix-category-' + config.Id + '">Template Category:</label>';
@@ -1564,6 +1651,135 @@
             }
 
             // ===================== LIBRARY FUNCTIONS =====================
+
+            function escapeHtml(value) {
+                return String(value === null || value === undefined ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            // ===================== FEATURED =====================
+
+            var featuredItems = [];   // [{ Id, Name, Type, ProductionYear }]
+            var featuredSearchTimer = null;
+
+            function renderFeatured() {
+                var container = document.getElementById('FeaturedList');
+                if (!container) return;
+
+                if (!featuredItems.length) {
+                    container.innerHTML = '<p class="no-configs-text">Nothing featured for the next newsletter.</p>';
+                    return;
+                }
+
+                var html = '';
+                featuredItems.forEach(function (item) {
+                    html += '<div class="featured-row">';
+                    html += '  <span class="featured-name">' + escapeHtml(item.Name) + '</span>';
+                    html += '  <span class="featured-meta">' + escapeHtml(item.Type === 'Movie' ? 'Movie' : 'Series')
+                        + (item.ProductionYear ? ' &middot; ' + escapeHtml(item.ProductionYear) : '') + '</span>';
+                    html += '  <button type="button" class="config-action-btn delete-btn"'
+                        + ' onclick="removeFeatured(\'' + escapeHtml(item.Id) + '\')">Remove</button>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+
+            function searchFeatured(term) {
+                if (featuredSearchTimer) clearTimeout(featuredSearchTimer);
+
+                var results = document.getElementById('FeaturedResults');
+                if (!results) return;
+
+                if (!term || term.trim().length < 2) {
+                    results.innerHTML = '';
+                    return;
+                }
+
+                featuredSearchTimer = setTimeout(function () {
+                    var url = ApiClient.getUrl('Items', {
+                        searchTerm: term.trim(),
+                        IncludeItemTypes: 'Movie,Series',
+                        Recursive: true,
+                        Limit: 8,
+                        userId: ApiClient.getCurrentUserId(),
+                        Fields: 'ProductionYear'
+                    });
+
+                    ApiClient.getJSON(url).then(function (result) {
+                        var items = (result && result.Items) || [];
+                        if (!items.length) {
+                            results.innerHTML = '<p class="no-configs-text">No matches.</p>';
+                            return;
+                        }
+
+                        var html = '';
+                        items.forEach(function (item) {
+                            if (featuredItems.some(function (f) { return f.Id === item.Id; })) return;
+                            html += '<div class="featured-row" onclick="addFeatured(\'' + escapeHtml(item.Id) + '\')">';
+                            html += '  <span class="featured-name">' + escapeHtml(item.Name) + '</span>';
+                            html += '  <span class="featured-meta">' + escapeHtml(item.Type === 'Movie' ? 'Movie' : 'Series')
+                                + (item.ProductionYear ? ' &middot; ' + escapeHtml(item.ProductionYear) : '') + '</span>';
+                            html += '</div>';
+                        });
+                        results.innerHTML = html || '<p class="no-configs-text">Already featured.</p>';
+                        window._featuredSearchCache = items;
+                    }).catch(function (error) {
+                        console.error('Featured search failed:', error);
+                        results.innerHTML = '<p class="no-configs-text">Search failed. Check the Jellyfin logs.</p>';
+                    });
+                }, 300);
+            }
+
+            function addFeatured(id) {
+                var found = (window._featuredSearchCache || []).filter(function (i) { return i.Id === id; })[0];
+                if (!found) return;
+
+                if (!featuredItems.some(function (f) { return f.Id === id; })) {
+                    featuredItems.push(found);
+                    renderFeatured();
+                }
+
+                var search = document.getElementById('FeaturedSearch');
+                if (search) search.value = '';
+                var results = document.getElementById('FeaturedResults');
+                if (results) results.innerHTML = '';
+            }
+
+            function removeFeatured(id) {
+                featuredItems = featuredItems.filter(function (f) { return f.Id !== id; });
+                renderFeatured();
+            }
+
+            function loadFeatured(ids) {
+                featuredItems = [];
+                if (!ids || !ids.length) {
+                    renderFeatured();
+                    return;
+                }
+
+                // Config stores IDs only; resolve them to names for display.
+                var url = ApiClient.getUrl('Items', {
+                    ids: ids.join(','),
+                    Recursive: true,
+                    userId: ApiClient.getCurrentUserId(),
+                    Fields: 'ProductionYear'
+                });
+
+                ApiClient.getJSON(url).then(function (result) {
+                    var byId = {};
+                    ((result && result.Items) || []).forEach(function (i) { byId[i.Id] = i; });
+                    // Preserve the configured order, and drop anything no longer in the library.
+                    ids.forEach(function (id) { if (byId[id]) featuredItems.push(byId[id]); });
+                    renderFeatured();
+                }).catch(function (error) {
+                    console.error('Could not resolve featured items:', error);
+                    renderFeatured();
+                });
+            }
 
             function loadLibraries() {
                 // Return a promise to ensure libraries are loaded before rendering client configs
@@ -1610,6 +1826,9 @@
                     config.EmailConfigurations = emailConfigs;
                     config.RadarrConfigurations = radarrConfigs;
                     config.SonarrConfigurations = sonarrConfigs;
+                    config.FeaturedItemIds = featuredItems.map(function (i) { return i.Id; });
+                    var featuredEmojiEl = document.querySelector('#FeaturedEmoji');
+                    if (featuredEmojiEl) config.FeaturedEmoji = (featuredEmojiEl.value || '').trim() || '\u2B50';
 
                     ApiClient.updatePluginConfiguration(NewsletterConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -1622,15 +1841,6 @@
 
             var previewData = null;
             var previewExpanded = {};
-
-            function escapeHtml(value) {
-                return String(value === null || value === undefined ? '' : value)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#39;');
-            }
 
             function previewGroupKey(group) {
                 return group.Title + ' ' + group.EventType;
@@ -1840,6 +2050,9 @@
                     var hostingEl = document.querySelector('#HostingSelector');
                     if (hostingEl && config.PosterType) hostingEl.value = config.PosterType;
 
+                    var featuredEmojiEl = document.querySelector('#FeaturedEmoji');
+                    if (featuredEmojiEl) featuredEmojiEl.value = config.FeaturedEmoji || '\u2B50';
+
                     var ratingEl = document.querySelector('#CommunityRatingDecimalPlaces');
                     if (ratingEl) ratingEl.value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
 
@@ -1866,6 +2079,7 @@
                         renderRadarrConfigs();
                         renderSonarrConfigs();
                         loadPreview();
+                        loadFeatured(config.FeaturedItemIds || []);
                         Dashboard.hideLoadingMsg();
                     });
                 });

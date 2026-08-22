@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Featured;
+using Jellyfin.Plugin.Newsletters.Scanner;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
@@ -24,6 +26,8 @@ public class ClientBuilder(Logger loggerInstance,
     SQLiteDatabase dbInstance,
     ILibraryManager libraryManagerInstance)
 {
+    private IReadOnlyList<JsonFileObj>? featuredEntries;
+
     /// <summary>
     /// Gets the plugin configuration instance.
     /// </summary>
@@ -43,6 +47,12 @@ public class ClientBuilder(Logger loggerInstance,
     /// Gets the library manager instance.
     /// </summary>
     protected ILibraryManager LibraryManager { get; } = libraryManagerInstance;
+
+    /// <summary>
+    /// Gets the admin's pinned featured entries, resolved once per newsletter run.
+    /// </summary>
+    protected IReadOnlyList<JsonFileObj> FeaturedEntries =>
+        featuredEntries ??= FeaturedItems.Build(LibraryManager, Logger, Db, new PosterImageHandler(Logger), Config.Hostname, Config.FeaturedItemIds);
 
     /// <summary>
     /// Queries newsletter data from the database, merges upcoming items, deduplicates,
@@ -93,6 +103,29 @@ public class ClientBuilder(Logger loggerInstance,
             Db.CloseConnection();
         }
 
+        // Prepend the admin's featured picks. They are resolved from the library rather than the
+        // queue, so they bypass the queue entirely but still honour this client's filters.
+        foreach (var item in FeaturedEntries)
+        {
+            if (!ShouldIncludeItem(item, config, clientName))
+            {
+                continue;
+            }
+
+            // A featured title is very often also sitting in the queue (featuring something added
+            // this week is the common case). Drop those rows so the title is rendered once, under
+            // the Featured heading, instead of appearing again under its library section.
+            foreach (var duplicateKey in itemsByKey
+                .Where(kvp => string.Equals(kvp.Value.Title, item.Title, StringComparison.OrdinalIgnoreCase))
+                .Select(kvp => kvp.Key)
+                .ToList())
+            {
+                itemsByKey.Remove(duplicateKey);
+            }
+
+            itemsByKey[$"{item.Title}_{FeaturedItems.EventType}"] = item;
+        }
+
         // Append prefetched upcoming items and deduplicate by title
         if (upcomingItems != null && upcomingItems.Count > 0)
         {
@@ -111,7 +144,7 @@ public class ClientBuilder(Logger loggerInstance,
 
         var allItems = itemsByKey.Values.ToList();
 
-        var eventTypeOrder = new Dictionary<string, int> { { "add", 0 }, { "update", 1 }, { "delete", 2 }, { "upcoming", 3 } };
+        var eventTypeOrder = new Dictionary<string, int> { { "featured", 0 }, { "add", 1 }, { "update", 2 }, { "delete", 3 }, { "upcoming", 4 } };
 
         return allItems
             .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
@@ -468,6 +501,7 @@ public class ClientBuilder(Logger loggerInstance,
             "delete" => $"🗑️ Removed from {libDisplay}",
             "update" => $"🔄 Updated in {libDisplay}",
             "upcoming" => $"📅 Upcoming in {libDisplay}",
+            "featured" => $"{Config.FeaturedEmoji} Featured",
             _ => $"🎬 Added to {libDisplay}"
         };
     }
@@ -492,6 +526,11 @@ public class ClientBuilder(Logger loggerInstance,
         else if (eventType == "update" && !config.NewsletterOnItemUpdatedEnabled)
         {
             Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (Event: {eventType}) - 'Item Updated' notifications disabled.");
+            return false;
+        }
+        else if (eventType == FeaturedItems.EventType && !config.NewsletterOnFeaturedEnabled)
+        {
+            Logger.Debug($"[{clientName}] Skipping item '{item.Title}' (Event: {eventType}) - 'Featured' section disabled.");
             return false;
         }
         else if (eventType == "delete" && !config.NewsletterOnItemDeletedEnabled)

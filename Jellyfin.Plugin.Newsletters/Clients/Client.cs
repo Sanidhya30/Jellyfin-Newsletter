@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Featured;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
@@ -61,6 +62,15 @@ public class Client(Logger loggerInstance,
             Db.ExecuteSQL("INSERT OR REPLACE INTO ArchiveData SELECT * FROM CurrNewsletterData;");
             Db.ExecuteSQL("DELETE FROM CurrNewsletterData;");
 
+            // Featured picks are curated per issue, so a send consumes them the same way it
+            // consumes the queue. Leaving them would silently re-run the same feature forever.
+            if (Config.FeaturedItemIds.Count > 0)
+            {
+                Logger.Info($"Clearing {Config.FeaturedItemIds.Count} featured item(s) after send");
+                Config.FeaturedItemIds.Clear();
+                FeaturedItems.ClearPosterCache();
+            }
+
             // Update and save the last published date
             Config.LastPublishedDate = DateTime.Now;
             Plugin.Instance!.SaveConfiguration();
@@ -118,6 +128,8 @@ public class Client(Logger loggerInstance,
         bool dbPopulated = NewsletterDbIsPopulated();
         var upcomingItems = await UpcomingService.GetAllUpcomingAsync().ConfigureAwait(false);
         
-        return (dbPopulated || upcomingItems.Count > 0, upcomingItems);
+        bool hasFeatured = Config.FeaturedItemIds.Count > 0;
+
+        return (dbPopulated || hasFeatured || upcomingItems.Count > 0, upcomingItems);
     }
 }

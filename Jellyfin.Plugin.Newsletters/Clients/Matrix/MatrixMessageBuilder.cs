@@ -159,6 +159,7 @@ public class MatrixMessageBuilder(
             "update" => ("UPDATED", "🔄", "#2196F3"),
             "delete" => ("REMOVED", "🗑️", "#F44336"),
             "upcoming" => ("UPCOMING", "📅", "#FF8C00"),
+            "featured" => ("FEATURED", Config.FeaturedEmoji, "#FFC107"),
             _ => ("NEW", "🎬", "#4CAF50")
         };
 
