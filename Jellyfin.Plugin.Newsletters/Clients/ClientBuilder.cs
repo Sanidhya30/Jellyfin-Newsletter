@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Featured;
+using Jellyfin.Plugin.Newsletters.Scanner;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
@@ -51,7 +52,7 @@ public class ClientBuilder(Logger loggerInstance,
     /// Gets the admin's pinned featured entries, resolved once per newsletter run.
     /// </summary>
     protected IReadOnlyList<JsonFileObj> FeaturedEntries =>
-        featuredEntries ??= FeaturedItems.Build(LibraryManager, Logger, Config.Hostname, Config.FeaturedItemIds);
+        featuredEntries ??= FeaturedItems.Build(LibraryManager, Logger, Db, new PosterImageHandler(Logger), Config.Hostname, Config.FeaturedItemIds);
 
     /// <summary>
     /// Queries newsletter data from the database, merges upcoming items, deduplicates,

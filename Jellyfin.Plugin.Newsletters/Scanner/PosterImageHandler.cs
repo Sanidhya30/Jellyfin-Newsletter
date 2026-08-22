@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using Newtonsoft.Json.Linq;
 
@@ -19,6 +20,39 @@ public class PosterImageHandler(Logger loggerInstance)
     private static readonly object RateLimitLock = new();
     private static readonly TimeSpan MinInterval = TimeSpan.FromMilliseconds(25);
     private static DateTime lastRequestTime = DateTime.MinValue;
+
+    /// <summary>
+    /// Looks for an image URL already stored against this title in the newsletter tables.
+    /// Saves a round trip to TMDB for anything that has been through a scan before.
+    /// </summary>
+    /// <param name="db">The database to search. The caller owns the connection.</param>
+    /// <param name="title">The title to look for.</param>
+    /// <returns>The stored URL, or an empty string when nothing is cached for the title.</returns>
+    public string FindCachedImageUrl(SQLiteDatabase db, string title)
+    {
+        string[] tables = { "CurrRunData", "CurrNewsletterData", "ArchiveData" };
+
+        foreach (string table in tables)
+        {
+            foreach (var row in db.Query($"SELECT * FROM {table};"))
+            {
+                if (row is null)
+                {
+                    continue;
+                }
+
+                JsonFileObj fileObj = JsonFileObj.ConvertToObj(row);
+                if ((fileObj is not null) && (fileObj.Title == title) && (fileObj.ImageURL.Length > 0))
+                {
+                    logger.Debug($"Found cached image URL for {title} in {table} :: {fileObj.ImageURL}");
+                    return fileObj.ImageURL;
+                }
+            }
+        }
+
+        logger.Debug($"No cached image URL for {title}");
+        return string.Empty;
+    }
 
     /// <summary>
     /// Fetches the poster image URL for the given item using external IDs (e.g., TMDB).

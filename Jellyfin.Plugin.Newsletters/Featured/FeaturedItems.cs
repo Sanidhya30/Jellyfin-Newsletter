@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using Jellyfin.Plugin.Newsletters.Scanner;
+using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -26,6 +28,14 @@ public static class FeaturedItems
     /// </summary>
     public const string EventType = "featured";
 
+    // Same provider-to-TMDB key mapping the scanner uses when it builds an entry.
+    private static readonly Dictionary<string, string> AllowedExternalIds = new()
+    {
+        { "Imdb", "imdb_id" },
+        { "Tmdb", "tmdb" },
+        { "Tvdb", "tvdb_id" },
+    };
+
     /// <summary>
     /// The single section heading featured entries are grouped under, spanning all libraries.
     /// </summary>
@@ -36,12 +46,16 @@ public static class FeaturedItems
     /// </summary>
     /// <param name="libraryManager">The Jellyfin library manager.</param>
     /// <param name="logger">The logger used to report items that cannot be resolved.</param>
-    /// <param name="hostname">The configured server URL, used to build poster URLs.</param>
+    /// <param name="db">The database searched for an already known poster URL.</param>
+    /// <param name="imageHandler">The handler used to look up and fetch poster URLs.</param>
+    /// <param name="hostname">The configured server URL, used as the poster URL of last resort.</param>
     /// <param name="itemIds">The pinned Jellyfin item IDs, in the order they should appear.</param>
     /// <returns>The resolved entries. IDs that no longer exist are skipped.</returns>
     public static Collection<JsonFileObj> Build(
         ILibraryManager libraryManager,
         Logger logger,
+        SQLiteDatabase db,
+        PosterImageHandler imageHandler,
         string? hostname,
         IEnumerable<string>? itemIds)
     {
@@ -63,7 +77,7 @@ public static class FeaturedItems
                     continue;
                 }
 
-                featured.Add(ToEntry(item, libraryManager, hostname));
+                featured.Add(ToEntry(item, libraryManager, logger, db, imageHandler, hostname));
             }
             catch (Exception ex)
             {
@@ -74,7 +88,7 @@ public static class FeaturedItems
         return featured;
     }
 
-    private static JsonFileObj ToEntry(BaseItem item, ILibraryManager libraryManager, string? hostname)
+    private static JsonFileObj ToEntry(BaseItem item, ILibraryManager libraryManager, Logger logger, SQLiteDatabase db, PosterImageHandler imageHandler, string? hostname)
     {
         var entry = new JsonFileObj
         {
@@ -104,14 +118,62 @@ public static class FeaturedItems
             entry.RunTime = (int)TimeSpan.FromTicks(item.RunTimeTicks.Value).TotalMinutes;
         }
 
-        // Unlike scanned items there is no cached TMDB URL to reuse, so point at the server's
-        // own image endpoint. Attachment mode uses PosterPath above and ignores this.
-        if (!string.IsNullOrWhiteSpace(hostname))
+        // The scanner keys its TMDB lookups off these, so carry them over and the same
+        // resolution works for a featured pick. Attachment mode uses PosterPath and ignores it.
+        foreach (var kvp in item.ProviderIds)
         {
-            entry.ImageURL = $"{hostname.TrimEnd('/')}/Items/{entry.ItemID}/Images/Primary";
+            if (AllowedExternalIds.TryGetValue(kvp.Key, out var mappedKey))
+            {
+                entry.ExternalIds[mappedKey] = kvp.Value;
+            }
         }
 
+        entry.ImageURL = ResolveImageUrl(entry, logger, db, imageHandler, hostname);
+
         return entry;
+    }
+
+    private static string ResolveImageUrl(JsonFileObj entry, Logger logger, SQLiteDatabase db, PosterImageHandler imageHandler, string? hostname)
+    {
+        // Prefer a URL an earlier scan already resolved for this title, exactly as the scanner does.
+        try
+        {
+            db.CreateConnection();
+            string cached = imageHandler.FindCachedImageUrl(db, entry.Title);
+            if (!string.IsNullOrEmpty(cached))
+            {
+                return cached;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.Warn($"Could not check for a cached image URL for '{entry.Title}': {ex.Message}");
+        }
+        finally
+        {
+            db.CloseConnection();
+        }
+
+        // Nothing cached - ask TMDB the same way a scan would.
+        try
+        {
+            string fetched = imageHandler.FetchImagePoster(entry);
+            if (!string.IsNullOrEmpty(fetched) && fetched != "429" && fetched != "ERR")
+            {
+                return fetched;
+            }
+
+            logger.Warn($"Could not obtain a poster URL for featured item '{entry.Title}'");
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Poster lookup failed for featured item '{entry.Title}': {ex.Message}");
+        }
+
+        // Last resort: the server's own image endpoint, which needs a reachable hostname.
+        return string.IsNullOrWhiteSpace(hostname)
+            ? string.Empty
+            : $"{hostname.TrimEnd('/')}/Items/{entry.ItemID}/Images/Primary";
     }
 
     private static string ResolveLibraryId(BaseItem item, ILibraryManager libraryManager)
