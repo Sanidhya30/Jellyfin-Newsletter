@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Featured;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -84,7 +85,11 @@ public class TelegramMessageBuilder(
                 // Skip items beyond the per-section cap
                 if (maxItemsPerSection > 0)
                 {
-                    string sectionKey = $"{eventType}|{libraryName}";
+                    // Featured picks form a single section spanning libraries, the way the HTML
+                    // clients group them, so the cap applies to that whole section.
+                    string sectionKey = eventType == FeaturedItems.EventType
+                        ? $"{eventType}|{FeaturedItems.SectionName}"
+                        : $"{eventType}|{libraryName}";
                     sectionItemCounts.TryGetValue(sectionKey, out int sectionItemCount);
                     sectionItemCounts[sectionKey] = sectionItemCount + 1;
 

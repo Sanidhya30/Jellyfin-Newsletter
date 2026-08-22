@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Featured;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
@@ -61,7 +62,11 @@ public class EmbedBuilder(
                 // Skip items beyond the per-section cap
                 if (maxItemsPerSection > 0)
                 {
-                    string sectionKey = $"{eventType}|{libraryName}";
+                    // Featured picks form a single section spanning libraries, the way the HTML
+                    // clients group them, so the cap applies to that whole section.
+                    string sectionKey = eventType == FeaturedItems.EventType
+                        ? $"{eventType}|{FeaturedItems.SectionName}"
+                        : $"{eventType}|{libraryName}";
                     sectionItemCounts.TryGetValue(sectionKey, out int sectionItemCount);
                     sectionItemCounts[sectionKey] = sectionItemCount + 1;
 
@@ -318,6 +323,7 @@ public class EmbedBuilder(
         return basePrefix.Replace($"Added to {libDisplay}", $"**Added to {libDisplay}**", StringComparison.Ordinal)
                         .Replace($"Removed from {libDisplay}", $"**Removed from {libDisplay}**", StringComparison.Ordinal)
                         .Replace($"Updated in {libDisplay}", $"**Updated in {libDisplay}**", StringComparison.Ordinal)
-                        .Replace($"Upcoming in {libDisplay}", $"**Upcoming in {libDisplay}**", StringComparison.Ordinal);
+                        .Replace($"Upcoming in {libDisplay}", $"**Upcoming in {libDisplay}**", StringComparison.Ordinal)
+                        .Replace($"{Config.FeaturedEmoji} {FeaturedItems.SectionName}", $"{Config.FeaturedEmoji} **{FeaturedItems.SectionName}**", StringComparison.Ordinal);
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
+using Jellyfin.Plugin.Newsletters.Featured;
 using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
@@ -67,6 +68,7 @@ public class Client(Logger loggerInstance,
             {
                 Logger.Info($"Clearing {Config.FeaturedItemIds.Count} featured item(s) after send");
                 Config.FeaturedItemIds.Clear();
+                FeaturedItems.ClearPosterCache();
             }
 
             // Update and save the last published date

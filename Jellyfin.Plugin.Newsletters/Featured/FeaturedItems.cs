@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -27,6 +28,12 @@ public static class FeaturedItems
     /// The event type featured entries carry through the newsletter pipeline.
     /// </summary>
     public const string EventType = "featured";
+
+    // Resolving a poster costs a TMDB round trip, and every client config builds its own
+    // ClientBuilder - so without this the same pick is fetched once per configured client.
+    // Keyed by item ID and dropped when the featured list is consumed, so an entry lives
+    // for exactly one issue.
+    private static readonly ConcurrentDictionary<string, string> PosterUrlCache = new();
 
     // Same provider-to-TMDB key mapping the scanner uses when it builds an entry.
     private static readonly Dictionary<string, string> AllowedExternalIds = new()
@@ -133,7 +140,34 @@ public static class FeaturedItems
         return entry;
     }
 
+    /// <summary>
+    /// Drops the poster URLs resolved for the current featured list.
+    /// Call this when the list itself is cleared, so the next issue resolves afresh.
+    /// </summary>
+    public static void ClearPosterCache()
+    {
+        PosterUrlCache.Clear();
+    }
+
     private static string ResolveImageUrl(JsonFileObj entry, Logger logger, SQLiteDatabase db, PosterImageHandler imageHandler, string? hostname)
+    {
+        if (!string.IsNullOrEmpty(entry.ItemID) && PosterUrlCache.TryGetValue(entry.ItemID, out string? memoized))
+        {
+            logger.Debug($"Reusing the poster URL already resolved this cycle for '{entry.Title}'");
+            return memoized;
+        }
+
+        string resolved = ResolveImageUrlUncached(entry, logger, db, imageHandler, hostname);
+
+        if (!string.IsNullOrEmpty(entry.ItemID))
+        {
+            PosterUrlCache[entry.ItemID] = resolved;
+        }
+
+        return resolved;
+    }
+
+    private static string ResolveImageUrlUncached(JsonFileObj entry, Logger logger, SQLiteDatabase db, PosterImageHandler imageHandler, string? hostname)
     {
         // Prefer a URL an earlier scan already resolved for this title, exactly as the scanner does.
         try
