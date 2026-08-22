@@ -133,14 +133,4 @@ public static class FeaturedItems
 
         return string.Empty;
     }
-
-    /// <summary>
-    /// Gets a value indicating whether the item is a type that can be featured.
-    /// </summary>
-    /// <param name="item">The library item.</param>
-    /// <returns>True for movies and series.</returns>
-    public static bool IsFeaturable(BaseItem item)
-    {
-        return item is Movie || item is Series;
-    }
 }

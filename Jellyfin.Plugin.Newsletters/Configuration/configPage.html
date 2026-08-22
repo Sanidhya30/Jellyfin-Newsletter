@@ -495,6 +495,13 @@
             }
 
             .preview-title {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
             /* Featured */
             .featured-row {
                 display: flex;
@@ -514,10 +521,14 @@
                 white-space: nowrap;
             }
 
-            .preview-meta {
-                opacity: 0.7;
             .featured-row .featured-meta {
                 opacity: 0.65;
+                font-size: 0.85em;
+                white-space: nowrap;
+            }
+
+            .preview-meta {
+                opacity: 0.7;
                 font-size: 0.85em;
                 white-space: nowrap;
             }
@@ -581,6 +592,8 @@
             .preview-excluded .preview-episode-label {
                 opacity: 0.45;
                 text-decoration: line-through;
+            }
+
             #FeaturedResults .featured-row {
                 cursor: pointer;
                 border-style: dashed;

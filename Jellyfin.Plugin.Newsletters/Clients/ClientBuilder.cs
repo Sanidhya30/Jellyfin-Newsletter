@@ -111,11 +111,18 @@ public class ClientBuilder(Logger loggerInstance,
                 continue;
             }
 
-            string featuredKey = $"{item.Title}_{FeaturedItems.EventType}";
-            if (!itemsByKey.ContainsKey(featuredKey))
+            // A featured title is very often also sitting in the queue (featuring something added
+            // this week is the common case). Drop those rows so the title is rendered once, under
+            // the Featured heading, instead of appearing again under its library section.
+            foreach (var duplicateKey in itemsByKey
+                .Where(kvp => string.Equals(kvp.Value.Title, item.Title, StringComparison.OrdinalIgnoreCase))
+                .Select(kvp => kvp.Key)
+                .ToList())
             {
-                itemsByKey[featuredKey] = item;
+                itemsByKey.Remove(duplicateKey);
             }
+
+            itemsByKey[$"{item.Title}_{FeaturedItems.EventType}"] = item;
         }
 
         // Append prefetched upcoming items and deduplicate by title
