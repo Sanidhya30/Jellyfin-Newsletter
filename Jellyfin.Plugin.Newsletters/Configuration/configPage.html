@@ -479,25 +479,33 @@
                 white-space: nowrap;
             }
 
-            .preview-badge {
-                border-radius: 3px;
-                padding: 2px 7px;
-                font-size: 0.72em;
-                text-transform: uppercase;
-                letter-spacing: 0.04em;
-                color: #fff;
+            .preview-section {
+                margin-bottom: 22px;
             }
 
-            .preview-badge.add {
-                background: #2e7d32;
+            .preview-section-header {
+                font-size: 1.05em;
+                font-weight: 700;
+                letter-spacing: 0.4px;
+                padding-bottom: 6px;
+                margin-bottom: 10px;
+                border-bottom: 2px solid;
             }
 
-            .preview-badge.update {
-                background: #1565c0;
+            .preview-section-count {
+                font-weight: 400;
+                font-size: 0.8em;
+                opacity: 0.7;
+                margin-left: 6px;
             }
 
-            .preview-badge.delete {
-                background: #c62828;
+            /* Only groups with more than one file can expand, so only those look clickable. */
+            .preview-group-header {
+                cursor: default;
+            }
+
+            .preview-expandable > .preview-group-header {
+                cursor: pointer;
             }
 
             .preview-episodes {
@@ -1665,61 +1673,94 @@
                     return;
                 }
 
+                var EVENT_SECTIONS = [
+                    { key: 'add', label: 'Added', color: '#2e7d32' },
+                    { key: 'update', label: 'Updated', color: '#1565c0' },
+                    { key: 'delete', label: 'Removed', color: '#c62828' }
+                ];
+
                 var html = '';
-                groups.forEach(function (group) {
-                    var key = previewGroupKey(group);
-                    var allExcluded = group.ExcludedCount === group.TotalCount;
-                    var eventType = (group.EventType || 'add').toLowerCase();
-                    var classes = 'preview-group' + (previewExpanded[key] ? ' expanded' : '')
-                        + (allExcluded ? ' preview-excluded' : '');
+                EVENT_SECTIONS.forEach(function (section) {
+                    var inSection = groups.filter(function (g) {
+                        return (g.EventType || 'add').toLowerCase() === section.key;
+                    });
+                    if (!inSection.length) return;
 
-                    var meta = [];
-                    if (group.SeasonSummary) meta.push(group.SeasonSummary);
-                    if (group.PremiereYear) meta.push(group.PremiereYear);
-                    if (group.LibraryName) meta.push(group.LibraryName);
-                    if (group.ExcludedCount && !allExcluded) {
-                        meta.push(group.ExcludedCount + ' of ' + group.TotalCount + ' excluded');
+                    // Entries are what the newsletter actually shows - one card per title, so
+                    // fully excluded titles are left out and excluded files are not counted. The
+                    // file count only differs when a title covers several episodes, so it goes in
+                    // parentheses and is dropped when the two are equal.
+                    var entries = inSection.filter(function (g) { return g.ExcludedCount < g.TotalCount; }).length;
+                    var items = inSection.reduce(function (n, g) { return n + (g.TotalCount - g.ExcludedCount); }, 0);
+                    var countLabel = entries + ' ' + (entries === 1 ? 'entry' : 'entries');
+                    if (items !== entries) {
+                        countLabel += ' (' + items + ' item' + (items === 1 ? '' : 's') + ')';
                     }
 
-                    html += '<div class="' + classes + '" data-preview-key="' + escapeHtml(key) + '">';
-                    html += '  <div class="preview-group-header" onclick="togglePreviewGroup(this)">';
-                    html += '    <span class="expand-icon">' + (group.TotalCount > 1 ? '&#9656;' : '&nbsp;') + '</span>';
-                    html += '    <span class="preview-badge ' + escapeHtml(eventType) + '">' + escapeHtml(eventType) + '</span>';
-                    html += '    <span class="preview-title">' + escapeHtml(group.Title) + '</span>';
-                    html += '    <span class="preview-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
+                    html += '<div class="preview-section">';
+                    html += '  <div class="preview-section-header" style="color: ' + section.color
+                        + '; border-bottom-color: ' + section.color + ';">'
+                        + escapeHtml(section.label) + ' <span class="preview-section-count">'
+                        + escapeHtml(countLabel) + '</span></div>';
 
-                    if (allExcluded) {
-                        html += '    <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, false)">Restore</button>';
-                    } else {
-                        html += '    <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, true)">Remove</button>';
-                    }
-
-                    html += '  </div>';
-
-                    if (group.TotalCount > 1) {
-                        html += '  <div class="preview-episodes">';
-                        group.Items.forEach(function (item) {
-                            var isEpisode = group.Type !== 'Movie' && item.Season >= 0 && item.Episode >= 0;
-                            var label = isEpisode
-                                ? 'S' + ('0' + item.Season).slice(-2) + 'E' + ('0' + item.Episode).slice(-2)
-                                : item.Filename.split(/[\\/]/).pop();
-
-                            html += '<div class="preview-episode' + (item.Excluded ? ' preview-excluded' : '') + '"'
-                                + ' data-preview-file="' + escapeHtml(item.Filename) + '">';
-                            html += '  <span class="preview-episode-label" title="' + escapeHtml(item.Filename) + '">'
-                                + escapeHtml(label) + '</span>';
-                            html += item.Excluded
-                                ? '  <button type="button" class="config-action-btn test-btn" onclick="setPreviewItemExcluded(this, false)">Restore</button>'
-                                : '  <button type="button" class="config-action-btn delete-btn" onclick="setPreviewItemExcluded(this, true)">Remove</button>';
-                            html += '</div>';
-                        });
-                        html += '  </div>';
-                    }
+                    inSection.forEach(function (group) {
+                        html += renderPreviewGroup(group);
+                    });
 
                     html += '</div>';
                 });
 
                 list.innerHTML = html;
+            }
+
+            function renderPreviewGroup(group) {
+                var key = previewGroupKey(group);
+                var allExcluded = group.ExcludedCount === group.TotalCount;
+                var expandable = group.TotalCount > 1;
+                var classes = 'preview-group' + (previewExpanded[key] ? ' expanded' : '')
+                    + (allExcluded ? ' preview-excluded' : '')
+                    + (expandable ? ' preview-expandable' : '');
+
+                var meta = [];
+                if (group.SeasonSummary) meta.push(group.SeasonSummary);
+                if (group.PremiereYear) meta.push(group.PremiereYear);
+                if (group.LibraryName) meta.push(group.LibraryName);
+                if (group.ExcludedCount && !allExcluded) {
+                    meta.push(group.ExcludedCount + ' of ' + group.TotalCount + ' excluded');
+                }
+
+                var html = '<div class="' + classes + '" data-preview-key="' + escapeHtml(key) + '">';
+                html += '  <div class="preview-group-header" onclick="togglePreviewGroup(this)">';
+                html += '    <span class="expand-icon">' + (expandable ? '&#9656;' : '&nbsp;') + '</span>';
+                html += '    <span class="preview-title">' + escapeHtml(group.Title) + '</span>';
+                html += '    <span class="preview-meta">' + escapeHtml(meta.join(' \u00b7 ')) + '</span>';
+                html += allExcluded
+                    ? '    <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, false)">Restore</button>'
+                    : '    <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, true)">Remove</button>';
+                html += '  </div>';
+
+                if (expandable) {
+                    html += '  <div class="preview-episodes">';
+                    group.Items.forEach(function (item) {
+                        var isEpisode = group.Type !== 'Movie' && item.Season >= 0 && item.Episode >= 0;
+                        var label = isEpisode
+                            ? 'S' + ('0' + item.Season).slice(-2) + 'E' + ('0' + item.Episode).slice(-2)
+                            : item.Filename.split(/[\\/]/).pop();
+
+                        html += '<div class="preview-episode' + (item.Excluded ? ' preview-excluded' : '') + '"'
+                            + ' data-preview-file="' + escapeHtml(item.Filename) + '">';
+                        html += '  <span class="preview-episode-label" title="' + escapeHtml(item.Filename) + '">'
+                            + escapeHtml(label) + '</span>';
+                        html += item.Excluded
+                            ? '  <button type="button" class="config-action-btn test-btn" onclick="setPreviewItemExcluded(this, false)">Restore</button>'
+                            : '  <button type="button" class="config-action-btn delete-btn" onclick="setPreviewItemExcluded(this, true)">Remove</button>';
+                        html += '</div>';
+                    });
+                    html += '  </div>';
+                }
+
+                html += '</div>';
+                return html;
             }
 
             function togglePreviewGroup(headerEl) {
