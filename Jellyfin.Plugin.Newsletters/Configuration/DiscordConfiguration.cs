@@ -34,6 +34,11 @@ public class DiscordConfiguration : INewsletterConfiguration
     public string WebhookName { get; set; } = "Jellyfin Newsletter";
 
     /// <summary>
+    /// Gets or sets the comma separated list of Discord mention targets (@everyone, @here, role ids or user ids).
+    /// </summary>
+    public string Mentions { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether description should be visible in Discord embed.
     /// </summary>
     public bool DescriptionEnabled { get; set; } = true;

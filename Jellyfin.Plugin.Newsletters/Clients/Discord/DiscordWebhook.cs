@@ -98,6 +98,8 @@ public class DiscordWebhook(IServerApplicationHost appHost,
 
         bool anySuccess = false;
 
+        var mentionContent = BuildMentionContent(discordConfig);
+
         foreach (var webhookUrl in webhookUrls)
         {
             try
@@ -108,7 +110,8 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                 var payload = new DiscordPayload
                 {
                     Username = discordConfig.WebhookName,
-                    Embeds = embedList
+                    Embeds = embedList,
+                    Content = string.IsNullOrEmpty(mentionContent) ? null : mentionContent
                 };
 
                 var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
@@ -261,19 +264,26 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                 chunks.Add(chunk);
             }
 
+            var mentionContent = BuildMentionContent(discordConfig);
+
             // Iterate over each webhook URL and send the pre-calculated chunks
             foreach (var webhookUrl in webhookUrls)
             {
                 Logger.Debug($"Sending Discord newsletter to '{discordConfig.Name}' (URL: {webhookUrl})");
 
+                // Mentions are only attached to the first successfully sent chunk of each webhook,
+                // otherwise a multi chunk newsletter would notify members once per chunk.
+                bool mentionPending = !string.IsNullOrEmpty(mentionContent);
+
                 foreach (var chunk in chunks)
                 {
-                    try 
+                    try
                     {
                         var payload = new DiscordPayload
                         {
                             Username = discordConfig.WebhookName,
-                            Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly()
+                            Embeds = new Collection<Embed>(chunk.Select(t => t.Item1).ToList()).AsReadOnly(),
+                            Content = mentionPending ? mentionContent : null
                         };
 
                         var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
@@ -304,6 +314,9 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                         {
                             // Track any successful chunk
                             anyResult = true;
+
+                            // Only stop attaching mentions once a chunk carrying them actually went through
+                            mentionPending = false;
                             Logger.Debug($"Discord message chunk sent successfully to '{discordConfig.Name}' (URL: {webhookUrl})");
                         }
                         else
@@ -325,6 +338,19 @@ public class DiscordWebhook(IServerApplicationHost appHost,
         }
 
         return anyResult;
+    }
+
+    /// <summary>
+    /// Builds the message content carrying the configured mentions.
+    /// Commas are only a separator in the configuration, Discord parses the mentions from the content itself.
+    /// </summary>
+    /// <param name="discordConfig">The Discord configuration to read the mentions from.</param>
+    /// <returns>The space separated mentions, empty when none are configured.</returns>
+    private static string BuildMentionContent(DiscordConfiguration discordConfig)
+    {
+        return string.Join(' ', discordConfig.Mentions.Split(',')
+                                                      .Select(m => m.Trim())
+                                                      .Where(m => !string.IsNullOrEmpty(m)));
     }
 
     /// <summary>
