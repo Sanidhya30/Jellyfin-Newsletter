@@ -863,7 +863,7 @@
                 return html;
             }
 
-            function getEventTogglesHtml(clientId, configType, added, updated, deleted, upcoming) {
+            function getEventTogglesHtml(clientId, configType, added, updated, deleted, upcoming, featured) {
                 var html = '<div>';
                 html += '  <label class="inputLabel">Events to Notify:</label>';
                 html += '  <table><tr>';
@@ -883,6 +883,10 @@
                 html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
                 html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-upcoming-' + clientId + '" ' + (upcoming === true ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
                 html += '    <span>Upcoming Item</span></label></div></td>';
+
+                html += '    <td><div class="checkboxContainer"><label class="emby-checkbox-label">';
+                html += '    <input type="checkbox" is="emby-checkbox" id="' + configType + '-event-featured-' + clientId + '" ' + (featured !== false ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
+                html += '    <span>Featured</span></label></div></td>';
 
                 html += '  </tr></table>';
                 html += '</div>';
@@ -927,6 +931,7 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     MaxItemsPerSection: 0
                 };
                 discordConfigs.push(newConfig);
@@ -995,6 +1000,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('discord-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('discord-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('discord-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('discord-event-featured-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.discord-series-lib-' + id + ':checked');
@@ -1047,7 +1053,7 @@
                     html += '      <input id="discord-webhookname-' + config.Id + '" type="text" is="emby-input" value="' + (config.WebhookName || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'discord', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'discord', config.MaxItemsPerSection);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
@@ -1107,6 +1113,7 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     MaxItemsPerSection: 0
                 };
                 telegramConfigs.push(newConfig);
@@ -1169,6 +1176,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('telegram-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('telegram-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('telegram-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('telegram-event-featured-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.telegram-series-lib-' + id + ':checked');
@@ -1221,7 +1229,7 @@
                     html += '      <div class="fieldDescription">Telegram chat ID or group ID to send messages to. Separate multiple IDs with commas.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'telegram', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'telegram', config.MaxItemsPerSection);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
@@ -1267,6 +1275,7 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     EnableSsl: true,
                     UseAuthentication: true,
                     MaxItemsPerSection: 0
@@ -1336,6 +1345,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('email-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('email-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('email-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('email-event-featured-' + id).checked;
 
                 // Update Library Selections
                 var seriesChecked = document.querySelectorAll('.email-series-lib-' + id + ':checked');
@@ -1432,7 +1442,7 @@
                     html += '      <input id="email-subject-' + config.Id + '" type="text" is="emby-input" value="' + (config.Subject || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'email', config.MaxItemsPerSection);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="email-category-' + config.Id + '">Template Category:</label>';
@@ -1484,6 +1494,7 @@
                     NewsletterOnItemUpdatedEnabled: false,
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
+                    NewsletterOnFeaturedEnabled: true,
                     MaxItemsPerSection: 0
                 };
                 matrixConfigs.push(newConfig);
@@ -1541,6 +1552,7 @@
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('matrix-event-update-' + id).checked;
                 config.NewsletterOnItemDeletedEnabled = document.getElementById('matrix-event-delete-' + id).checked;
                 config.NewsletterOnUpcomingItemEnabled = document.getElementById('matrix-event-upcoming-' + id).checked;
+                config.NewsletterOnFeaturedEnabled = document.getElementById('matrix-event-featured-' + id).checked;
 
                 var seriesChecked = document.querySelectorAll('.matrix-series-lib-' + id + ':checked');
                 config.SelectedSeriesLibraries = Array.from(seriesChecked).map(function (cb) { return cb.getAttribute('data-lib-id'); });
@@ -1596,7 +1608,7 @@
                     html += '      <div class="fieldDescription">The internal room ID (e.g., !yourRoomId:example.com). Separate multiple with commas.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'matrix', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
-                    html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled);
+                    html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'matrix', config.MaxItemsPerSection);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="matrix-category-' + config.Id + '">Template Category:</label>';
