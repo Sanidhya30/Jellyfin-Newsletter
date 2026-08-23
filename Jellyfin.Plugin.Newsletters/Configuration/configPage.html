@@ -912,6 +912,7 @@
                     IsEnabled: true,
                     WebhookURL: '',
                     WebhookName: 'Jellyfin Newsletter',
+                    Mentions: '',
                     DescriptionEnabled: true,
                     ThumbnailEnabled: true,
                     RatingEnabled: true,
@@ -984,6 +985,7 @@
                 config.IsEnabled = document.getElementById('discord-enabled-' + id).checked;
                 config.WebhookURL = document.getElementById('discord-url-' + id).value;
                 config.WebhookName = document.getElementById('discord-webhookname-' + id).value;
+                config.Mentions = document.getElementById('discord-mentions-' + id).value;
                 config.DescriptionEnabled = document.getElementById('discord-desc-' + id).checked;
                 config.ThumbnailEnabled = document.getElementById('discord-thumb-' + id).checked;
                 config.RatingEnabled = document.getElementById('discord-rating-' + id).checked;
@@ -1059,6 +1061,11 @@
                     html += '    <div class="inputContainer">';
                     html += '      <label class="inputLabel inputLabelUnfocused">Webhook Display Name:</label>';
                     html += '      <input id="discord-webhookname-' + config.Id + '" type="text" is="emby-input" value="' + (config.WebhookName || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Mentions:</label>';
+                    html += '      <input id="discord-mentions-' + config.Id + '" type="text" is="emby-input" value="' + (config.Mentions || '') + '" onchange="updateDiscordConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Who to ping when this newsletter is posted. Separate multiple entries with commas, for example: @everyone, @here, &lt;@&amp;ROLE_ID&gt;, &lt;@USER_ID&gt;. Enable Developer Mode in Discord to copy role and user IDs. The mention is posted once per webhook, on the first message of the newsletter. Leave empty to post without pinging.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'discord', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);

@@ -19,4 +19,11 @@ public class DiscordPayload
     /// </summary>
     [JsonPropertyName("embeds")]
     public ReadOnlyCollection<Embed>? Embeds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the plain text message content, used to carry the configured mentions.
+    /// </summary>
+    [JsonPropertyName("content")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Content { get; set; }
 }
