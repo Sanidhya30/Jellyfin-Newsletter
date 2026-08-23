@@ -1,3 +1,11 @@
+# 1.8.0.0
+
+- **Feature**: Added a Preview tab that lists everything queued for the next newsletter, with the ability to exclude and restore individual entries before it is sent
+- **Feature**: Added a Featured section that pins hand-picked library titles to the top of the next newsletter, with a configurable emoji, a per-client toggle, and automatic clearing after each send
+- **Feature**: Added Discord mentions support for `@everyone`, `@here`, roles and users, posted once per webhook on the first message of the newsletter
+- **Feature**: Added configurable Discord embed colors for the Upcoming and Featured sections
+- **Maintenance**: Updated SixLabors.ImageSharp from 4.0.0 to 4.1.1
+
 # 1.7.0.0
 
 - **Feature**: Made all newsletter clients asynchronous and added rate-limiting for the Telegram client

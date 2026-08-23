@@ -633,60 +633,26 @@ public class Scraper
 
     private string SetImageURL(JsonFileObj currObj)
     {
-        JsonFileObj fileObj;
-        string currTitle = currObj.Title.Replace("'", "''", StringComparison.Ordinal);
-
-        // check if URL for series already exists CurrRunData table
-        foreach (var row in db.Query("SELECT * FROM CurrRunData;"))
+        string cached = imageHandler.FindCachedImageUrl(db, currObj.Title);
+        if (!string.IsNullOrEmpty(cached))
         {
-            if (row is not null)
-            {
-                fileObj = JsonFileObj.ConvertToObj(row);
-                if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
-                {
-                    logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
-                    return fileObj.ImageURL;
-                }
-            }
-        }
-
-        // check if URL for series already exists CurrNewsletterData table
-        logger.Debug("Checking if exists in CurrNewsletterData");
-        foreach (var row in db.Query("SELECT * FROM CurrNewsletterData;"))
-        {
-            if (row is not null)
-            {
-                fileObj = JsonFileObj.ConvertToObj(row);
-                if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
-                {
-                    logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
-                    return fileObj.ImageURL;
-                }
-            }
-        }
-
-        // check if URL for series already exists ArchiveData table
-        foreach (var row in db.Query("SELECT * FROM ArchiveData;"))
-        {
-            if (row is not null)
-            {
-                fileObj = JsonFileObj.ConvertToObj(row);
-                if ((fileObj is not null) && (fileObj.Title == currTitle) && (fileObj.ImageURL.Length > 0))
-                {
-                    logger.Debug("Found Current Scan of URL for " + currTitle + " :: " + fileObj.ImageURL);
-                    return fileObj.ImageURL;
-                }
-            }
+            return cached;
         }
 
         logger.Debug("Grabbing poster...");
         logger.Debug(currObj.ItemID);
-        // return string.Empty;
         return imageHandler.FetchImagePoster(currObj);
     }
 
     private void CopyCurrRunDataToNewsletterData()
     {
+        // The copy below replaces queued rows by Filename, and scanned rows carry no Excluded value,
+        // so carry any admin exclusion across first. Without this, re-queuing a file (a Sonarr/Radarr
+        // upgrade fires Delete then Add, which lands as an Update for the same path) silently puts an
+        // item the admin removed in the Preview tab back into the next newsletter.
+        db.ExecuteSQL("UPDATE CurrRunData SET Excluded = (SELECT n.Excluded FROM CurrNewsletterData n WHERE n.Filename = CurrRunData.Filename) " +
+                      "WHERE EXISTS (SELECT 1 FROM CurrNewsletterData n WHERE n.Filename = CurrRunData.Filename);");
+
         // -> copy CurrData Table to NewsletterDataTable
         // -> clear CurrData table
         db.ExecuteSQL("INSERT OR REPLACE INTO CurrNewsletterData SELECT * FROM CurrRunData;");

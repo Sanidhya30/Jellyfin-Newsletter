@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.8.0.0",
+                "changelog": "- Feature: Added a Preview tab to see and curate everything queued for the next newsletter.\n- Feature: Added a Featured section to pin hand-picked titles to the top of the newsletter.\n- Feature: Added Discord mentions support for @everyone, @here, roles and users.\n- Feature: Added configurable Discord embed colors for the Upcoming and Featured sections.\n- Maintenance: Updated SixLabors.ImageSharp from 4.0.0 to 4.1.1.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.8.0.0/newsletters_1.8.0.0.zip",
+                "checksum": "64e0bb344800c90e2a38a6e287d3fe7e",
+                "timestamp": "2026-08-23T14:23:38Z"
+            },
+            {
                 "version": "1.7.0.0",
                 "changelog": "- Feature: Made all newsletter clients asynchronous and added rate-limiting for the Telegram client.\n- Feature: Added a configurable maximum number of items per section for each client.\n- Feature: Added a Genres tag for newsletters.\n- Maintenance: Added explicit permissions to the stale issue/PR workflow.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",

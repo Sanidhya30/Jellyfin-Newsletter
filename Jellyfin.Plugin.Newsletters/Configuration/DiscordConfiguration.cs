@@ -34,6 +34,11 @@ public class DiscordConfiguration : INewsletterConfiguration
     public string WebhookName { get; set; } = "Jellyfin Newsletter";
 
     /// <summary>
+    /// Gets or sets the comma separated list of Discord mention targets (@everyone, @here, role ids or user ids).
+    /// </summary>
+    public string Mentions { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether description should be visible in Discord embed.
     /// </summary>
     public bool DescriptionEnabled { get; set; } = true;
@@ -84,6 +89,16 @@ public class DiscordConfiguration : INewsletterConfiguration
     public string SeriesUpdateEmbedColor { get; set; } = "#0000ff";
 
     /// <summary>
+    /// Gets or sets the embed color for series upcoming events.
+    /// </summary>
+    public string SeriesUpcomingEmbedColor { get; set; } = "#ff8c00";
+
+    /// <summary>
+    /// Gets or sets the embed color for series featured events.
+    /// </summary>
+    public string SeriesFeaturedEmbedColor { get; set; } = "#ffc107";
+
+    /// <summary>
     /// Gets or sets the embed color for movies add events.
     /// </summary>
     public string MoviesAddEmbedColor { get; set; } = "#00ff00";
@@ -97,6 +112,16 @@ public class DiscordConfiguration : INewsletterConfiguration
     /// Gets or sets the embed color for movies update events.
     /// </summary>
     public string MoviesUpdateEmbedColor { get; set; } = "#0000ff";
+
+    /// <summary>
+    /// Gets or sets the embed color for movies upcoming events.
+    /// </summary>
+    public string MoviesUpcomingEmbedColor { get; set; } = "#ff8c00";
+
+    /// <summary>
+    /// Gets or sets the embed color for movies featured events.
+    /// </summary>
+    public string MoviesFeaturedEmbedColor { get; set; } = "#ffc107";
 
     /// <summary>
     /// Gets or sets the collection of selected series libraries.
@@ -127,6 +152,11 @@ public class DiscordConfiguration : INewsletterConfiguration
     /// Gets or sets a value indicating whether to include upcoming items in the newsletter.
     /// </summary>
     public bool NewsletterOnUpcomingItemEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to include the featured section in the newsletter.
+    /// </summary>
+    public bool NewsletterOnFeaturedEnabled { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the maximum number of items shown per newsletter section.

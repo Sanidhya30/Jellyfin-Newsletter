@@ -43,6 +43,11 @@ public interface INewsletterConfiguration
     bool NewsletterOnUpcomingItemEnabled { get; }
 
     /// <summary>
+    /// Gets a value indicating whether to include the featured section in the newsletter.
+    /// </summary>
+    bool NewsletterOnFeaturedEnabled { get; }
+
+    /// <summary>
     /// Gets the maximum number of items shown per newsletter section.
     /// A value of 0 means unlimited.
     /// </summary>

@@ -481,6 +481,17 @@ public class PluginConfiguration : BasePluginConfiguration
     public Collection<RadarrConfiguration> RadarrConfigurations { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the Jellyfin item IDs pinned to the featured section of the next newsletter.
+    /// Cleared once a newsletter is sent, so each issue is curated deliberately.
+    /// </summary>
+    public Collection<string> FeaturedItemIds { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the emoji shown beside the featured section heading.
+    /// </summary>
+    public string FeaturedEmoji { get; set; } = "\u2B50";
+
+    /// <summary>
     /// Gets or sets the collection of Sonarr instance configurations.
     /// </summary>
     public Collection<SonarrConfiguration> SonarrConfigurations { get; set; } = new();

@@ -17,6 +17,8 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 * Event-Based item detection and notifications (Add/Update/Delete)
 * Per-library selection for series and movies per client
 * Radarr & Sonarr Integration for Upcoming Media
+* Newsletter Preview to review and curate the queue before it is sent
+* Featured section to pin hand-picked titles to the top of the newsletter
 * Multiple Bug Fixes, Enhancements and much more!!!
 
 # Description
@@ -24,6 +26,8 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 This plugin uses event-driven notifications with scheduled processing. When library changes occur (additions or deletions), they are detected in real-time and stored in the database. A hidden background task processes these events every 30 seconds, and the main Newsletter task generates and sends newsletters containing all accumulated events.
 
 Additionally, the plugin integrates with **Radarr** and **Sonarr** to include upcoming media in your newsletters, giving users a preview of what's coming soon to your server.
+
+Before a newsletter goes out you can review the queue on the **Preview** tab and drop anything you do not want to announce, and pin hand-picked titles to the top of the issue from the **Featured** tab.
 
 # Screenshots
 
@@ -212,6 +216,40 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 </details>
 
 <details>
+<summary>Preview</summary>
+
+> ***The "Preview" tab shows everything currently queued for the next newsletter, so you can review and curate it before it is sent.***
+
+- Entries are grouped by event section (**Added**, **Updated**, **Removed**) and, within each section, by library. Series entries are summarised by season/episode.
+- Removing an entry excludes it from **every** client. Excluded entries stay listed and can be restored at any time until the newsletter is sent.
+- Changes take effect immediately &mdash; you do **not** need to press Save.
+- Upcoming items from Radarr/Sonarr are fetched live when the newsletter is built, so they are not listed here.
+- Use the "Refresh" button to reload the queue.
+
+</details>
+
+<details>
+<summary>Featured</summary>
+
+> ***The "Featured" tab lets you pin hand-picked titles to the top of the next newsletter.***
+
+- Anything in your library can be featured, whether or not it was added recently. Featured items are read live from the library when the newsletter is built, so they do not depend on the queue.
+- All featured titles appear under a single "Featured" section that spans every library, pinned above the other sections.
+- **The featured list is cleared once a newsletter is sent**, so each issue is curated deliberately.
+- Each client has its own **Featured** event toggle (default: enabled), so you can include the section for some clients and not others.
+
+### Featured Emoji
+
+- The emoji shown beside the "Featured" heading (default: &#11088;). Available in the header template as the `{FeaturedEmoji}` placeholder.
+
+### Add a title
+
+- Search your Jellyfin library and click a result to pin it. Pinned titles are listed below the search box and can be reordered by removing and re-adding, or removed with the "Remove" button.
+- Press Save to store the featured list.
+
+</details>
+
+<details>
 <summary>Email Configuration</summary>
 
 > ***You can configure Multiple Email Clients. Each client instance has its own SMTP settings, recipients, library selection, event triggers, template settings, and an enable/disable toggle.***
@@ -260,11 +298,12 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 
 ### Newsletter Event Settings
 
-- Configure which library events (Add/Update/Delete/Upcoming) should trigger the newsletters for this email client:
+- Configure which library events (Add/Update/Delete/Upcoming/Featured) should trigger the newsletters for this email client:
   - **Add**: Enable newly added items section in the newsletter (default: enabled).
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
+  - **Featured**: Enable the Featured section, pinned to the top of the newsletter and populated from the **Featured** tab (default: enabled).
 
 ### Max Items Per Section
 
@@ -286,12 +325,16 @@ You can select between different email templates:
 
 ### Header HTML
 
-- Define custom HTML for section headers (e.g., "Added to Movies", "Removed from Series"). The template uses `<template>` tags with IDs to define all four event-type headers in a single file:
+- Define custom HTML for section headers (e.g., "Added to Movies", "Removed from Series"). The template uses `<template>` tags with IDs to define all event-type headers in a single file:
+  - `<template id="header-featured">` - Header for the Featured section
   - `<template id="header-add">` - Header for newly added items
   - `<template id="header-update">` - Header for updated items
   - `<template id="header-delete">` - Header for deleted items
   - `<template id="header-upcoming">` - Header for upcoming items
-- **Placeholder**: `{LibraryName}` - replaced with the library name (e.g., "Movies", "TV Shows")
+- **Placeholders**:
+  - `{LibraryName}` - replaced with the library name (e.g., "Movies", "TV Shows")
+  - `{FeaturedEmoji}` - replaced with the emoji configured on the **Featured** tab (only used in `header-featured`)
+- If a custom Header HTML was saved before the Featured section existed and has no `header-featured` template, the Featured section is skipped for that client and a warning is logged.
 - If left empty, the default header template from the selected **Newsletter Template Category** will be used.
 
 </details>
@@ -309,17 +352,25 @@ You can select between different email templates:
 
 - Name for your discord webhook, defaults to "Jellyfin Newsletter"
 
+### Mentions
+
+- Who to ping when the newsletter is posted. Separate multiple entries with commas `,`, for example: `@everyone, @here, <@&ROLE_ID>, <@USER_ID>`.
+- Enable Developer Mode in Discord to copy role and user IDs.
+- The mention is posted once per webhook, on the first message of the newsletter, so a multi-part newsletter does not ping members repeatedly.
+- Leave empty to post without pinging.
+
 ### Library Selection
 
 - Choose specific libraries within each item type (Movies/Series) to include in newsletters for this Discord client.
 
 ### Newsletter Event Settings
 
-- Configure which library events (Add/Update/Delete/Upcoming) should trigger Discord notifications:
+- Configure which library events (Add/Update/Delete/Upcoming/Featured) should trigger Discord notifications:
   - **Add**: Enable newly added items section in the newsletter (default: enabled).
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
+  - **Featured**: Enable the Featured section, pinned to the top of the newsletter and populated from the **Featured** tab (default: enabled).
 
 ### Max Items Per Section
 
@@ -328,7 +379,7 @@ You can select between different email templates:
 ### Fields & Color selection
 
 - Select the fields that you want as part of your embed.
-- Select the embed color for each event type (Add, Update, Delete) and item type (Series, Movies).
+- Select the embed color for each event type (Add, Update, Delete, Upcoming, Featured) and item type (Series, Movies).
 
 </details>
 
@@ -351,11 +402,12 @@ You can select between different email templates:
 
 ### Newsletter Event Settings
 
-- Configure which library events (Add/Update/Delete/Upcoming) should trigger Telegram notifications:
+- Configure which library events (Add/Update/Delete/Upcoming/Featured) should trigger Telegram notifications:
   - **Add**: Enable newly added items section in the newsletter (default: enabled).
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
+  - **Featured**: Enable the Featured section, pinned to the top of the newsletter and populated from the **Featured** tab (default: enabled).
 
 ### Max Items Per Section
 
@@ -393,11 +445,12 @@ You can select between different email templates:
 
 ### Newsletter Event Settings
 
-- Configure which library events (Add/Update/Delete/Upcoming) should trigger Matrix notifications:
+- Configure which library events (Add/Update/Delete/Upcoming/Featured) should trigger Matrix notifications:
   - **Add**: Enable newly added items section in the newsletter (default: enabled).
   - **Update**: Enable updated items section in the newsletter. Updates are detected when media files are upgraded (e.g., by tools like Radarr/Sonarr), where the old file is deleted and a new one is added with the same title/season/episode information (default: disabled).
   - **Delete**: Enable deleted items section in the newsletter (default: enabled).
   - **Upcoming**: Enable upcoming media section in the newsletter, sourced from Radarr/Sonarr (default: disabled).
+  - **Featured**: Enable the Featured section, pinned to the top of the newsletter and populated from the **Featured** tab (default: enabled).
 
 ### Max Items Per Section
 
@@ -418,12 +471,16 @@ You can select between different email templates:
 
 ### Header HTML
 
-- Define custom HTML for section headers (e.g., "Added to Movies", "Removed from Series"). The template uses `<template>` tags with IDs to define all four event-type headers in a single file:
+- Define custom HTML for section headers (e.g., "Added to Movies", "Removed from Series"). The template uses `<template>` tags with IDs to define all event-type headers in a single file:
+  - `<template id="header-featured">` - Header for the Featured section
   - `<template id="header-add">` - Header for newly added items
   - `<template id="header-update">` - Header for updated items
   - `<template id="header-delete">` - Header for deleted items
   - `<template id="header-upcoming">` - Header for upcoming items
-- **Placeholder**: `{LibraryName}` - replaced with the library name (e.g., "Movies", "TV Shows")
+- **Placeholders**:
+  - `{LibraryName}` - replaced with the library name (e.g., "Movies", "TV Shows")
+  - `{FeaturedEmoji}` - replaced with the emoji configured on the **Featured** tab (only used in `header-featured`)
+- If a custom Header HTML was saved before the Featured section existed and has no `header-featured` template, the Featured section is skipped for that client and a warning is logged.
 - If left empty, the default header template from the selected **Newsletter Template Category** will be used.
 
 </details>
@@ -489,6 +546,7 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 - {OfficialRating} - TV-PG, TV-13, TV-14, etc.
 - {CommunityRating} - Numerical rating stored in Jellyfin's metadata
 - {LibraryName} - The library name (e.g., "Movies", "TV Shows") - used in the Header template
+- {FeaturedEmoji} - The configured Featured emoji - used in the 'header-featured' Header template
 ```
 
 ## Non-Recommended Tags

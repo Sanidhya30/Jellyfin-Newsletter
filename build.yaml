@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.7.0.0"
+version: "1.8.0.0"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Send newsletters for recently added/deleted/updated/upcoming media"
@@ -17,8 +17,9 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Feature: Made all newsletter clients asynchronous and added rate-limiting for the Telegram client.
-  - Feature: Added a configurable maximum number of items per section for each client.
-  - Feature: Added a Genres tag for newsletters.
-  - Maintenance: Added explicit permissions to the stale issue/PR workflow.
+  - Feature: Added a Preview tab to see and curate everything queued for the next newsletter.
+  - Feature: Added a Featured section to pin hand-picked titles to the top of the newsletter.
+  - Feature: Added Discord mentions support for @everyone, @here, roles and users.
+  - Feature: Added configurable Discord embed colors for the Upcoming and Featured sections.
+  - Maintenance: Updated SixLabors.ImageSharp from 4.0.0 to 4.1.1.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md
