@@ -27,4 +27,22 @@ public interface ITemplatedConfiguration : INewsletterConfiguration
     /// If empty, the default template file is used.
     /// </summary>
     string Header { get; }
+
+    /// <summary>
+    /// Gets or sets the number of movies these libraries held when the last newsletter was sent.
+    /// Null when no newsletter has been sent yet.
+    /// </summary>
+    int? PrevMovieCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of series these libraries held when the last newsletter was sent.
+    /// Null when no newsletter has been sent yet.
+    /// </summary>
+    int? PrevSeriesCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of episodes these libraries held when the last newsletter was sent.
+    /// Null when no newsletter has been sent yet.
+    /// </summary>
+    int? PrevEpisodeCount { get; set; }
 }

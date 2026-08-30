@@ -119,8 +119,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
             string body = hb.GetDefaultHTMLBody(emailConfig);
             string builtString = hb.BuildHtmlStringsForTest(emailConfig);
-            builtString = hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname);
-            builtString = hb.ReplaceDatePlaceholders(builtString);
+            builtString = hb.ReplaceBodyPlaceholders(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), emailConfig);
 
             var mail = new MimeMessage();
             mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));
@@ -297,8 +296,8 @@ public class SmtpMailer(IServerApplicationHost appHost,
                 {
                     Logger.Debug($"Email part {partNum} for '{emailConfig.Name}' image count: {inlineImages.Count}");
                     // Add template substitutions
-                    string finalBody = hb.ReplaceDatePlaceholders(
-                        hb.TemplateReplace(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), "{ServerURL}", Config.Hostname));
+                    string finalBody = hb.ReplaceBodyPlaceholders(
+                        HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), emailConfig);
 
                     var mail = new MimeMessage();
                     mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));

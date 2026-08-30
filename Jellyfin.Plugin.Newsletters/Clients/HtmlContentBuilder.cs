@@ -11,6 +11,7 @@ using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller.Library;
 using Newtonsoft.Json;
 
@@ -168,6 +169,66 @@ public abstract class HtmlContentBuilder(
         html = ReplaceDatePlaceholdersInternal(html, DateTime.Today, string.Empty);
         html = ReplaceDatePlaceholdersInternal(html, Config.LastPublishedDate, "prev");
         return html;
+    }
+
+    /// <summary>
+    /// Replaces the {ServerURL}, date, and library-count placeholders in a fully built newsletter body.
+    /// </summary>
+    /// <param name="html">The built newsletter body.</param>
+    /// <param name="config">The configuration the newsletter is being rendered for.</param>
+    /// <returns>The body with every body-level placeholder resolved.</returns>
+    public string ReplaceBodyPlaceholders(string html, ITemplatedConfiguration config)
+    {
+        html = this.TemplateReplace(html, "{ServerURL}", Config.Hostname);
+        html = ReplaceDatePlaceholders(html);
+        return ReplaceStatPlaceholders(html, config);
+    }
+
+    /// <summary>
+    /// Replaces the library-count placeholders using the libraries selected on the given configuration.
+    /// </summary>
+    /// <param name="html">The string containing count placeholders to replace.</param>
+    /// <param name="config">The configuration whose library selection defines the counts.</param>
+    /// <returns>The string with all count placeholders resolved.</returns>
+    public string ReplaceStatPlaceholders(string html, ITemplatedConfiguration config)
+    {
+        // A failed library query still has to render something; zeros beat leaving raw tags in the email.
+        var current = LibraryStats.GetCounts(LibraryManager, Logger, config) ?? new LibraryCounts(0, 0, 0);
+
+        // Before the first send there is nothing to compare against. Falling back to the current
+        // counts makes every delta 0, rather than reporting the whole library as newly added.
+        var previous = config.PrevMovieCount.HasValue && config.PrevSeriesCount.HasValue && config.PrevEpisodeCount.HasValue
+            ? new LibraryCounts(config.PrevMovieCount.Value, config.PrevSeriesCount.Value, config.PrevEpisodeCount.Value)
+            : current;
+
+        html = this.TemplateReplace(html, "{MovieCount}", current.Movies);
+        html = this.TemplateReplace(html, "{SeriesCount}", current.Series);
+        html = this.TemplateReplace(html, "{EpisodeCount}", current.Episodes);
+        html = this.TemplateReplace(html, "{ItemCount}", current.Items);
+
+        html = this.TemplateReplace(html, "{prevMovieCount}", previous.Movies);
+        html = this.TemplateReplace(html, "{prevSeriesCount}", previous.Series);
+        html = this.TemplateReplace(html, "{prevEpisodeCount}", previous.Episodes);
+        html = this.TemplateReplace(html, "{prevItemCount}", previous.Items);
+
+        html = this.TemplateReplace(html, "{newMovieCount}", Signed(current.Movies - previous.Movies));
+        html = this.TemplateReplace(html, "{newSeriesCount}", Signed(current.Series - previous.Series));
+        html = this.TemplateReplace(html, "{newEpisodeCount}", Signed(current.Episodes - previous.Episodes));
+        html = this.TemplateReplace(html, "{newItemCount}", Signed(current.Items - previous.Items));
+
+        return html;
+    }
+
+    /// <summary>
+    /// Formats a delta with an explicit sign so a template never has to hardcode one.
+    /// A hardcoded '+' would read as "+-3" once items are deleted.
+    /// </summary>
+    /// <param name="value">The delta to format.</param>
+    /// <returns>"+2" when positive, "-3" when negative, "0" when unchanged.</returns>
+    private static string Signed(int value)
+    {
+        string text = value.ToString(CultureInfo.InvariantCulture);
+        return value > 0 ? "+" + text : text;
     }
 
     private string ReplaceDatePlaceholdersInternal(string html, DateTime? date, string prefix)

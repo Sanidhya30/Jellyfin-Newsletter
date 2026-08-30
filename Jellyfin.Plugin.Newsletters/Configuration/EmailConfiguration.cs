@@ -135,4 +135,19 @@ public class EmailConfiguration : ITemplatedConfiguration
     /// A value of 0 means unlimited (default).
     /// </summary>
     public int MaxItemsPerSection { get; set; } = 0;
+
+    /// <summary>
+    /// Gets or sets the movie count captured when the last newsletter was sent.
+    /// </summary>
+    public int? PrevMovieCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the series count captured when the last newsletter was sent.
+    /// </summary>
+    public int? PrevSeriesCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the episode count captured when the last newsletter was sent.
+    /// </summary>
+    public int? PrevEpisodeCount { get; set; }
 }

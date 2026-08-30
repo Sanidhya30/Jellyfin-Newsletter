@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Featured;
 using Jellyfin.Plugin.Newsletters.Integrations;
+using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
 using MediaBrowser.Controller.Library;
@@ -71,6 +73,11 @@ public class Client(Logger loggerInstance,
                 FeaturedItems.ClearPosterCache();
             }
 
+            // Snapshot each configuration's library counts so the next newsletter can report the
+            // change since this one. Every config carries its own library selection, so the counts
+            // are resolved per config rather than once server-wide.
+            CaptureLibraryCounts();
+
             // Update and save the last published date
             Config.LastPublishedDate = DateTime.Now;
             Plugin.Instance!.SaveConfiguration();
@@ -83,6 +90,38 @@ public class Client(Logger loggerInstance,
         {
             Db.CloseConnection();
         }
+    }
+
+    /// <summary>
+    /// Records the current library counts on every templated configuration.
+    /// </summary>
+    /// <remarks>
+    /// Disabled configurations are snapshotted too. "Previous" means "as of the last newsletter
+    /// cycle", so skipping them would make the first delta after re-enabling one enormous.
+    /// </remarks>
+    private void CaptureLibraryCounts()
+    {
+        var templatedConfigs = Config.EmailConfigurations.Cast<ITemplatedConfiguration>()
+            .Concat(Config.MatrixConfigurations);
+
+        foreach (var templatedConfig in templatedConfigs)
+        {
+            var counts = LibraryStats.GetCounts(LibraryManager, Logger, templatedConfig);
+            if (counts is null)
+            {
+                // Storing zeros here would make the next newsletter report the whole library as
+                // newly added. Keeping the older baseline is the less wrong answer.
+                Logger.Warn("Could not count library items - keeping the previous baseline for this configuration.");
+                continue;
+            }
+
+            templatedConfig.PrevMovieCount = counts.Movies;
+            templatedConfig.PrevSeriesCount = counts.Series;
+            templatedConfig.PrevEpisodeCount = counts.Episodes;
+        }
+
+        // The next cycle must re-query rather than reuse what we just stored.
+        LibraryStats.ClearCache();
     }
 
     /// <summary>
