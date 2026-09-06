@@ -117,11 +117,11 @@ public class Client(Logger loggerInstance,
                 continue;
             }
 
-            // Copied, not assigned: configurations with the same library selection share one
-            // cached snapshot, so assigning its collections directly would leave several
-            // configurations holding the same mutable lists.
-            templatedConfig.PrevMovieLibraryCounts = Copy(snapshot.MovieLibraries);
-            templatedConfig.PrevSeriesLibraryCounts = Copy(snapshot.SeriesLibraries);
+            // Contents replaced rather than the collection assigned: configurations with the
+            // same library selection share one cached snapshot, so handing over its collections
+            // would leave several configurations holding the same mutable lists.
+            ReplaceAll(templatedConfig.PrevMovieLibraryCounts, snapshot.MovieLibraries);
+            ReplaceAll(templatedConfig.PrevSeriesLibraryCounts, snapshot.SeriesLibraries);
         }
 
         // The next cycle must re-query rather than reuse what we just stored.
@@ -129,25 +129,28 @@ public class Client(Logger loggerInstance,
     }
 
     /// <summary>
-    /// Copies stored counts so each configuration owns its own rows.
+    /// Replaces a configuration's stored counts with fresh rows of its own.
     /// </summary>
-    /// <param name="source">The rows to copy.</param>
-    /// <returns>A new collection of new rows.</returns>
-    private static Collection<StoredLibraryCount> Copy(Collection<StoredLibraryCount> source)
+    /// <param name="target">The configuration's stored counts.</param>
+    /// <param name="source">The rows to copy in.</param>
+    private static void ReplaceAll(Collection<StoredLibraryCount> target, Collection<StoredLibraryCount> source)
     {
-        var copy = new Collection<StoredLibraryCount>();
+        if (target is null)
+        {
+            return;
+        }
+
+        target.Clear();
 
         foreach (var entry in source)
         {
-            copy.Add(new StoredLibraryCount
+            target.Add(new StoredLibraryCount
             {
                 LibraryId = entry.LibraryId,
                 Titles = entry.Titles,
                 Episodes = entry.Episodes
             });
         }
-
-        return copy;
     }
 
     /// <summary>
