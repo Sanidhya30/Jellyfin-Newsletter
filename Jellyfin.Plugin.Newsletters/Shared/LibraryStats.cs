@@ -8,8 +8,6 @@ using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 
 namespace Jellyfin.Plugin.Newsletters.Shared;
@@ -106,21 +104,33 @@ public static class LibraryStats
             foreach (var libraryId in movieLibraries)
             {
                 var counted = CountInLibrary(libraryManager, logger, libraryId);
+                if (counted is null)
+                {
+                    // Abandon the whole snapshot rather than report a partial one. A partial
+                    // result would be stored as the baseline and fake a huge delta next cycle.
+                    return null;
+                }
+
                 snapshot.MovieLibraries.Add(new StoredLibraryCount
                 {
                     LibraryId = libraryId.ToString("N", CultureInfo.InvariantCulture),
-                    Titles = counted.Movies
+                    Titles = counted.Value.Movies
                 });
             }
 
             foreach (var libraryId in seriesLibraries)
             {
                 var counted = CountInLibrary(libraryManager, logger, libraryId);
+                if (counted is null)
+                {
+                    return null;
+                }
+
                 snapshot.SeriesLibraries.Add(new StoredLibraryCount
                 {
                     LibraryId = libraryId.ToString("N", CultureInfo.InvariantCulture),
-                    Titles = counted.Series,
-                    Episodes = counted.Episodes
+                    Titles = counted.Value.Series,
+                    Episodes = counted.Value.Episodes
                 });
             }
 
@@ -134,51 +144,56 @@ public static class LibraryStats
     }
 
     /// <summary>
-    /// Counts the media in one library by walking its children.
+    /// Counts the media in one library.
     /// </summary>
     /// <remarks>
-    /// The hierarchy is walked rather than queried. An <see cref="InternalItemsQuery"/> scoped by
-    /// ParentId or TopParentIds returns nothing for a library's collection-folder ID, so the
-    /// filter column does not hold what the configuration stores. Walking the folder counts what
-    /// is actually there, and one pass yields all three totals.
+    /// Counted through the resolved <see cref="Folder"/> rather than through
+    /// <see cref="ILibraryManager"/>. The manager queries the item repository directly, which
+    /// filters on raw columns - scoping by ParentId or TopParentIds there returns nothing for a
+    /// library's collection-folder ID, which is what the configuration stores. Folder applies the
+    /// parent-scope translation first, so it resolves the same ID the way browsing a library does.
     /// </remarks>
-    private static (int Movies, int Series, int Episodes) CountInLibrary(ILibraryManager libraryManager, Logger logger, Guid libraryId)
+    private static (int Movies, int Series, int Episodes)? CountInLibrary(ILibraryManager libraryManager, Logger logger, Guid libraryId)
     {
         if (libraryManager.GetItemById(libraryId) is not Folder folder)
         {
-            logger.Warn($"Library {libraryId:N} did not resolve to a folder - skipping it in the counts.");
-            return (0, 0, 0);
+            // Null rather than zeros: a library that is mid-rescan, unmounted, or not yet loaded
+            // after a restart must not be recorded as empty, or the next newsletter would report
+            // everything in it as newly added.
+            logger.Warn($"Library {libraryId:N} did not resolve to a folder - counts are unavailable this cycle.");
+            return null;
         }
 
-        int movies = 0;
-        int series = 0;
-        int episodes = 0;
-
-        foreach (var child in folder.GetRecursiveChildren())
-        {
-            // Excludes episodes Jellyfin knows about but has no file for (missing/unaired).
-            if (child.IsVirtualItem)
-            {
-                continue;
-            }
-
-            switch (child)
-            {
-                case Movie:
-                    movies++;
-                    break;
-                case Series:
-                    series++;
-                    break;
-                case Episode:
-                    episodes++;
-                    break;
-            }
-        }
+        int movies = CountOfKind(folder, BaseItemKind.Movie);
+        int series = CountOfKind(folder, BaseItemKind.Series);
+        int episodes = CountOfKind(folder, BaseItemKind.Episode);
 
         logger.Debug($"Library '{folder.Name}' ({libraryId:N}) - Movies: {movies}, Series: {series}, Episodes: {episodes}");
 
         return (movies, series, episodes);
+    }
+
+    /// <summary>
+    /// Counts items of one type in a library without loading them.
+    /// </summary>
+    /// <param name="folder">The resolved library folder.</param>
+    /// <param name="kind">The item type to count.</param>
+    /// <returns>The number of matching items.</returns>
+    private static int CountOfKind(Folder folder, BaseItemKind kind)
+    {
+        // Limit 0 with the total record count enabled counts in the database and returns no rows,
+        // so a large library costs one integer rather than an object per item.
+        var query = new InternalItemsQuery
+        {
+            IncludeItemTypes = new[] { kind },
+            Recursive = true,
+            // Excludes episodes Jellyfin knows about but has no file for (missing/unaired).
+            IsVirtualItem = false,
+            Limit = 0,
+            EnableTotalRecordCount = true
+        };
+
+        return folder.GetItems(query).TotalRecordCount;
     }
 
     private static Guid[] ParseIds(IEnumerable<string>? libraryIds)
