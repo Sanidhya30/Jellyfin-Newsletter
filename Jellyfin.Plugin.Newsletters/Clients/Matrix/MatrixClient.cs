@@ -102,8 +102,7 @@ public class MatrixClient(IServerApplicationHost appHost,
         {
             var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, new List<JsonFileObj>());
             var htmlBody = builder.BuildMessageForTest(matrixConfig);
-            htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
-            htmlBody = builder.ReplaceDatePlaceholders(htmlBody);
+            htmlBody = builder.ReplaceBodyPlaceholders(htmlBody, matrixConfig, isTest: true);
 
             bool anySuccess = false;
             foreach (var roomId in roomIds)
@@ -182,8 +181,7 @@ public class MatrixClient(IServerApplicationHost appHost,
 
                     var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, matrixConfig.NewsletterOnUpcomingItemEnabled ? upcomingItems : Array.Empty<JsonFileObj>());
                     var htmlBody = builder.BuildMessageFromNewsletterData(applicationHost.SystemId, matrixConfig);
-                    htmlBody = builder.TemplateReplace(htmlBody, "{ServerURL}", Config.Hostname);
-                    htmlBody = builder.ReplaceDatePlaceholders(htmlBody);
+                    htmlBody = builder.ReplaceBodyPlaceholders(htmlBody, matrixConfig);
 
                     foreach (var roomId in roomIds)
                     {
@@ -219,7 +217,7 @@ public class MatrixClient(IServerApplicationHost appHost,
             var payload = new MatrixPayload
             {
                 MsgType = "m.text",
-                Body = "Jellyfin Newsletter (This message requires a Matrix client with HTML support to display correctly.)",
+                Body = $"{(string.IsNullOrWhiteSpace(matrixConfig.NewsletterTitle) ? "Jellyfin Newsletter" : matrixConfig.NewsletterTitle)} (This message requires a Matrix client with HTML support to display correctly.)",
                 Format = "org.matrix.custom.html",
                 FormattedBody = htmlBody
             };

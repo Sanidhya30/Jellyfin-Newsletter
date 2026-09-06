@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
 
+using Jellyfin.Plugin.Newsletters.Shared.Models;
+
 namespace Jellyfin.Plugin.Newsletters.Configuration;
 
 /// <summary>
@@ -62,6 +64,11 @@ public class EmailConfiguration : ITemplatedConfiguration
     /// Gets or sets the email subject.
     /// </summary>
     public string Subject { get; set; } = "Jellyfin Newsletter";
+
+    /// <summary>
+    /// Gets or sets the newsletter title shown in the body template header, exposed as the {NewsletterTitle} tag.
+    /// </summary>
+    public string NewsletterTitle { get; set; } = "Jellyfin Newsletter";
 
     /// <summary>
     /// Gets or sets the email body HTML template.
@@ -135,4 +142,14 @@ public class EmailConfiguration : ITemplatedConfiguration
     /// A value of 0 means unlimited (default).
     /// </summary>
     public int MaxItemsPerSection { get; set; } = 0;
+
+    /// <summary>
+    /// Gets or sets the per-library movie counts captured when the last newsletter was sent.
+    /// </summary>
+    public Collection<StoredLibraryCount> PrevMovieLibraryCounts { get; set; } = new Collection<StoredLibraryCount>();
+
+    /// <summary>
+    /// Gets or sets the per-library series and episode counts captured when the last newsletter was sent.
+    /// </summary>
+    public Collection<StoredLibraryCount> PrevSeriesLibraryCounts { get; set; } = new Collection<StoredLibraryCount>();
 }

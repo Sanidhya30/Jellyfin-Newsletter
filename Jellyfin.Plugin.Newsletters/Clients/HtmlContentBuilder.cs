@@ -11,6 +11,7 @@ using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller.Library;
 using Newtonsoft.Json;
 
@@ -168,6 +169,90 @@ public abstract class HtmlContentBuilder(
         html = ReplaceDatePlaceholdersInternal(html, DateTime.Today, string.Empty);
         html = ReplaceDatePlaceholdersInternal(html, Config.LastPublishedDate, "prev");
         return html;
+    }
+
+    /// <summary>
+    /// Replaces the {NewsletterTitle}, {ServerURL}, date, and library-count placeholders in a fully built newsletter body.
+    /// </summary>
+    /// <param name="html">The built newsletter body.</param>
+    /// <param name="config">The configuration the newsletter is being rendered for.</param>
+    /// <param name="isTest">Whether this is a test newsletter, which uses sample counts.</param>
+    /// <returns>The body with every body-level placeholder resolved.</returns>
+    public string ReplaceBodyPlaceholders(string html, ITemplatedConfiguration config, bool isTest = false)
+    {
+        html = this.TemplateReplace(html, "{NewsletterTitle}", string.IsNullOrWhiteSpace(config.NewsletterTitle) ? "Jellyfin Newsletter" : config.NewsletterTitle);
+        html = this.TemplateReplace(html, "{ServerURL}", Config.Hostname);
+        html = ReplaceDatePlaceholders(html);
+        return ReplaceStatPlaceholders(html, config, isTest);
+    }
+
+    /// <summary>
+    /// Replaces the library-count placeholders using the libraries selected on the given configuration.
+    /// </summary>
+    /// <param name="html">The string containing count placeholders to replace.</param>
+    /// <param name="config">The configuration whose library selection defines the counts.</param>
+    /// <param name="isTest">Whether this is a test newsletter, which uses sample counts.</param>
+    /// <returns>The string with all count placeholders resolved.</returns>
+    public string ReplaceStatPlaceholders(string html, ITemplatedConfiguration config, bool isTest = false)
+    {
+        LibraryCounts current;
+        LibraryCounts delta;
+
+        if (isTest)
+        {
+            // A test newsletter is built from sample entries, so real library totals would sit
+            // oddly beside them - and a config with no libraries selected would render all zeros.
+            // Sample counts against a zero baseline show what the tags look like in use.
+            current = LibraryCounts.GetTestObj();
+            delta = current;
+        }
+        else
+        {
+            // A failed library walk still has to render something; zeros beat leaving raw tags in the email.
+            var snapshot = LibraryStats.GetSnapshot(LibraryManager, Logger, config) ?? new LibraryStats.Snapshot();
+            current = snapshot.Totals;
+
+            // Compared library by library, so a change to this configuration's library selection
+            // cannot masquerade as items being added or removed. Before the first send nothing
+            // matches, which leaves every delta at 0 rather than reporting the whole library as new.
+            delta = snapshot.DeltaFrom(config.PrevMovieLibraryCounts, config.PrevSeriesLibraryCounts);
+        }
+
+        // Derived rather than stored: it keeps {prevX} + {newX} == {X} in the rendered newsletter
+        // even when a library joined or left the selection and is therefore absent from the delta.
+        var previous = new LibraryCounts(
+            current.Movies - delta.Movies,
+            current.Series - delta.Series,
+            current.Episodes - delta.Episodes);
+
+        html = this.TemplateReplace(html, "{MovieCount}", current.Movies);
+        html = this.TemplateReplace(html, "{SeriesCount}", current.Series);
+        html = this.TemplateReplace(html, "{EpisodeCount}", current.Episodes);
+        html = this.TemplateReplace(html, "{ItemCount}", current.Items);
+
+        html = this.TemplateReplace(html, "{prevMovieCount}", previous.Movies);
+        html = this.TemplateReplace(html, "{prevSeriesCount}", previous.Series);
+        html = this.TemplateReplace(html, "{prevEpisodeCount}", previous.Episodes);
+        html = this.TemplateReplace(html, "{prevItemCount}", previous.Items);
+
+        html = this.TemplateReplace(html, "{newMovieCount}", Signed(delta.Movies));
+        html = this.TemplateReplace(html, "{newSeriesCount}", Signed(delta.Series));
+        html = this.TemplateReplace(html, "{newEpisodeCount}", Signed(delta.Episodes));
+        html = this.TemplateReplace(html, "{newItemCount}", Signed(delta.Items));
+
+        return html;
+    }
+
+    /// <summary>
+    /// Formats a delta with an explicit sign so a template never has to hardcode one.
+    /// A hardcoded '+' would read as "+-3" once items are deleted.
+    /// </summary>
+    /// <param name="value">The delta to format.</param>
+    /// <returns>"+2" when positive, "-3" when negative, "0" when unchanged.</returns>
+    private static string Signed(int value)
+    {
+        string text = value.ToString(CultureInfo.InvariantCulture);
+        return value > 0 ? "+" + text : text;
     }
 
     private string ReplaceDatePlaceholdersInternal(string html, DateTime? date, string prefix)

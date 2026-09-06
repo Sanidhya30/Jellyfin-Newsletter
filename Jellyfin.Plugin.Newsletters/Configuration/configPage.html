@@ -1284,6 +1284,7 @@
                     ToAddr: '',
                     FromAddr: 'JellyfinNewsletter@donotreply.com',
                     Subject: 'Jellyfin Newsletter',
+                    NewsletterTitle: 'Jellyfin Newsletter',
                     Body: '',
                     Entry: '',
                     Header: '',
@@ -1351,6 +1352,7 @@
                 config.ToAddr = document.getElementById('email-bcc-' + id).value;
                 config.FromAddr = document.getElementById('email-from-' + id).value;
                 config.Subject = document.getElementById('email-subject-' + id).value;
+                config.NewsletterTitle = document.getElementById('email-title-' + id).value;
                 config.Body = document.getElementById('email-body-' + id).value;
                 config.Entry = document.getElementById('email-entry-' + id).value;
                 config.Header = document.getElementById('email-header-' + id).value;
@@ -1460,6 +1462,11 @@
                     html += '      <label class="inputLabel inputLabelUnfocused">Subject:</label>';
                     html += '      <input id="email-subject-' + config.Id + '" type="text" is="emby-input" value="' + (config.Subject || '') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
                     html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Newsletter Title:</label>';
+                    html += '      <input id="email-title-' + config.Id + '" type="text" is="emby-input" value="' + (config.NewsletterTitle || 'Jellyfin Newsletter') + '" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Heading shown at the top of the newsletter. Also available as the {NewsletterTitle} tag in the Body HTML.</div>';
+                    html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'email', config.MaxItemsPerSection);
@@ -1504,6 +1511,7 @@
                     AccessToken: '',
                     RoomId: '',
                     TemplateCategory: 'Matrix',
+                    NewsletterTitle: 'Jellyfin Newsletter',
                     Body: '',
                     Entry: '',
                     Header: '',
@@ -1561,6 +1569,7 @@
                 config.HomeserverUrl = document.getElementById('matrix-url-' + id).value;
                 config.AccessToken = document.getElementById('matrix-token-' + id).value;
                 config.RoomId = document.getElementById('matrix-room-' + id).value;
+                config.NewsletterTitle = document.getElementById('matrix-title-' + id).value;
                 config.Body = document.getElementById('matrix-body-' + id).value;
                 config.Entry = document.getElementById('matrix-entry-' + id).value;
                 config.Header = document.getElementById('matrix-header-' + id).value;
@@ -1625,6 +1634,11 @@
                     html += '      <label class="inputLabel inputLabelUnfocused">Room ID:</label>';
                     html += '      <input id="matrix-room-' + config.Id + '" type="text" is="emby-input" value="' + (config.RoomId || '') + '" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
                     html += '      <div class="fieldDescription">The internal room ID (e.g., !yourRoomId:example.com). Separate multiple with commas.</div>';
+                    html += '    </div>';
+                    html += '    <div class="inputContainer">';
+                    html += '      <label class="inputLabel inputLabelUnfocused">Newsletter Title:</label>';
+                    html += '      <input id="matrix-title-' + config.Id + '" type="text" is="emby-input" value="' + (config.NewsletterTitle || 'Jellyfin Newsletter') + '" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" />';
+                    html += '      <div class="fieldDescription">Heading shown at the top of the newsletter. Also available as the {NewsletterTitle} tag in the Body HTML.</div>';
                     html += '    </div>';
                     html += getLibrarySelectionHtml(config.Id, 'matrix', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
