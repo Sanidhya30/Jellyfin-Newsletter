@@ -25,6 +25,11 @@ public interface ITemplatedConfiguration : INewsletterConfiguration
     string TemplateCategory { get; }
 
     /// <summary>
+    /// Gets the newsletter title shown in the body template header, exposed as the {NewsletterTitle} tag.
+    /// </summary>
+    string NewsletterTitle { get; }
+
+    /// <summary>
     /// Gets the custom HTML header template containing section headers for each event type.
     /// Uses template tags with IDs (header-add, header-update, header-delete, header-upcoming).
     /// If empty, the default template file is used.

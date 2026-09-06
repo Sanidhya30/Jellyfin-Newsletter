@@ -66,6 +66,11 @@ public class EmailConfiguration : ITemplatedConfiguration
     public string Subject { get; set; } = "Jellyfin Newsletter";
 
     /// <summary>
+    /// Gets or sets the newsletter title shown in the body template header, exposed as the {NewsletterTitle} tag.
+    /// </summary>
+    public string NewsletterTitle { get; set; } = "Jellyfin Newsletter";
+
+    /// <summary>
     /// Gets or sets the email body HTML template.
     /// </summary>
     public string Body { get; set; } = string.Empty;

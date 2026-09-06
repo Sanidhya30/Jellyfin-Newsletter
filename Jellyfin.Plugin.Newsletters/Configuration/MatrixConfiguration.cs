@@ -45,6 +45,11 @@ public class MatrixConfiguration : ITemplatedConfiguration
     public string TemplateCategory { get; set; } = "Matrix";
 
     /// <summary>
+    /// Gets or sets the newsletter title shown in the body template header, exposed as the {NewsletterTitle} tag.
+    /// </summary>
+    public string NewsletterTitle { get; set; } = "Jellyfin Newsletter";
+
+    /// <summary>
     /// Gets or sets a custom body HTML string. If empty, uses the template.
     /// </summary>
     public string Body { get; set; } = string.Empty;

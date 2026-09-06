@@ -172,7 +172,7 @@ public abstract class HtmlContentBuilder(
     }
 
     /// <summary>
-    /// Replaces the {ServerURL}, date, and library-count placeholders in a fully built newsletter body.
+    /// Replaces the {NewsletterTitle}, {ServerURL}, date, and library-count placeholders in a fully built newsletter body.
     /// </summary>
     /// <param name="html">The built newsletter body.</param>
     /// <param name="config">The configuration the newsletter is being rendered for.</param>
@@ -180,6 +180,7 @@ public abstract class HtmlContentBuilder(
     /// <returns>The body with every body-level placeholder resolved.</returns>
     public string ReplaceBodyPlaceholders(string html, ITemplatedConfiguration config, bool isTest = false)
     {
+        html = this.TemplateReplace(html, "{NewsletterTitle}", string.IsNullOrWhiteSpace(config.NewsletterTitle) ? "Jellyfin Newsletter" : config.NewsletterTitle);
         html = this.TemplateReplace(html, "{ServerURL}", Config.Hostname);
         html = ReplaceDatePlaceholders(html);
         return ReplaceStatPlaceholders(html, config, isTest);

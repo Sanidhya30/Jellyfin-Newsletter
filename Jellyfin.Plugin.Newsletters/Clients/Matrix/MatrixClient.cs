@@ -217,7 +217,7 @@ public class MatrixClient(IServerApplicationHost appHost,
             var payload = new MatrixPayload
             {
                 MsgType = "m.text",
-                Body = "Jellyfin Newsletter (This message requires a Matrix client with HTML support to display correctly.)",
+                Body = $"{(string.IsNullOrWhiteSpace(matrixConfig.NewsletterTitle) ? "Jellyfin Newsletter" : matrixConfig.NewsletterTitle)} (This message requires a Matrix client with HTML support to display correctly.)",
                 Format = "org.matrix.custom.html",
                 FormattedBody = htmlBody
             };

@@ -268,6 +268,12 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 
 - The subject of the email
 
+### Newsletter Title
+
+- The heading shown at the top of the newsletter body
+  - Defaults to `Jellyfin Newsletter`
+  - Also available as the `{NewsletterTitle}` tag in the Body HTML
+
 ### Smtp Server Address
 
 - The email server address you want to use.
@@ -435,6 +441,12 @@ You can select between different email templates:
 
 - The Room ID where newsletters will be sent (e.g., `!roomid:matrix.org`). You can find this in your Matrix client's room settings. **Supports multiple Room IDs**: You can enter multiple Room IDs separated by commas `,`.
 
+### Newsletter Title
+
+- The heading shown at the top of the newsletter body
+  - Defaults to `Jellyfin Newsletter`
+  - Also available as the `{NewsletterTitle}` tag in the Body HTML
+
 ### Test Message
 
 - Use the "Test" button to send a test message and verify your Matrix configuration before saving.
@@ -581,6 +593,7 @@ newsletter onwards.
 
 ```
 - {ServerURL} - The configured server URL for Jellyfin
+- {NewsletterTitle} - The configured per-client newsletter title - used in the Body template header
 - {SeasonEpsInfo} - This tag is the Plugin-generated Season/Episode data
 - {Title} - Title of Movie/Series
 - {SeriesOverview} - Movie/Series overview
