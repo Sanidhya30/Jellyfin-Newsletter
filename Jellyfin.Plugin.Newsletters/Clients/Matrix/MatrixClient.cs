@@ -102,7 +102,7 @@ public class MatrixClient(IServerApplicationHost appHost,
         {
             var builder = new MatrixMessageBuilder(Logger, Db, LibraryManager, new List<JsonFileObj>());
             var htmlBody = builder.BuildMessageForTest(matrixConfig);
-            htmlBody = builder.ReplaceBodyPlaceholders(htmlBody, matrixConfig);
+            htmlBody = builder.ReplaceBodyPlaceholders(htmlBody, matrixConfig, isTest: true);
 
             bool anySuccess = false;
             foreach (var roomId in roomIds)

@@ -119,7 +119,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
             string body = hb.GetDefaultHTMLBody(emailConfig);
             string builtString = hb.BuildHtmlStringsForTest(emailConfig);
-            builtString = hb.ReplaceBodyPlaceholders(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), emailConfig);
+            builtString = hb.ReplaceBodyPlaceholders(HtmlBuilder.ReplaceBodyWithBuiltString(body, builtString), emailConfig, isTest: true);
 
             var mail = new MimeMessage();
             mail.From.Add(new MailboxAddress(emailFromAddress, emailFromAddress));

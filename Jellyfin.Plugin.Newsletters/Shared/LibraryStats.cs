@@ -7,6 +7,8 @@ using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Newsletters.Configuration;
 using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 
 namespace Jellyfin.Plugin.Newsletters.Shared;
@@ -57,6 +59,8 @@ public static class LibraryStats
             return cached.Counts;
         }
 
+        logger.Debug($"Library selection for counts - Movies: [{string.Join(", ", movieLibraries)}], Series: [{string.Join(", ", seriesLibraries)}]");
+
         var counts = Compute(libraryManager, logger, movieLibraries, seriesLibraries);
         if (counts is null)
         {
@@ -80,11 +84,35 @@ public static class LibraryStats
 
     private static LibraryCounts? Compute(ILibraryManager libraryManager, Logger logger, Guid[] movieLibraries, Guid[] seriesLibraries)
     {
+        // An empty selection counts as a legitimate zero, so say so plainly - otherwise a
+        // configuration with no libraries picked looks identical to a broken lookup.
+        if (movieLibraries.Length == 0)
+        {
+            logger.Warn("No movie libraries are selected on this configuration - the movie count will be 0.");
+        }
+
+        if (seriesLibraries.Length == 0)
+        {
+            logger.Warn("No series libraries are selected on this configuration - the series and episode counts will be 0.");
+        }
+
         try
         {
-            int movies = Count(libraryManager, BaseItemKind.Movie, movieLibraries);
-            int series = Count(libraryManager, BaseItemKind.Series, seriesLibraries);
-            int episodes = Count(libraryManager, BaseItemKind.Episode, seriesLibraries);
+            int movies = 0;
+            int series = 0;
+            int episodes = 0;
+
+            foreach (var libraryId in movieLibraries)
+            {
+                movies += CountInLibrary(libraryManager, logger, libraryId).Movies;
+            }
+
+            foreach (var libraryId in seriesLibraries)
+            {
+                var counted = CountInLibrary(libraryManager, logger, libraryId);
+                series += counted.Series;
+                episodes += counted.Episodes;
+            }
 
             return new LibraryCounts(movies, series, episodes);
         }
@@ -95,25 +123,52 @@ public static class LibraryStats
         }
     }
 
-    private static int Count(ILibraryManager libraryManager, BaseItemKind kind, Guid[] libraryIds)
+    /// <summary>
+    /// Counts the media in one library by walking its children.
+    /// </summary>
+    /// <remarks>
+    /// The hierarchy is walked rather than queried. An <see cref="InternalItemsQuery"/> scoped by
+    /// ParentId or TopParentIds returns nothing for a library's collection-folder ID, so the
+    /// filter column does not hold what the configuration stores. Walking the folder counts what
+    /// is actually there, and one pass yields all three totals.
+    /// </remarks>
+    private static (int Movies, int Series, int Episodes) CountInLibrary(ILibraryManager libraryManager, Logger logger, Guid libraryId)
     {
-        if (libraryIds.Length == 0)
+        if (libraryManager.GetItemById(libraryId) is not Folder folder)
         {
-            return 0;
+            logger.Warn($"Library {libraryId:N} did not resolve to a folder - skipping it in the counts.");
+            return (0, 0, 0);
         }
 
-        var query = new InternalItemsQuery
-        {
-            IncludeItemTypes = new[] { kind },
-            TopParentIds = libraryIds,
-            Recursive = true,
-            // Excludes episodes Jellyfin knows about but has no file for (missing/unaired).
-            IsVirtualItem = false,
-            Limit = 0,
-            EnableTotalRecordCount = true
-        };
+        int movies = 0;
+        int series = 0;
+        int episodes = 0;
 
-        return libraryManager.GetItemsResult(query).TotalRecordCount;
+        foreach (var child in folder.GetRecursiveChildren())
+        {
+            // Excludes episodes Jellyfin knows about but has no file for (missing/unaired).
+            if (child.IsVirtualItem)
+            {
+                continue;
+            }
+
+            switch (child)
+            {
+                case Movie:
+                    movies++;
+                    break;
+                case Series:
+                    series++;
+                    break;
+                case Episode:
+                    episodes++;
+                    break;
+            }
+        }
+
+        logger.Debug($"Library '{folder.Name}' ({libraryId:N}) - Movies: {movies}, Series: {series}, Episodes: {episodes}");
+
+        return (movies, series, episodes);
     }
 
     private static Guid[] ParseIds(IEnumerable<string>? libraryIds)

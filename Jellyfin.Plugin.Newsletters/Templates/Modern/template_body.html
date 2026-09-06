@@ -76,6 +76,49 @@
 			letter-spacing: 1px;
 		}
 
+		.header-stats {
+			margin: 18px auto 0 auto;
+			border-spacing: 0;
+			background-color: #1a1a1a;
+			border-radius: 12px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+		}
+
+		.header-stats td {
+			text-align: center;
+		}
+
+		.header-stats .stat-value {
+			padding: 16px 24px 2px 24px;
+			font-size: 26px;
+			font-weight: bold;
+			color: #ffffff;
+			line-height: 1.2;
+		}
+
+		.header-stats .stat-label {
+			padding: 0 24px 2px 24px;
+			font-size: 10px;
+			letter-spacing: 1.6px;
+			text-transform: uppercase;
+			color: #9a9a9a;
+		}
+
+		.header-stats .stat-delta {
+			padding: 0 24px;
+			font-size: 13px;
+			font-weight: bold;
+			color: #c8c8c8;
+		}
+
+		.header-stats .stat-caption {
+			padding: 6px 24px 14px 24px;
+			font-size: 10px;
+			letter-spacing: 1.2px;
+			text-transform: uppercase;
+			color: #6a6a6a;
+		}
+
 		.card-row {
 			padding: 0 10px 20px 10px;
 		}
@@ -181,6 +224,27 @@
 						</a>
 					</h1>
 					<div class="header-date">{prevd} {prevmon} {prevyyyy} - {d} {mon} {yyyy}</div>
+					<table class="header-stats" role="presentation" align="center" cellpadding="0" cellspacing="0"
+						bgcolor="#1a1a1a">
+						<tr>
+							<td class="stat-value">{MovieCount}</td>
+							<td class="stat-value">{SeriesCount}</td>
+							<td class="stat-value">{EpisodeCount}</td>
+						</tr>
+						<tr>
+							<td class="stat-label">Movies</td>
+							<td class="stat-label">Series</td>
+							<td class="stat-label">Episodes</td>
+						</tr>
+						<tr>
+							<td class="stat-delta">{newMovieCount}</td>
+							<td class="stat-delta">{newSeriesCount}</td>
+							<td class="stat-delta">{newEpisodeCount}</td>
+						</tr>
+						<tr>
+							<td class="stat-caption" colspan="3">since the last newsletter</td>
+						</tr>
+					</table>
 				</td>
 			</tr>
 

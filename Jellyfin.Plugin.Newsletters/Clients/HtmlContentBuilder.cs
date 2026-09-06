@@ -176,12 +176,13 @@ public abstract class HtmlContentBuilder(
     /// </summary>
     /// <param name="html">The built newsletter body.</param>
     /// <param name="config">The configuration the newsletter is being rendered for.</param>
+    /// <param name="isTest">Whether this is a test newsletter, which uses sample counts.</param>
     /// <returns>The body with every body-level placeholder resolved.</returns>
-    public string ReplaceBodyPlaceholders(string html, ITemplatedConfiguration config)
+    public string ReplaceBodyPlaceholders(string html, ITemplatedConfiguration config, bool isTest = false)
     {
         html = this.TemplateReplace(html, "{ServerURL}", Config.Hostname);
         html = ReplaceDatePlaceholders(html);
-        return ReplaceStatPlaceholders(html, config);
+        return ReplaceStatPlaceholders(html, config, isTest);
     }
 
     /// <summary>
@@ -189,17 +190,32 @@ public abstract class HtmlContentBuilder(
     /// </summary>
     /// <param name="html">The string containing count placeholders to replace.</param>
     /// <param name="config">The configuration whose library selection defines the counts.</param>
+    /// <param name="isTest">Whether this is a test newsletter, which uses sample counts.</param>
     /// <returns>The string with all count placeholders resolved.</returns>
-    public string ReplaceStatPlaceholders(string html, ITemplatedConfiguration config)
+    public string ReplaceStatPlaceholders(string html, ITemplatedConfiguration config, bool isTest = false)
     {
-        // A failed library query still has to render something; zeros beat leaving raw tags in the email.
-        var current = LibraryStats.GetCounts(LibraryManager, Logger, config) ?? new LibraryCounts(0, 0, 0);
+        LibraryCounts current;
+        LibraryCounts previous;
 
-        // Before the first send there is nothing to compare against. Falling back to the current
-        // counts makes every delta 0, rather than reporting the whole library as newly added.
-        var previous = config.PrevMovieCount.HasValue && config.PrevSeriesCount.HasValue && config.PrevEpisodeCount.HasValue
-            ? new LibraryCounts(config.PrevMovieCount.Value, config.PrevSeriesCount.Value, config.PrevEpisodeCount.Value)
-            : current;
+        if (isTest)
+        {
+            // A test newsletter is built from sample entries, so real library totals would sit
+            // oddly beside them - and a config with no libraries selected would render all zeros.
+            // Sample counts against a zero baseline show what the tags look like in use.
+            current = LibraryCounts.GetTestObj();
+            previous = new LibraryCounts(0, 0, 0);
+        }
+        else
+        {
+            // A failed library query still has to render something; zeros beat leaving raw tags in the email.
+            current = LibraryStats.GetCounts(LibraryManager, Logger, config) ?? new LibraryCounts(0, 0, 0);
+
+            // Before the first send there is nothing to compare against. Falling back to the current
+            // counts makes every delta 0, rather than reporting the whole library as newly added.
+            previous = config.PrevMovieCount.HasValue && config.PrevSeriesCount.HasValue && config.PrevEpisodeCount.HasValue
+                ? new LibraryCounts(config.PrevMovieCount.Value, config.PrevSeriesCount.Value, config.PrevEpisodeCount.Value)
+                : current;
+        }
 
         html = this.TemplateReplace(html, "{MovieCount}", current.Movies);
         html = this.TemplateReplace(html, "{SeriesCount}", current.Series);

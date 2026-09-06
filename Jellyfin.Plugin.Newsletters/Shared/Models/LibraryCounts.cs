@@ -38,4 +38,14 @@ public sealed class LibraryCounts
     /// Series are containers rather than playable media, so they are deliberately excluded.
     /// </summary>
     public int Items => Movies + Episodes;
+
+    /// <summary>
+    /// Gets a sample set of counts for test newsletters, where real library totals are not
+    /// meaningful. Paired with a zero baseline so every delta renders as "+1".
+    /// </summary>
+    /// <returns>A sample <see cref="LibraryCounts"/> holding one of each item type.</returns>
+    public static LibraryCounts GetTestObj()
+    {
+        return new LibraryCounts(1, 1, 1);
+    }
 }
