@@ -1,3 +1,9 @@
+# 1.9.0.0
+
+- **Feature**: Added library count tags for HTML clients (`{MovieCount}`, `{SeriesCount}`, `{EpisodeCount}`, `{ItemCount}`), along with `{prev*}` tags for the counts at the previous newsletter and signed `{new*}` tags for the change since then
+- **Feature**: Added a library stats block to the Classic and Modern templates showing current counts and their change since the last newsletter
+- **Feature**: Added a configurable newsletter title for the Email and Matrix clients, exposed as the `{NewsletterTitle}` tag in the Body template
+
 # 1.8.0.0
 
 - **Feature**: Added a Preview tab that lists everything queued for the next newsletter, with the ability to exclude and restore individual entries before it is sent
