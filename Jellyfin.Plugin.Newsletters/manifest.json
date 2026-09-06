@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.9.0.0",
+                "changelog": "- Feature: Added library count tags for HTML clients ({MovieCount}, {SeriesCount}, {EpisodeCount}, {ItemCount}), with previous-newsletter and signed change variants.\n- Feature: Added a library stats block to the Classic and Modern templates.\n- Feature: Added a configurable newsletter title for the Email and Matrix clients, exposed as the {NewsletterTitle} tag.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v1.9.0.0/newsletters_1.9.0.0.zip",
+                "checksum": "8a0904b2fb75854b03ee1cf7a7d28591",
+                "timestamp": "2026-09-06T13:22:56Z"
+            },
+            {
                 "version": "1.8.0.0",
                 "changelog": "- Feature: Added a Preview tab to see and curate everything queued for the next newsletter.\n- Feature: Added a Featured section to pin hand-picked titles to the top of the newsletter.\n- Feature: Added Discord mentions support for @everyone, @here, roles and users.\n- Feature: Added configurable Discord embed colors for the Upcoming and Featured sections.\n- Maintenance: Updated SixLabors.ImageSharp from 4.0.0 to 4.1.1.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",
