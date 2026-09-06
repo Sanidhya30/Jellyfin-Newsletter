@@ -1,8 +1,12 @@
 namespace Jellyfin.Plugin.Newsletters.Shared.Models;
 
 /// <summary>
-/// A snapshot of how many media items a set of libraries holds.
+/// The combined media totals for a set of libraries, as rendered into a newsletter.
 /// </summary>
+/// <remarks>
+/// A computed value, never persisted. The counts remembered between newsletters are stored per
+/// library as <see cref="StoredLibraryCount"/>.
+/// </remarks>
 public sealed class LibraryCounts
 {
     /// <summary>

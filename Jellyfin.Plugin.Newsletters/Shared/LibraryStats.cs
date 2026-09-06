@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using Jellyfin.Data.Enums;
@@ -32,21 +33,22 @@ public static class LibraryStats
     private static readonly ConcurrentDictionary<string, CacheEntry> CountCache = new();
 
     /// <summary>
-    /// Gets the media counts for the libraries selected on a newsletter configuration.
+    /// Gets the per-library media counts for the libraries selected on a newsletter configuration.
     /// </summary>
     /// <param name="libraryManager">The Jellyfin library manager.</param>
     /// <param name="logger">The logger used to report lookup failures.</param>
     /// <param name="config">The configuration whose library selection should be counted.</param>
     /// <returns>
-    /// The counts, or null when the library could not be queried. A configuration with nothing
-    /// selected returns zeros rather than null, so callers can tell "empty" from "failed" - which
-    /// matters when the result is about to be stored as the baseline for the next newsletter.
+    /// The snapshot, or null when the library could not be walked. A configuration with nothing
+    /// selected returns an empty snapshot rather than null, so callers can tell "empty" from
+    /// "failed" - which matters when the result is about to be stored as the baseline for the
+    /// next newsletter.
     /// </returns>
-    public static LibraryCounts? GetCounts(ILibraryManager libraryManager, Logger logger, INewsletterConfiguration config)
+    internal static Snapshot? GetSnapshot(ILibraryManager libraryManager, Logger logger, INewsletterConfiguration config)
     {
         if (config is null)
         {
-            return new LibraryCounts(0, 0, 0);
+            return new Snapshot();
         }
 
         var movieLibraries = ParseIds(config.SelectedMoviesLibraries);
@@ -56,22 +58,23 @@ public static class LibraryStats
         if (CountCache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow - cached.CapturedAt < CacheLifetime)
         {
             logger.Debug($"Using cached library counts for key '{cacheKey}'");
-            return cached.Counts;
+            return cached.Snapshot;
         }
 
         logger.Debug($"Library selection for counts - Movies: [{string.Join(", ", movieLibraries)}], Series: [{string.Join(", ", seriesLibraries)}]");
 
-        var counts = Compute(libraryManager, logger, movieLibraries, seriesLibraries);
-        if (counts is null)
+        var snapshot = Compute(libraryManager, logger, movieLibraries, seriesLibraries);
+        if (snapshot is null)
         {
             // Not cached - a transient failure should not stick around for the TTL.
             return null;
         }
 
-        CountCache[cacheKey] = new CacheEntry(DateTime.UtcNow, counts);
+        CountCache[cacheKey] = new CacheEntry(DateTime.UtcNow, snapshot);
 
-        logger.Debug($"Library counts resolved - Movies: {counts.Movies}, Series: {counts.Series}, Episodes: {counts.Episodes}");
-        return counts;
+        var totals = snapshot.Totals;
+        logger.Debug($"Library counts resolved - Movies: {totals.Movies}, Series: {totals.Series}, Episodes: {totals.Episodes}");
+        return snapshot;
     }
 
     /// <summary>
@@ -82,7 +85,7 @@ public static class LibraryStats
         CountCache.Clear();
     }
 
-    private static LibraryCounts? Compute(ILibraryManager libraryManager, Logger logger, Guid[] movieLibraries, Guid[] seriesLibraries)
+    private static Snapshot? Compute(ILibraryManager libraryManager, Logger logger, Guid[] movieLibraries, Guid[] seriesLibraries)
     {
         // An empty selection counts as a legitimate zero, so say so plainly - otherwise a
         // configuration with no libraries picked looks identical to a broken lookup.
@@ -98,23 +101,30 @@ public static class LibraryStats
 
         try
         {
-            int movies = 0;
-            int series = 0;
-            int episodes = 0;
+            var snapshot = new Snapshot();
 
             foreach (var libraryId in movieLibraries)
             {
-                movies += CountInLibrary(libraryManager, logger, libraryId).Movies;
+                var counted = CountInLibrary(libraryManager, logger, libraryId);
+                snapshot.MovieLibraries.Add(new StoredLibraryCount
+                {
+                    LibraryId = libraryId.ToString("N", CultureInfo.InvariantCulture),
+                    Titles = counted.Movies
+                });
             }
 
             foreach (var libraryId in seriesLibraries)
             {
                 var counted = CountInLibrary(libraryManager, logger, libraryId);
-                series += counted.Series;
-                episodes += counted.Episodes;
+                snapshot.SeriesLibraries.Add(new StoredLibraryCount
+                {
+                    LibraryId = libraryId.ToString("N", CultureInfo.InvariantCulture),
+                    Titles = counted.Series,
+                    Episodes = counted.Episodes
+                });
             }
 
-            return new LibraryCounts(movies, series, episodes);
+            return snapshot;
         }
         catch (Exception ex)
         {
@@ -197,16 +207,93 @@ public static class LibraryStats
         return $"{movies}|{series}";
     }
 
+    /// <summary>
+    /// The per-library media counts for one newsletter configuration's library selection.
+    /// </summary>
+    /// <remarks>
+    /// Nested here because <see cref="LibraryStats"/> is the only thing that produces one; it is
+    /// the shape of a counting result rather than a domain model in its own right. Internal
+    /// because nothing outside this plugin consumes it.
+    /// </remarks>
+    internal sealed class Snapshot
+    {
+        /// <summary>
+        /// Gets the counts for each selected movie library.
+        /// </summary>
+        public Collection<StoredLibraryCount> MovieLibraries { get; } = new Collection<StoredLibraryCount>();
+
+        /// <summary>
+        /// Gets the counts for each selected series library.
+        /// </summary>
+        public Collection<StoredLibraryCount> SeriesLibraries { get; } = new Collection<StoredLibraryCount>();
+
+        /// <summary>
+        /// Gets the combined totals across every selected library.
+        /// </summary>
+        public LibraryCounts Totals => new LibraryCounts(
+            MovieLibraries.Sum(l => l.Titles),
+            SeriesLibraries.Sum(l => l.Titles),
+            SeriesLibraries.Sum(l => l.Episodes));
+
+        /// <summary>
+        /// Gets the change between a stored baseline and this snapshot.
+        /// </summary>
+        /// <remarks>
+        /// Only libraries present on both sides are compared. A library added to the selection
+        /// since the baseline was taken has nothing to compare against, and a library removed from
+        /// the selection is no longer in this snapshot - so neither can pass a change in scope off
+        /// as a change in the library. The totals still reflect the full current selection; only
+        /// the change is restricted.
+        /// </remarks>
+        /// <param name="previousMovieLibraries">The stored per-library movie counts.</param>
+        /// <param name="previousSeriesLibraries">The stored per-library series and episode counts.</param>
+        /// <returns>The change, as movie, series and episode deltas.</returns>
+        public LibraryCounts DeltaFrom(
+            Collection<StoredLibraryCount>? previousMovieLibraries,
+            Collection<StoredLibraryCount>? previousSeriesLibraries)
+        {
+            int movies = 0;
+            int series = 0;
+            int episodes = 0;
+
+            foreach (var current in MovieLibraries)
+            {
+                var previous = Find(previousMovieLibraries, current.LibraryId);
+                if (previous is not null)
+                {
+                    movies += current.Titles - previous.Titles;
+                }
+            }
+
+            foreach (var current in SeriesLibraries)
+            {
+                var previous = Find(previousSeriesLibraries, current.LibraryId);
+                if (previous is not null)
+                {
+                    series += current.Titles - previous.Titles;
+                    episodes += current.Episodes - previous.Episodes;
+                }
+            }
+
+            return new LibraryCounts(movies, series, episodes);
+        }
+
+        private static StoredLibraryCount? Find(Collection<StoredLibraryCount>? stored, string libraryId)
+        {
+            return stored?.FirstOrDefault(l => string.Equals(l.LibraryId, libraryId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     private sealed class CacheEntry
     {
-        public CacheEntry(DateTime capturedAt, LibraryCounts counts)
+        public CacheEntry(DateTime capturedAt, Snapshot snapshot)
         {
             CapturedAt = capturedAt;
-            Counts = counts;
+            Snapshot = snapshot;
         }
 
         public DateTime CapturedAt { get; }
 
-        public LibraryCounts Counts { get; }
+        public Snapshot Snapshot { get; }
     }
 }

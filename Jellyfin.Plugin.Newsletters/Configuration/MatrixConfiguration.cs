@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 
+using Jellyfin.Plugin.Newsletters.Shared.Models;
+
 namespace Jellyfin.Plugin.Newsletters.Configuration;
 
 /// <summary>
@@ -101,17 +103,12 @@ public class MatrixConfiguration : ITemplatedConfiguration
     public int MaxItemsPerSection { get; set; } = 0;
 
     /// <summary>
-    /// Gets or sets the movie count captured when the last newsletter was sent.
+    /// Gets or sets the per-library movie counts captured when the last newsletter was sent.
     /// </summary>
-    public int? PrevMovieCount { get; set; }
+    public Collection<StoredLibraryCount> PrevMovieLibraryCounts { get; set; } = new Collection<StoredLibraryCount>();
 
     /// <summary>
-    /// Gets or sets the series count captured when the last newsletter was sent.
+    /// Gets or sets the per-library series and episode counts captured when the last newsletter was sent.
     /// </summary>
-    public int? PrevSeriesCount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the episode count captured when the last newsletter was sent.
-    /// </summary>
-    public int? PrevEpisodeCount { get; set; }
+    public Collection<StoredLibraryCount> PrevSeriesLibraryCounts { get; set; } = new Collection<StoredLibraryCount>();
 }

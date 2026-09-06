@@ -1,3 +1,9 @@
+// Collection properties need setters so the plugin configuration can be XML-serialized,
+// the same reason PluginConfiguration suppresses these.
+#pragma warning disable CA2227
+using System.Collections.ObjectModel;
+using Jellyfin.Plugin.Newsletters.Shared.Models;
+
 namespace Jellyfin.Plugin.Newsletters.Configuration;
 
 /// <summary>
@@ -29,20 +35,14 @@ public interface ITemplatedConfiguration : INewsletterConfiguration
     string Header { get; }
 
     /// <summary>
-    /// Gets or sets the number of movies these libraries held when the last newsletter was sent.
-    /// Null when no newsletter has been sent yet.
+    /// Gets or sets the per-library movie counts captured when the last newsletter was sent.
+    /// Empty until the first newsletter has been sent.
     /// </summary>
-    int? PrevMovieCount { get; set; }
+    Collection<StoredLibraryCount> PrevMovieLibraryCounts { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of series these libraries held when the last newsletter was sent.
-    /// Null when no newsletter has been sent yet.
+    /// Gets or sets the per-library series and episode counts captured when the last newsletter
+    /// was sent. Empty until the first newsletter has been sent.
     /// </summary>
-    int? PrevSeriesCount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of episodes these libraries held when the last newsletter was sent.
-    /// Null when no newsletter has been sent yet.
-    /// </summary>
-    int? PrevEpisodeCount { get; set; }
+    Collection<StoredLibraryCount> PrevSeriesLibraryCounts { get; set; }
 }

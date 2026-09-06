@@ -195,7 +195,7 @@ public abstract class HtmlContentBuilder(
     public string ReplaceStatPlaceholders(string html, ITemplatedConfiguration config, bool isTest = false)
     {
         LibraryCounts current;
-        LibraryCounts previous;
+        LibraryCounts delta;
 
         if (isTest)
         {
@@ -203,19 +203,26 @@ public abstract class HtmlContentBuilder(
             // oddly beside them - and a config with no libraries selected would render all zeros.
             // Sample counts against a zero baseline show what the tags look like in use.
             current = LibraryCounts.GetTestObj();
-            previous = new LibraryCounts(0, 0, 0);
+            delta = current;
         }
         else
         {
-            // A failed library query still has to render something; zeros beat leaving raw tags in the email.
-            current = LibraryStats.GetCounts(LibraryManager, Logger, config) ?? new LibraryCounts(0, 0, 0);
+            // A failed library walk still has to render something; zeros beat leaving raw tags in the email.
+            var snapshot = LibraryStats.GetSnapshot(LibraryManager, Logger, config) ?? new LibraryStats.Snapshot();
+            current = snapshot.Totals;
 
-            // Before the first send there is nothing to compare against. Falling back to the current
-            // counts makes every delta 0, rather than reporting the whole library as newly added.
-            previous = config.PrevMovieCount.HasValue && config.PrevSeriesCount.HasValue && config.PrevEpisodeCount.HasValue
-                ? new LibraryCounts(config.PrevMovieCount.Value, config.PrevSeriesCount.Value, config.PrevEpisodeCount.Value)
-                : current;
+            // Compared library by library, so a change to this configuration's library selection
+            // cannot masquerade as items being added or removed. Before the first send nothing
+            // matches, which leaves every delta at 0 rather than reporting the whole library as new.
+            delta = snapshot.DeltaFrom(config.PrevMovieLibraryCounts, config.PrevSeriesLibraryCounts);
         }
+
+        // Derived rather than stored: it keeps {prevX} + {newX} == {X} in the rendered newsletter
+        // even when a library joined or left the selection and is therefore absent from the delta.
+        var previous = new LibraryCounts(
+            current.Movies - delta.Movies,
+            current.Series - delta.Series,
+            current.Episodes - delta.Episodes);
 
         html = this.TemplateReplace(html, "{MovieCount}", current.Movies);
         html = this.TemplateReplace(html, "{SeriesCount}", current.Series);
@@ -227,10 +234,10 @@ public abstract class HtmlContentBuilder(
         html = this.TemplateReplace(html, "{prevEpisodeCount}", previous.Episodes);
         html = this.TemplateReplace(html, "{prevItemCount}", previous.Items);
 
-        html = this.TemplateReplace(html, "{newMovieCount}", Signed(current.Movies - previous.Movies));
-        html = this.TemplateReplace(html, "{newSeriesCount}", Signed(current.Series - previous.Series));
-        html = this.TemplateReplace(html, "{newEpisodeCount}", Signed(current.Episodes - previous.Episodes));
-        html = this.TemplateReplace(html, "{newItemCount}", Signed(current.Items - previous.Items));
+        html = this.TemplateReplace(html, "{newMovieCount}", Signed(delta.Movies));
+        html = this.TemplateReplace(html, "{newSeriesCount}", Signed(delta.Series));
+        html = this.TemplateReplace(html, "{newEpisodeCount}", Signed(delta.Episodes));
+        html = this.TemplateReplace(html, "{newItemCount}", Signed(delta.Items));
 
         return html;
     }

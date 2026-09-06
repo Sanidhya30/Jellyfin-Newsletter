@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Jellyfin.Plugin.Newsletters.Integrations;
 using Jellyfin.Plugin.Newsletters.Shared;
 using Jellyfin.Plugin.Newsletters.Shared.Database;
 using Jellyfin.Plugin.Newsletters.Shared.Entities;
+using Jellyfin.Plugin.Newsletters.Shared.Models;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Mvc;
 
@@ -106,8 +108,8 @@ public class Client(Logger loggerInstance,
 
         foreach (var templatedConfig in templatedConfigs)
         {
-            var counts = LibraryStats.GetCounts(LibraryManager, Logger, templatedConfig);
-            if (counts is null)
+            var snapshot = LibraryStats.GetSnapshot(LibraryManager, Logger, templatedConfig);
+            if (snapshot is null)
             {
                 // Storing zeros here would make the next newsletter report the whole library as
                 // newly added. Keeping the older baseline is the less wrong answer.
@@ -115,13 +117,37 @@ public class Client(Logger loggerInstance,
                 continue;
             }
 
-            templatedConfig.PrevMovieCount = counts.Movies;
-            templatedConfig.PrevSeriesCount = counts.Series;
-            templatedConfig.PrevEpisodeCount = counts.Episodes;
+            // Copied, not assigned: configurations with the same library selection share one
+            // cached snapshot, so assigning its collections directly would leave several
+            // configurations holding the same mutable lists.
+            templatedConfig.PrevMovieLibraryCounts = Copy(snapshot.MovieLibraries);
+            templatedConfig.PrevSeriesLibraryCounts = Copy(snapshot.SeriesLibraries);
         }
 
         // The next cycle must re-query rather than reuse what we just stored.
         LibraryStats.ClearCache();
+    }
+
+    /// <summary>
+    /// Copies stored counts so each configuration owns its own rows.
+    /// </summary>
+    /// <param name="source">The rows to copy.</param>
+    /// <returns>A new collection of new rows.</returns>
+    private static Collection<StoredLibraryCount> Copy(Collection<StoredLibraryCount> source)
+    {
+        var copy = new Collection<StoredLibraryCount>();
+
+        foreach (var entry in source)
+        {
+            copy.Add(new StoredLibraryCount
+            {
+                LibraryId = entry.LibraryId,
+                Titles = entry.Titles,
+                Episodes = entry.Episodes
+            });
+        }
+
+        return copy;
     }
 
     /// <summary>
