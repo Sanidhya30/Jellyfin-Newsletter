@@ -1,3 +1,6 @@
+using System.Collections.ObjectModel;
+using Jellyfin.Plugin.Newsletters.Shared.Models;
+
 namespace Jellyfin.Plugin.Newsletters.Configuration;
 
 /// <summary>
@@ -27,4 +30,16 @@ public interface ITemplatedConfiguration : INewsletterConfiguration
     /// If empty, the default template file is used.
     /// </summary>
     string Header { get; }
+
+    /// <summary>
+    /// Gets the per-library movie counts captured when the last newsletter was sent.
+    /// Empty until the first newsletter has been sent.
+    /// </summary>
+    Collection<StoredLibraryCount> PrevMovieLibraryCounts { get; }
+
+    /// <summary>
+    /// Gets the per-library series and episode counts captured when the last newsletter
+    /// was sent. Empty until the first newsletter has been sent.
+    /// </summary>
+    Collection<StoredLibraryCount> PrevSeriesLibraryCounts { get; }
 }

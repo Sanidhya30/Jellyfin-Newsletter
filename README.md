@@ -533,6 +533,52 @@ Some of these may not interest that average user (if anyone), but I figured I wo
 ```
 </details>
 
+<details>
+<summary><b>Library Count Tags (Click to expand)</b></summary>
+
+Counts cover only the libraries selected on the configuration that is sending the newsletter, so two configurations pointed at different libraries will legitimately show different numbers.
+
+Current library size:
+
+```
+- {MovieCount} - Number of movies (e.g. 14)
+- {SeriesCount} - Number of series (e.g. 7)
+- {EpisodeCount} - Number of episodes (e.g. 213)
+- {ItemCount} - Movies plus episodes (series are containers, so they are not counted here)
+```
+
+Library size when the previous newsletter was sent:
+
+```
+- {prevMovieCount} - Number of movies at the previous newsletter
+- {prevSeriesCount} - Number of series at the previous newsletter
+- {prevEpisodeCount} - Number of episodes at the previous newsletter
+- {prevItemCount} - Movies plus episodes at the previous newsletter
+```
+
+Change since the previous newsletter. **These always render with a sign** - `+2` when items were
+added, `-3` when items were deleted, `0` when nothing changed:
+
+```
+- {newMovieCount} - Change in movie count (e.g. +2)
+- {newSeriesCount} - Change in series count (e.g. +1)
+- {newEpisodeCount} - Change in episode count (e.g. -3)
+- {newItemCount} - Change in movies plus episodes
+```
+
+**Do not put your own `+` in front of these tags.** The sign is already included, so a hardcoded
+plus would read as `+-3` once media is deleted. Example usage:
+
+```
+Now with {MovieCount} movies and {SeriesCount} shows! ({newMovieCount} since last newsletter!)
+```
+
+On the very first newsletter there is nothing to compare against, so the `{prev*}` tags equal the
+current counts and every `{new*}` tag reads `0`. The comparison becomes meaningful from the second
+newsletter onwards.
+
+</details>
+
 ```
 - {ServerURL} - The configured server URL for Jellyfin
 - {SeasonEpsInfo} - This tag is the Plugin-generated Season/Episode data
