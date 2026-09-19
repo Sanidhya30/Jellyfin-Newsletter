@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "1.9.1.0",
+                "changelog": "- Feature: Added rendered preview window.\n",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/TheDMV2/Jellyfin-Newsletter/releases/download/v1.9.1.0/newsletters_1.9.1.0.zip",
+                "checksum": "",
+                "timestamp": "2026-09-20T13:22:56Z"
+            },
+            {
                 "version": "1.9.0.0",
                 "changelog": "- Feature: Added library count tags for HTML clients ({MovieCount}, {SeriesCount}, {EpisodeCount}, {ItemCount}), with previous-newsletter and signed change variants.\n- Feature: Added a library stats block to the Classic and Modern templates.\n- Feature: Added a configurable newsletter title for the Email and Matrix clients, exposed as the {NewsletterTitle} tag.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",
