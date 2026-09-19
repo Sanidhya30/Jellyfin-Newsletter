@@ -49,6 +49,12 @@ public class ClientBuilder(Logger loggerInstance,
     protected ILibraryManager LibraryManager { get; } = libraryManagerInstance;
 
     /// <summary>
+    /// Gets a value indicating whether the builder is producing a preview.
+    /// A preview sends nothing and skips image resizing/uploading.
+    /// </summary>
+    public bool PreviewMode { get; init; }
+    
+    /// <summary>
     /// Gets the admin's pinned featured entries, resolved once per newsletter run.
     /// </summary>
     protected IReadOnlyList<JsonFileObj> FeaturedEntries =>
@@ -404,6 +410,11 @@ public class ClientBuilder(Logger loggerInstance,
     protected (MemoryStream? ResizedStream, string ContentId, bool Success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 500, int jpegQuality = 80)
     {
         string contentId = $"image_{Guid.NewGuid()}.jpg";
+        // Preview only: skip the resize; callers then fall back to the poster URL
+        if (PreviewMode)
+        {
+            return (null, contentId, false);
+        }
         int attempt = 0;
         MemoryStream? resizedStream = null;
         
