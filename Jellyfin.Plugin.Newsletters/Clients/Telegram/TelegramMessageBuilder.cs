@@ -113,7 +113,7 @@ public class TelegramMessageBuilder(
 
                 if (telegramConfig.ThumbnailEnabled)
                 {
-                    if (Config.PosterType == "attachment")
+                    if (Config.PosterType == "attachment") && !PreviewMode)
                     {
                         if (item.EventType == "upcoming")
                         {
