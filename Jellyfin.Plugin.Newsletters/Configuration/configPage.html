@@ -153,6 +153,14 @@
                             are not listed here.
                         </div>
                         <div id="PreviewSummary" class="fieldDescription" style="margin-bottom: 10px;"></div>
+                        <div class="preview-filter-bar">
+                            <button type="button" class="preview-filter-btn active" data-preview-filter="all"
+                                onclick="setPreviewFilter('all')">All</button>
+                            <button type="button" class="preview-filter-btn" data-preview-filter="included"
+                                onclick="setPreviewFilter('included')">Will be sent</button>
+                            <button type="button" class="preview-filter-btn" data-preview-filter="excluded"
+                                onclick="setPreviewFilter('excluded')">Removed</button>
+                        </div>
                         <div id="PreviewList" class="config-list">
                             <p class="no-configs-text">Loading&hellip;</p>
                         </div>
@@ -592,6 +600,36 @@
             .preview-excluded .preview-episode-label {
                 opacity: 0.45;
                 text-decoration: line-through;
+            }
+
+            .preview-filter-bar {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 10px;
+            }
+
+            .preview-filter-btn {
+                background-color: transparent;
+                border: 1px solid #444;
+                border-radius: 14px;
+                outline: none;
+                cursor: pointer;
+                padding: 4px 12px;
+                font-size: 0.85em;
+                color: #ccc;
+                transition: 0.2s;
+            }
+
+            .preview-filter-btn:hover {
+                color: #fff;
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+
+            .preview-filter-btn.active {
+                color: #fff;
+                background-color: #00a4dc;
+                border-color: #00a4dc;
             }
 
             #FeaturedResults .featured-row {
@@ -1862,9 +1900,18 @@
 
             var previewData = null;
             var previewExpanded = {};
+            var previewFilter = 'all';
 
             function previewGroupKey(group) {
                 return group.Title + ' ' + group.EventType;
+            }
+
+            function setPreviewFilter(filter) {
+                previewFilter = filter;
+                document.querySelectorAll('.preview-filter-btn').forEach(function (btn) {
+                    btn.classList.toggle('active', btn.getAttribute('data-preview-filter') === filter);
+                });
+                renderPreview();
             }
 
             function loadPreview() {
@@ -1887,20 +1934,36 @@
                 var summary = document.getElementById('PreviewSummary');
                 if (!list || !previewData) return;
 
-                var groups = previewData.Groups || [];
-                var included = (previewData.TotalItems || 0) - (previewData.ExcludedItems || 0);
+                var allGroups = previewData.Groups || [];
+
+                // The newsletter shows one card per title, not one per episode/file, so the
+                // summary counts entries (titles) rather than the raw file/episode totals.
+                var excludedEntries = allGroups.filter(function (g) { return g.ExcludedCount === g.TotalCount; }).length;
+                var includedEntries = allGroups.length - excludedEntries;
 
                 if (summary) {
                     var sent = previewData.LastPublishedDate
                         ? new Date(previewData.LastPublishedDate).toLocaleString()
                         : 'never';
-                    summary.innerHTML = '<b>' + included + '</b> item(s) will be sent'
-                        + (previewData.ExcludedItems ? ', <b>' + previewData.ExcludedItems + '</b> excluded' : '')
+                    summary.innerHTML = '<b>' + includedEntries + '</b> '
+                        + (includedEntries === 1 ? 'entry' : 'entries') + ' will be sent'
+                        + (excludedEntries ? ', <b>' + excludedEntries + '</b> excluded' : '')
                         + '. Last newsletter sent: ' + escapeHtml(sent) + '.';
                 }
 
-                if (!groups.length) {
+                if (!allGroups.length) {
                     list.innerHTML = '<p class="no-configs-text">Nothing queued for the next newsletter.</p>';
+                    return;
+                }
+
+                var groups = allGroups.filter(function (g) {
+                    if (previewFilter === 'included') return g.ExcludedCount !== g.TotalCount;
+                    if (previewFilter === 'excluded') return g.ExcludedCount === g.TotalCount;
+                    return true;
+                });
+
+                if (!groups.length) {
+                    list.innerHTML = '<p class="no-configs-text">Nothing matches this filter.</p>';
                     return;
                 }
 
@@ -1920,9 +1983,16 @@
                     // Entries are what the newsletter actually shows - one card per title, so
                     // fully excluded titles are left out and excluded files are not counted. The
                     // file count only differs when a title covers several episodes, so it goes in
-                    // parentheses and is dropped when the two are equal.
-                    var entries = inSection.filter(function (g) { return g.ExcludedCount < g.TotalCount; }).length;
-                    var items = inSection.reduce(function (n, g) { return n + (g.TotalCount - g.ExcludedCount); }, 0);
+                    // parentheses and is dropped when the two are equal. The "Removed" view lists
+                    // only fully excluded titles, so there it counts what is being left out
+                    // instead, which would otherwise always be zero.
+                    var countingExcluded = previewFilter === 'excluded';
+                    var entries = countingExcluded
+                        ? inSection.length
+                        : inSection.filter(function (g) { return g.ExcludedCount < g.TotalCount; }).length;
+                    var items = inSection.reduce(function (n, g) {
+                        return n + (countingExcluded ? g.ExcludedCount : g.TotalCount - g.ExcludedCount);
+                    }, 0);
                     var countLabel = entries + ' ' + (entries === 1 ? 'entry' : 'entries');
                     if (items !== entries) {
                         countLabel += ' (' + items + ' item' + (items === 1 ? '' : 's') + ')';
@@ -2003,8 +2073,63 @@
                 groupEl.classList.toggle('expanded');
             }
 
+            // Mirrors SeasonSummary.Format on the server: excluded items are left out so the
+            // summary describes what will be sent, falling back to the full set when everything
+            // is excluded. Recomputed locally because nothing re-fetches after a remove/restore.
+            function buildSeasonSummary(group) {
+                if ((group.Type || '').toLowerCase() === 'movie') return '';
+
+                var items = group.Items.filter(function (i) { return !i.Excluded; });
+                if (!items.length) items = group.Items;
+
+                var seasons = {};
+                items.forEach(function (item) {
+                    if (item.Season < 0) return;
+                    if (!seasons[item.Season]) seasons[item.Season] = {};
+                    if (item.Episode >= 0) seasons[item.Season][item.Episode] = true;
+                });
+
+                function byNumber(a, b) { return a - b; }
+
+                return Object.keys(seasons).map(Number).sort(byNumber).map(function (season) {
+                    var episodes = Object.keys(seasons[season]).map(Number).sort(byNumber);
+                    if (!episodes.length) return 'S' + season;
+
+                    var runs = [];
+                    var start = episodes[0];
+                    var previous = start;
+                    for (var i = 1; i <= episodes.length; i++) {
+                        if (i < episodes.length && episodes[i] === previous + 1) {
+                            previous = episodes[i];
+                            continue;
+                        }
+                        runs.push(start === previous ? String(start) : start + '-' + previous);
+                        if (i < episodes.length) start = previous = episodes[i];
+                    }
+
+                    return 'S' + season + ' E' + runs.join(', ');
+                }).join(', ');
+            }
+
+            function applyLocalPreviewChange(filenames, excluded) {
+                var fileSet = {};
+                filenames.forEach(function (f) { fileSet[f] = true; });
+
+                (previewData.Groups || []).forEach(function (group) {
+                    group.Items.forEach(function (item) {
+                        if (fileSet[item.Filename]) item.Excluded = excluded;
+                    });
+                    group.ExcludedCount = group.Items.filter(function (i) { return i.Excluded; }).length;
+                    group.SeasonSummary = buildSeasonSummary(group);
+                });
+            }
+
             function postPreviewChange(filenames, excluded) {
-                if (!filenames.length) return;
+                if (!filenames.length || !previewData) return;
+
+                var previousSnapshot = JSON.parse(JSON.stringify(previewData));
+                applyLocalPreviewChange(filenames, excluded);
+                renderPreview();
 
                 var url = ApiClient.getUrl('Newsletters/Preview/' + (excluded ? 'Exclude' : 'Include'));
                 ApiClient.ajax({
@@ -2012,12 +2137,11 @@
                     url: url,
                     contentType: 'application/json',
                     data: JSON.stringify({ Filenames: filenames })
-                }).then(function () {
-                    loadPreview();
                 }).catch(function (error) {
                     console.error('Error updating newsletter preview:', error);
                     alert('Could not update the newsletter preview. Check the Jellyfin logs.');
-                    loadPreview();
+                    previewData = previousSnapshot;
+                    renderPreview();
                 });
             }
 
