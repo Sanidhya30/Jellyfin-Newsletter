@@ -103,6 +103,12 @@ public class MatrixMessageBuilder(
     /// <inheritdoc/>
     protected override void CustomizeItemReplaceDict(JsonFileObj item, string eventType, Dictionary<string, object?> replaceDict)
     {
+        // Preview only: don't upload anything to the homeserver
+        if (PreviewMode)
+        {
+            return;
+        }
+        
         // Upload the image to the Matrix homeserver and use the MXC URL
         var matrixConfig = GetCurrentMatrixConfig();
         if (matrixConfig == null)
