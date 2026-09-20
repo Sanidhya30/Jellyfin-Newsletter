@@ -865,20 +865,50 @@
             // Global libraries storage
             var allLibraries = [];
 
+            // A library whose Jellyfin content type is "Mixed Movies and TV Shows" carries no
+            // collection type at all: Jellyfin writes no .collection file for it, so the
+            // Library/MediaFolders response omits the key entirely.
+            // An absent collection type on its own is not enough to identify one: folders
+            // contributed by other plugins report nothing either, and neither does anything that
+            // is not a library at all. Only a real library is a CollectionFolder, so check that
+            // first and leave everything else out of both lists.
+            function isMixedLibrary(lib) {
+                if (lib.Type !== 'CollectionFolder') {
+                    return false;
+                }
+
+                var collectionType = (lib.CollectionType || '').toLowerCase();
+                return collectionType === '' || collectionType === 'mixed';
+            }
+
+            // Mixed libraries hold both kinds, so they are offered in both lists and the admin
+            // decides which sections their content appears under. Music, books, photos, boxsets
+            // and playlists all report a collection type, so they stay out of both.
+            function librariesForSection(collectionType) {
+                return allLibraries.filter(function (l) {
+                    return (l.CollectionType || '').toLowerCase() === collectionType || isMixedLibrary(l);
+                });
+            }
+
+            // Spelt out in the list so it is clear why one library appears under both headings.
+            function getLibraryDisplayName(lib) {
+                return isMixedLibrary(lib) ? lib.Name + ' (Mixed)' : lib.Name;
+            }
+
             function getLibrarySelectionHtml(clientId, configType, selectedSeriesIds, selectedMoviesIds) {
                 var html = '<div class="inputContainer"><label class="inputLabel">Library Selection:</label>';
 
                 // Series
                 html += '<div style="margin-bottom: 10px; font-weight: bold;">TV Series</div>';
                 html += '<div class="library-checkbox-container" style="max-height: 150px; overflow-y: auto; border: 1px solid #444; padding: 10px; background: rgba(0,0,0,0.2);">';
-                var seriesLibs = allLibraries.filter(function (l) { return (l.CollectionType || '').toLowerCase() === 'tvshows'; });
+                var seriesLibs = librariesForSection('tvshows');
                 if (seriesLibs.length === 0) html += '<div style="opacity: 0.7;">No TV Series libraries found</div>';
                 seriesLibs.forEach(function (lib) {
                     var isChecked = (selectedSeriesIds || []).indexOf(lib.Id) !== -1;
                     html += '<div class="checkboxContainer">';
                     html += '<label class="emby-checkbox-label">';
                     html += '<input type="checkbox" is="emby-checkbox" class="' + configType + '-series-lib-' + clientId + '" data-lib-id="' + lib.Id + '" ' + (isChecked ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
-                    html += '<span>' + lib.Name + '</span>';
+                    html += '<span>' + getLibraryDisplayName(lib) + '</span>';
                     html += '</label></div>';
                 });
                 html += '</div>';
@@ -886,14 +916,14 @@
                 // Movies
                 html += '<div style="margin-top: 15px; margin-bottom: 10px; font-weight: bold;">Movies</div>';
                 html += '<div class="library-checkbox-container" style="max-height: 150px; overflow-y: auto; border: 1px solid #444; padding: 10px; background: rgba(0,0,0,0.2);">';
-                var movieLibs = allLibraries.filter(function (l) { return (l.CollectionType || '').toLowerCase() === 'movies'; });
+                var movieLibs = librariesForSection('movies');
                 if (movieLibs.length === 0) html += '<div style="opacity: 0.7;">No Movie libraries found</div>';
                 movieLibs.forEach(function (lib) {
                     var isChecked = (selectedMoviesIds || []).indexOf(lib.Id) !== -1;
                     html += '<div class="checkboxContainer">';
                     html += '<label class="emby-checkbox-label">';
                     html += '<input type="checkbox" is="emby-checkbox" class="' + configType + '-movies-lib-' + clientId + '" data-lib-id="' + lib.Id + '" ' + (isChecked ? 'checked' : '') + ' onchange="update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')"/>';
-                    html += '<span>' + lib.Name + '</span>';
+                    html += '<span>' + getLibraryDisplayName(lib) + '</span>';
                     html += '</label></div>';
                 });
                 html += '</div></div>';
@@ -1843,7 +1873,7 @@
             function loadLibraries() {
                 // Return a promise to ensure libraries are loaded before rendering client configs
                 return ApiClient.getJSON(ApiClient.getUrl('Library/MediaFolders')).then(function (result) {
-                    allLibraries = result.Items;
+                    allLibraries = result.Items || [];
                     return result.Items;
                 }).catch(function (error) {
                     console.error('Error loading libraries:', error);

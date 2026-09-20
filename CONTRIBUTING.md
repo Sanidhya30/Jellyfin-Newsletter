@@ -7,7 +7,7 @@ Thank you for your interest in contributing to the Jellyfin Newsletter Plugin! W
 To build the plugin on your local machine, please follow these steps:
 
 ### Prerequisites
-1. **.NET SDK**: Ensure you have the .NET 9.0 SDK installed (or the version currently specified in the `.csproj`).
+1. **.NET SDK**: Ensure you have the .NET 10.0 SDK installed (or the version currently specified in the `.csproj`).
 2. **SixLabors License**: This project uses `SixLabors.ImageSharp` version 4.0.0, which requires a valid license key file (`sixlabors.lic`) to compile.
 
 ### Setting up the License
@@ -28,7 +28,7 @@ To build the plugin on your local machine, please follow these steps:
    ```bash
    dotnet build
    ```
-3. The compiled plugin `.dll` will be available in the `Jellyfin.Plugin.Newsletters/bin/Debug/net9.0/` directory.
+3. The compiled plugin `.dll` will be available in the `Jellyfin.Plugin.Newsletters/bin/Debug/net10.0/` directory.
 
 ## Submitting Pull Requests
 - All Pull Requests should be made against the `development` branch.
