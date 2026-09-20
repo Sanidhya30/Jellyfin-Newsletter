@@ -1,3 +1,10 @@
+# 2.0.0.0
+
+- **Breaking**: Now requires Jellyfin 12.0 or newer and is built against .NET 10. Jellyfin 10.11 and older are no longer supported and will not be offered this update; 1.9.0.0 remains the last release for them
+- **Feature**: Libraries whose Jellyfin content type is "Mixed Movies and TV Shows" can now be selected in a client's library selection. They are listed under both TV Series and Movies, marked `(Mixed)`, so each media type can be included independently. Previously such libraries appeared in neither list and their content was silently left out of every newsletter
+- **Feature**: Reworked the Preview tab with instant remove and restore, All/Will be sent/Removed filtering, and summary counts based on titles rather than individual episode files
+- **Maintenance**: Updated MailKit from 4.17.0 to 4.18.0 and SixLabors.ImageSharp from 4.1.1 to 4.1.2
+
 # 1.9.0.0
 
 - **Feature**: Added library count tags for HTML clients (`{MovieCount}`, `{SeriesCount}`, `{EpisodeCount}`, `{ItemCount}`), along with `{prev*}` tags for the counts at the previous newsletter and signed `{new*}` tags for the change since then

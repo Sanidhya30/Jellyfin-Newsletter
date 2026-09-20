@@ -2,7 +2,7 @@
 name: "Newsletters"
 guid: "60f478ab-2dd6-4ea0-af10-04d033f75979"
 imageUrl: "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png"
-version: "1.9.0.0"
+version: "2.0.0.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Send newsletters for recently added/deleted/updated/upcoming media"
@@ -17,7 +17,8 @@ artifacts:
   - "MimeKit.dll"
   - "BouncyCastle.Cryptography.dll"
 changelog: |
-  - Feature: Added library count tags for HTML clients ({MovieCount}, {SeriesCount}, {EpisodeCount}, {ItemCount}), with previous-newsletter and signed change variants.
-  - Feature: Added a library stats block to the Classic and Modern templates.
-  - Feature: Added a configurable newsletter title for the Email and Matrix clients, exposed as the {NewsletterTitle} tag.
+  - Breaking: Now requires Jellyfin 12.0 or newer and is built on .NET 10. Jellyfin 10.11 and older are no longer supported; stay on 1.9.0.0 for those.
+  - Feature: Libraries set to "Mixed Movies and TV Shows" can now be picked in a client's library selection, under both TV Series and Movies.
+  - Feature: Reworked the Preview tab with instant remove/restore, All/Will be sent/Removed filters, and title-based counts.
+  - Maintenance: Updated MailKit from 4.17.0 to 4.18.0 and SixLabors.ImageSharp from 4.1.1 to 4.1.2.
   - FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md
