@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "2.0.0.0",
+                "changelog": "- Breaking: Now requires Jellyfin 12.0 or newer and is built on .NET 10. Jellyfin 10.11 and older are no longer supported; stay on 1.9.0.0 for those.\n- Feature: Libraries set to \"Mixed Movies and TV Shows\" can now be picked in a client's library selection, under both TV Series and Movies.\n- Feature: Reworked the Preview tab with instant remove/restore, All/Will be sent/Removed filters, and title-based counts.\n- Maintenance: Updated MailKit from 4.17.0 to 4.18.0 and SixLabors.ImageSharp from 4.1.1 to 4.1.2.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "12.0.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v2.0.0.0/newsletters_2.0.0.0.zip",
+                "checksum": "019377b19ee4af164fae5e98238d8ad3",
+                "timestamp": "2026-09-20T14:24:27Z"
+            },
+            {
                 "version": "1.9.0.0",
                 "changelog": "- Feature: Added library count tags for HTML clients ({MovieCount}, {SeriesCount}, {EpisodeCount}, {ItemCount}), with previous-newsletter and signed change variants.\n- Feature: Added a library stats block to the Classic and Modern templates.\n- Feature: Added a configurable newsletter title for the Email and Matrix clients, exposed as the {NewsletterTitle} tag.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "10.11.0.0",
