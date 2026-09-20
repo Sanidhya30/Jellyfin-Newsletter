@@ -160,6 +160,8 @@ Testing and Frequency can be managed through your Dashboard > Scheduled Tasks
 
 # Installation
 
+> **Requires Jellyfin 12.0 or newer.** From version 2.0.0.0 the plugin is built against .NET 10 to match Jellyfin 12. On Jellyfin 10.11 or older the catalog will keep offering 1.9.0.0, which is the last release for those servers.
+
 Manifest is up and running! You can now import the manifest in Jellyfin and this plugin will appear in the Catalog!
 
 - Go to "Plugins" on your "Dashboard"
