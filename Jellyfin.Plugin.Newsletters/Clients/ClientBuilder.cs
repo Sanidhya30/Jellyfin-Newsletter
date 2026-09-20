@@ -415,6 +415,7 @@ public class ClientBuilder(Logger loggerInstance,
         {
             return (null, contentId, false);
         }
+        
         int attempt = 0;
         MemoryStream? resizedStream = null;
         
