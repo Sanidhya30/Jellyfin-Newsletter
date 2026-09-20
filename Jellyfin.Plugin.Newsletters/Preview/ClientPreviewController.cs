@@ -95,8 +95,8 @@ public class ClientPreviewController(
             string html = builder.BuildMessageFromNewsletterData(appHost.SystemId, config);
             html = builder.ReplaceBodyPlaceholders(html, config);
 
-            // Matrix clients read data-mx-color; browsers read the plain color attribute.
-            html = html.Replace("data-mx-color", "color", StringComparison.Ordinal);
+            // Matrix clients read data-mx-color; browsers need a CSS colour.
+            html = Regex.Replace(html, @"data-mx-color=([""'])(#[0-9A-Fa-f]{3,8})\1", "style=\"color:$2\"");
             return Page(MatrixCss, html);
         });
     }
