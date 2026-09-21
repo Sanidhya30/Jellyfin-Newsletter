@@ -26,6 +26,10 @@ public class ClientBuilder(Logger loggerInstance,
     SQLiteDatabase dbInstance,
     ILibraryManager libraryManagerInstance)
 {
+    // Preview posters are requested smaller than the ones actually sent, since a preview only has to
+    // show the layout.
+    private const int PreviewImageWidth = 300;
+
     private IReadOnlyList<JsonFileObj>? featuredEntries;
 
     /// <summary>
@@ -50,7 +54,8 @@ public class ClientBuilder(Logger loggerInstance,
 
     /// <summary>
     /// Gets a value indicating whether the builder is producing a preview.
-    /// A preview sends nothing and skips image resizing/uploading.
+    /// A preview sends nothing and attaches or uploads nothing; posters are resolved
+    /// for display by <see cref="PreviewImageSource"/> instead.
     /// </summary>
     public bool PreviewMode { get; init; }
 
@@ -152,11 +157,24 @@ public class ClientBuilder(Logger loggerInstance,
 
         var eventTypeOrder = new Dictionary<string, int> { { "featured", 0 }, { "add", 1 }, { "update", 2 }, { "delete", 3 }, { "upcoming", 4 } };
 
-        return allItems
+        var sortedItems = allItems
             .OrderBy(i => eventTypeOrder.GetValueOrDefault(i.EventType?.ToLowerInvariant() ?? "add", 0))
             .ThenBy(i => i.Type == "Movie" ? 0 : 1)
             .ThenBy(i => i.EventType == "upcoming" ? i.LibraryId : LibraryNames.Resolve(i.LibraryId, libraryNameMap))
             .ToList();
+
+        // A preview can neither attach nor upload an image, and every client already falls back to
+        // ImageURL when there is no attachment. Pointing ImageURL at something a browser can load
+        // therefore covers all of them from here, rather than client by client.
+        if (PreviewMode)
+        {
+            foreach (var item in sortedItems)
+            {
+                item.ImageURL = PreviewImageSource(item);
+            }
+        }
+
+        return sortedItems;
     }
 
     /// <summary>
@@ -410,7 +428,8 @@ public class ClientBuilder(Logger loggerInstance,
     protected (MemoryStream? ResizedStream, string ContentId, bool Success) ResizeImage(string imagePath, int maxRetries = 5, int delayMilliseconds = 200, int targetWidth = 500, int jpegQuality = 80)
     {
         string contentId = $"image_{Guid.NewGuid()}.jpg";
-        // Preview only: skip the resize; callers then fall back to the poster URL
+
+        // Preview only: nothing is attached or uploaded, so callers fall back to the rewritten ImageURL.
         if (PreviewMode)
         {
             return (null, contentId, false);
@@ -456,6 +475,33 @@ public class ClientBuilder(Logger loggerInstance,
 
         Logger.Error($"Failed to process image for {imagePath} after {maxRetries} attempts.");
         return (null, contentId, false);
+    }
+
+    /// <summary>
+    /// Resolves what a preview should show for an item's poster.
+    /// With remote posters that is the poster URL. With local posters it is the server's own image
+    /// endpoint, which serves primary images without authentication, so the preview frame can load it
+    /// directly. The path is relative so it resolves against whichever address the admin is already on.
+    /// Falls back to the poster URL whenever that endpoint would not serve the poster the newsletter uses.
+    /// </summary>
+    /// <param name="item">The item being previewed.</param>
+    /// <returns>A value usable as an HTML image source.</returns>
+    private string PreviewImageSource(JsonFileObj item)
+    {
+        if (Config.PosterType != "attachment" || string.IsNullOrEmpty(item.PosterPath))
+        {
+            return item.ImageURL;
+        }
+
+        // The scanner stores the series ID but falls back to an episode's image when a series has none
+        // of its own, so only use the endpoint when it would serve the very file that would be attached.
+        if (!Guid.TryParse(item.ItemID, out Guid itemId)
+            || LibraryManager.GetItemById(itemId)?.PrimaryImagePath != item.PosterPath)
+        {
+            return item.ImageURL;
+        }
+
+        return $"/Items/{item.ItemID}/Images/Primary?maxWidth={PreviewImageWidth}";
     }
 
     private static bool IsIncremental(List<int> values)

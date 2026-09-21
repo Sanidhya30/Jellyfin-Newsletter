@@ -263,7 +263,8 @@
                     </div>
                     <div class="cfg-preview-note">
                         Note: Email and chat apps may strip or change some CSS, so the real message can look slightly
-                        different. This is a draft preview; nothing is sent.
+                        different, and posters are shown at a smaller size than the ones actually sent.
+                        This is a draft preview; nothing is sent.
                     </div>
                     <iframe id="CfgPreviewFrame" title="Newsletter preview"
                         sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
@@ -643,7 +644,7 @@
             .cfg-preview-open > #CfgPreviewPane {
                 display: block;
                 flex: 1 1 700px;
-                min-width: 700px;
+                min-width: min(700px, 100%);
                 position: sticky;
                 top: 5em;
                 border: 1px solid #444;
@@ -704,6 +705,7 @@
                 }
                 document.getElementById(tabName).style.display = "block";
                 evt.currentTarget.className += " active";
+                hideConfigPreview();
             };
 
             // Configuration fields mapping (for General tab only now)
@@ -1022,6 +1024,7 @@
                 if (confirm('Are you sure you want to remove this Discord webhook configuration?')) {
                     discordConfigs = discordConfigs.filter(function (c) { return c.Id !== id; });
                     renderDiscordConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1219,6 +1222,7 @@
                 if (confirm('Are you sure you want to remove this Telegram bot configuration?')) {
                     telegramConfigs = telegramConfigs.filter(function (c) { return c.Id !== id; });
                     renderTelegramConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1385,6 +1389,7 @@
                 if (confirm('Are you sure you want to remove this email configuration?')) {
                     emailConfigs = emailConfigs.filter(function (c) { return c.Id !== id; });
                     renderEmailConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1610,6 +1615,7 @@
                 if (confirm('Are you sure you want to remove this Matrix configuration?')) {
                     matrixConfigs = matrixConfigs.filter(function (c) { return c.Id !== id; });
                     renderMatrixConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1948,12 +1954,16 @@
                 matrix: { route: 'Matrix', list: function () { return matrixConfigs; }, sync: updateMatrixConfigFromUI }
             };
 
+            // Id of the configuration currently shown in the preview pane, or null when closed.
+            var cfgPreviewId = null;
+
             function showConfigPreview(type, id) {
                 var client = cfgPreviewTypes[type];
                 client.sync(id);
                 var config = client.list().find(function (c) { return c.Id === id; });
                 if (!config) return;
 
+                cfgPreviewId = id;
                 var frame = document.getElementById('CfgPreviewFrame');
                 document.getElementById('CfgPreviewTitle').textContent = 'Preview: ' + config.Name;
                 document.querySelector('#NewsletterConfigPage .content-primary').classList.add('cfg-preview-open');
@@ -1977,8 +1987,14 @@
             }
 
             function hideConfigPreview() {
+                cfgPreviewId = null;
                 document.querySelector('#NewsletterConfigPage .content-primary').classList.remove('cfg-preview-open');
                 document.getElementById('CfgPreviewFrame').srcdoc = '';
+            }
+
+            // Closes the pane when the configuration it is previewing is deleted.
+            function hideConfigPreviewFor(id) {
+                if (cfgPreviewId === id) hideConfigPreview();
             }
 
             // ===================== PREVIEW TAB =====================

@@ -40,11 +40,14 @@ public class ClientPreviewController(
     private const string EmptyMessage = "<p>Nothing is queued for the next newsletter with this configuration.</p>";
 
     // Page styles. The preview runs in an isolated iframe, so these are the only styles applied.
+    // Each one approximates that client's dark theme, which is what the templates are designed for.
     private const string BaseCss = "body{margin:0;padding:16px;font:14px/1.4 'Segoe UI',Arial,sans-serif}";
-    private const string MatrixCss = BaseCss + "body{background:#fff;color:#2e2f32}img{max-width:100%}";
-    private const string TelegramCss = BaseCss + "body{background:#dfe7ec;color:#000}"
-        + ".msg{max-width:420px;margin:0 0 8px;background:#fff;border-radius:12px;overflow:hidden}"
-        + ".msg img{display:block;width:100%}.txt{padding:8px 12px;white-space:pre-wrap}.link{color:#168acd}";
+    private const string MatrixCss = BaseCss + "body{background:#15191e;color:#edf3ff}"
+        + "img{max-width:100%}a{color:#0086e0}hr{border:0;border-top:1px solid #26292d}";
+
+    private const string TelegramCss = BaseCss + "body{background:#0e1621;color:#fff}"
+        + ".msg{max-width:420px;margin:0 0 8px;background:#182533;border-radius:12px;overflow:hidden}"
+        + ".msg img{display:block;width:100%}.txt{padding:8px 12px;white-space:pre-wrap}.link{color:#71bafa}";
 
     private const string DiscordCss = BaseCss + "body{background:#313338;color:#dbdee1}"
         + ".embed{max-width:520px;margin:0 0 8px;padding:8px 16px 16px 12px;background:#2b2d31;border-left:4px solid;border-radius:4px}"
@@ -61,7 +64,7 @@ public class ClientPreviewController(
     [HttpPost("Email")]
     public Task<ActionResult> PreviewEmail([FromBody] EmailConfiguration config)
     {
-        return RenderAsync(async () =>
+        return RenderAsync("Email", config.Name, async () =>
         {
             var upcoming = await GetUpcomingAsync(config.NewsletterOnUpcomingItemEnabled).ConfigureAwait(false);
             var builder = new HtmlBuilder(loggerInstance, dbInstance, config, libraryManager, upcoming) { PreviewMode = true };
@@ -71,10 +74,17 @@ public class ClientPreviewController(
 
             // Same assembly steps as SmtpMailer: fill the body template, then blank any unused {tags}.
             // A newsletter only splits into several emails when it is huge; if so, they are shown one after another.
-            var emails = chunks.Select(chunk => Regex.Replace(
-                builder.ReplaceBodyPlaceholders(HtmlBuilder.ReplaceBodyWithBuiltString(body, chunk.HtmlString), config),
-                "{[A-za-z]*}",
-                " "));
+            // Every part comes from the same template, so only the first keeps the document wrapper and the
+            // later parts contribute their <body> content, leaving one valid page with one <head>.
+            var emails = chunks.Select((chunk, index) =>
+            {
+                string part = Regex.Replace(
+                    builder.ReplaceBodyPlaceholders(HtmlBuilder.ReplaceBodyWithBuiltString(body, chunk.HtmlString), config),
+                    "{[A-za-z]*}",
+                    " ");
+
+                return index == 0 ? part : StripDocumentWrapper(part);
+            });
 
             return chunks.Count == 0 ? Page(BaseCss, EmptyMessage) : string.Join("<hr>", emails);
         });
@@ -88,12 +98,20 @@ public class ClientPreviewController(
     [HttpPost("Matrix")]
     public Task<ActionResult> PreviewMatrix([FromBody] MatrixConfiguration config)
     {
-        return RenderAsync(async () =>
+        return RenderAsync("Matrix", config.Name, async () =>
         {
             var upcoming = await GetUpcomingAsync(config.NewsletterOnUpcomingItemEnabled).ConfigureAwait(false);
             var builder = new MatrixMessageBuilder(loggerInstance, dbInstance, libraryManager, upcoming) { PreviewMode = true };
 
             string html = builder.BuildMessageFromNewsletterData(appHost.SystemId, config);
+
+            // The Matrix builder always returns the body template, so compare against that template with
+            // no entries to tell an empty queue - which MatrixClient would not send - from a real newsletter.
+            if (html == MatrixMessageBuilder.ReplaceBodyWithBuiltString(builder.GetDefaultHTMLBody(config), string.Empty))
+            {
+                return Page(MatrixCss, EmptyMessage);
+            }
+
             html = builder.ReplaceBodyPlaceholders(html, config);
 
             // Matrix clients read data-mx-color; browsers need a CSS colour.
@@ -110,7 +128,7 @@ public class ClientPreviewController(
     [HttpPost("Telegram")]
     public Task<ActionResult> PreviewTelegram([FromBody] TelegramConfiguration config)
     {
-        return RenderAsync(async () =>
+        return RenderAsync("Telegram", config.Name, async () =>
         {
             var upcoming = await GetUpcomingAsync(config.NewsletterOnUpcomingItemEnabled).ConfigureAwait(false);
             var builder = new TelegramMessageBuilder(loggerInstance, dbInstance, libraryManager, upcoming) { PreviewMode = true };
@@ -139,7 +157,7 @@ public class ClientPreviewController(
     [HttpPost("Discord")]
     public Task<ActionResult> PreviewDiscord([FromBody] DiscordConfiguration config)
     {
-        return RenderAsync(async () =>
+        return RenderAsync("Discord", config.Name, async () =>
         {
             var upcoming = await GetUpcomingAsync(config.NewsletterOnUpcomingItemEnabled).ConfigureAwait(false);
             var builder = new EmbedBuilder(loggerInstance, dbInstance, libraryManager, upcoming) { PreviewMode = true };
@@ -156,16 +174,21 @@ public class ClientPreviewController(
 
     /// <summary>
     /// Runs a preview builder and returns its HTML, or a 500 if it fails.
+    /// The two log lines bracket the builder's own output, which is otherwise identical to a real run.
     /// </summary>
-    private async Task<ActionResult> RenderAsync(Func<Task<string>> build)
+    private async Task<ActionResult> RenderAsync(string client, string configName, Func<Task<string>> build)
     {
+        loggerInstance.Info($"[Preview] Building {client} preview for '{configName}' - nothing will be sent");
+
         try
         {
-            return Content(await build().ConfigureAwait(false), MediaTypeNames.Text.Html);
+            string html = await build().ConfigureAwait(false);
+            loggerInstance.Info($"[Preview] Built {client} preview for '{configName}' ({html.Length} chars)");
+            return Content(html, MediaTypeNames.Text.Html);
         }
         catch (Exception e)
         {
-            loggerInstance.Error("Could not build the client preview: " + e);
+            loggerInstance.Error($"[Preview] Could not build the {client} preview for '{configName}': " + e);
             return StatusCode(StatusCodes.Status500InternalServerError, "Could not build the preview.");
         }
     }
@@ -181,6 +204,14 @@ public class ClientPreviewController(
         }
 
         return await upcomingService.GetAllUpcomingAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Strips the surrounding document tags from an email part, leaving its body content.
+    /// </summary>
+    private static string StripDocumentWrapper(string page)
+    {
+        return Regex.Replace(page, @"^.*?<body[^>]*>|</body>.*$", string.Empty, RegexOptions.Singleline | RegexOptions.IgnoreCase);
     }
 
     /// <summary>

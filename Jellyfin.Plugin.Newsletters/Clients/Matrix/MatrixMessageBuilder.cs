@@ -103,7 +103,8 @@ public class MatrixMessageBuilder(
     /// <inheritdoc/>
     protected override void CustomizeItemReplaceDict(JsonFileObj item, string eventType, Dictionary<string, object?> replaceDict)
     {
-        // Preview only: don't upload anything to the homeserver
+        // Preview only: don't upload anything to the homeserver. The dict already carries the
+        // item's ImageURL, which a preview has pointed at something the browser can load.
         if (PreviewMode)
         {
             return;
