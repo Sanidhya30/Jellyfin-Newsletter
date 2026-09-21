@@ -108,7 +108,7 @@ public class MatrixMessageBuilder(
         {
             return;
         }
-        
+
         // Upload the image to the Matrix homeserver and use the MXC URL
         var matrixConfig = GetCurrentMatrixConfig();
         if (matrixConfig == null)

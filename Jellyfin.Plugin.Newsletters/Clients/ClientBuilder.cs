@@ -53,7 +53,7 @@ public class ClientBuilder(Logger loggerInstance,
     /// A preview sends nothing and skips image resizing/uploading.
     /// </summary>
     public bool PreviewMode { get; init; }
-    
+
     /// <summary>
     /// Gets the admin's pinned featured entries, resolved once per newsletter run.
     /// </summary>
@@ -415,7 +415,7 @@ public class ClientBuilder(Logger loggerInstance,
         {
             return (null, contentId, false);
         }
-        
+
         int attempt = 0;
         MemoryStream? resizedStream = null;
         

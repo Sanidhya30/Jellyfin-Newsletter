@@ -45,6 +45,7 @@ public class ClientPreviewController(
     private const string TelegramCss = BaseCss + "body{background:#dfe7ec;color:#000}"
         + ".msg{max-width:420px;margin:0 0 8px;background:#fff;border-radius:12px;overflow:hidden}"
         + ".msg img{display:block;width:100%}.txt{padding:8px 12px;white-space:pre-wrap}.link{color:#168acd}";
+
     private const string DiscordCss = BaseCss + "body{background:#313338;color:#dbdee1}"
         + ".embed{max-width:520px;margin:0 0 8px;padding:8px 16px 16px 12px;background:#2b2d31;border-left:4px solid;border-radius:4px}"
         + ".thumb{float:right;width:80px;margin:8px 0 0 16px;border-radius:4px}"
