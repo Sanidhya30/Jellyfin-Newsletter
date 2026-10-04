@@ -1,3 +1,8 @@
+# 2.1.0.0
+
+- **Feature**: Added a Preview button to every Email, Discord, Telegram and Matrix configuration that renders what the next newsletter would look like for that client, side by side with the configuration. Nothing is sent, saved or uploaded, unsaved changes are included in the preview, and local poster attachments are shown through the server's own image endpoint
+- **Maintenance**: Updated MailKit from 4.18.0 to 4.18.1
+
 # 2.0.0.0
 
 - **Breaking**: Now requires Jellyfin 12.0 or newer and is built against .NET 10. Jellyfin 10.11 and older are no longer supported and will not be offered this update; 1.9.0.0 remains the last release for them

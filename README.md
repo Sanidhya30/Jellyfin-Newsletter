@@ -18,6 +18,7 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 * Per-library selection for series and movies per client
 * Radarr & Sonarr Integration for Upcoming Media
 * Newsletter Preview to review and curate the queue before it is sent
+* Per-client rendered preview of the next newsletter, without sending it
 * Featured section to pin hand-picked titles to the top of the newsletter
 * Multiple Bug Fixes, Enhancements and much more!!!
 
@@ -227,6 +228,12 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 - Changes take effect immediately &mdash; you do **not** need to press Save.
 - Upcoming items from Radarr/Sonarr are fetched live when the newsletter is built, so they are not listed here.
 - Use the "Refresh" button to reload the queue.
+
+### Client Preview
+
+- Every Email, Discord, Telegram and Matrix configuration has a **Preview** button that renders the next newsletter for that client in a pane beside the configuration (below it on narrow screens).
+- Nothing is sent, saved or uploaded, and unsaved changes on the configuration are included, so you can try template or event changes before pressing Save.
+- Email and chat apps may strip or change some CSS, so the real message can look slightly different, and posters are shown smaller than the ones actually sent.
 
 </details>
 
