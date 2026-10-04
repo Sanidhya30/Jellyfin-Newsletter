@@ -113,7 +113,9 @@ public class TelegramMessageBuilder(
 
                 if (telegramConfig.ThumbnailEnabled)
                 {
-                    if (Config.PosterType == "attachment")
+                    // A preview keeps the URL branch: the attachment branch ignores a failed resize
+                    // and would leave the message with no image at all.
+                    if (Config.PosterType == "attachment" && !PreviewMode)
                     {
                         if (item.EventType == "upcoming")
                         {

@@ -57,8 +57,13 @@ public class HtmlBuilder(
     public ReadOnlyCollection<(string HtmlString, List<(MemoryStream? ImageStream, string ContentId)> Images)> BuildChunkedHtmlStringsFromNewsletterData(string serverId, EmailConfiguration config)
     {
         EnsureSetup(config);
-        Directory.CreateDirectory(newslettersDir);
-        Logger.Info("Newsletter will be saved to: " + newsletterHTMLFile);
+
+        // A preview is never saved, so it neither creates the directory nor claims a destination.
+        if (!PreviewMode)
+        {
+            Directory.CreateDirectory(newslettersDir);
+            Logger.Info("Newsletter will be saved to: " + newsletterHTMLFile);
+        }
 
         var groupedItems = BuildGroupedItems(config, "Email");
 

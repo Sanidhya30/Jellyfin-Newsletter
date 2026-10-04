@@ -262,6 +262,21 @@
                         </button>
                     </div>
                 </form>
+
+                <!-- Client preview pane (opened by the Preview button on each configuration) -->
+                <div id="CfgPreviewPane">
+                    <div class="cfg-preview-bar">
+                        <strong id="CfgPreviewTitle">Preview</strong>
+                        <button type="button" class="config-action-btn" onclick="hideConfigPreview()">Close</button>
+                    </div>
+                    <div class="cfg-preview-note">
+                        Note: Email and chat apps may strip or change some CSS, so the real message can look slightly
+                        different, and posters are shown at a smaller size than the ones actually sent.
+                        This is a draft preview; nothing is sent.
+                    </div>
+                    <iframe id="CfgPreviewFrame" title="Newsletter preview"
+                        sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+                </div>
             </div>
         </div>
         <style>
@@ -640,6 +655,67 @@
             #FeaturedResults .featured-row:hover {
                 background: rgba(255, 255, 255, 0.06);
             }
+
+            /* Client preview: Preview button (Jellyfin purple-pink) */
+            .config-action-btn.cfg-preview-btn {
+                background: #AA5CC3;
+                color: white;
+            }
+
+            /* Preview open: config on the left, preview on the right (wraps below on narrow screens) */
+            .content-primary.cfg-preview-open {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: flex-start;
+                gap: 1em;
+            }
+
+            .cfg-preview-open > form {
+                flex: 1 1 30em;
+                min-width: 0;
+            }
+
+            #CfgPreviewPane {
+                display: none;
+            }
+
+            .cfg-preview-open > #CfgPreviewPane {
+                display: block;
+                flex: 1 1 700px;
+                min-width: min(700px, 100%);
+                position: sticky;
+                top: 5em;
+                border: 1px solid #444;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .cfg-preview-bar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+            }
+
+            .cfg-preview-bar .config-action-btn {
+                background: #555;
+                color: white;
+            }
+
+            .cfg-preview-note {
+                padding: 8px 12px;
+                font-size: 0.85em;
+                background: rgba(255, 255, 255, 0.08);
+            }
+
+            #CfgPreviewFrame {
+                display: block;
+                width: 100%;
+                height: 75vh;
+                min-height: 480px;
+                border: 0;
+                background: #fff;
+            }
         </style>
         <script type="text/javascript">
             var NewsletterConfig = {
@@ -667,6 +743,7 @@
                 }
                 document.getElementById(tabName).style.display = "block";
                 evt.currentTarget.className += " active";
+                hideConfigPreview();
             };
 
             // Configuration fields mapping (for General tab only now)
@@ -1015,6 +1092,7 @@
                 if (confirm('Are you sure you want to remove this Discord webhook configuration?')) {
                     discordConfigs = discordConfigs.filter(function (c) { return c.Id !== id; });
                     renderDiscordConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1114,6 +1192,7 @@
                     html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testDiscordConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeDiscordConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '      <button type="button" class="config-action-btn cfg-preview-btn" onclick="event.stopPropagation(); showConfigPreview(\'discord\', \'' + config.Id + '\')">Preview</button>';
                     html += '    </div>';
                     html += '  </div>';
                     html += '  <div class="config-accordion-content">';
@@ -1211,6 +1290,7 @@
                 if (confirm('Are you sure you want to remove this Telegram bot configuration?')) {
                     telegramConfigs = telegramConfigs.filter(function (c) { return c.Id !== id; });
                     renderTelegramConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1298,6 +1378,7 @@
                     html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testTelegramConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeTelegramConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '      <button type="button" class="config-action-btn cfg-preview-btn" onclick="event.stopPropagation(); showConfigPreview(\'telegram\', \'' + config.Id + '\')">Preview</button>';
                     html += '    </div>';
                     html += '  </div>';
                     html += '  <div class="config-accordion-content">';
@@ -1376,6 +1457,7 @@
                 if (confirm('Are you sure you want to remove this email configuration?')) {
                     emailConfigs = emailConfigs.filter(function (c) { return c.Id !== id; });
                     renderEmailConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1469,6 +1551,7 @@
                     html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testEmailConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeEmailConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '      <button type="button" class="config-action-btn cfg-preview-btn" onclick="event.stopPropagation(); showConfigPreview(\'email\', \'' + config.Id + '\')">Preview</button>';
                     html += '    </div>';
                     html += '  </div>';
                     html += '  <div class="config-accordion-content">';
@@ -1600,6 +1683,7 @@
                 if (confirm('Are you sure you want to remove this Matrix configuration?')) {
                     matrixConfigs = matrixConfigs.filter(function (c) { return c.Id !== id; });
                     renderMatrixConfigs();
+                    hideConfigPreviewFor(id);
                 }
             }
 
@@ -1682,6 +1766,7 @@
                     html += '      </label>';
                     html += '      <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); testMatrixConfig(\'' + config.Id + '\')">Test</button>';
                     html += '      <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); removeMatrixConfig(\'' + config.Id + '\')">Delete</button>';
+                    html += '      <button type="button" class="config-action-btn cfg-preview-btn" onclick="event.stopPropagation(); showConfigPreview(\'matrix\', \'' + config.Id + '\')">Preview</button>';
                     html += '    </div>';
                     html += '  </div>';
                     html += '  <div class="config-accordion-content">';
@@ -1924,6 +2009,60 @@
                         console.log("Config saved: ", result);
                     });
                 });
+            }
+
+            // ===================== CLIENT PREVIEW (Preview button on each configuration) =====================
+
+            // Per client type: API route, in-memory config list, and the function that copies
+            // the form's current (unsaved) values into that list.
+            var cfgPreviewTypes = {
+                email: { route: 'Email', list: function () { return emailConfigs; }, sync: updateEmailConfigFromUI },
+                discord: { route: 'Discord', list: function () { return discordConfigs; }, sync: updateDiscordConfigFromUI },
+                telegram: { route: 'Telegram', list: function () { return telegramConfigs; }, sync: updateTelegramConfigFromUI },
+                matrix: { route: 'Matrix', list: function () { return matrixConfigs; }, sync: updateMatrixConfigFromUI }
+            };
+
+            // Id of the configuration currently shown in the preview pane, or null when closed.
+            var cfgPreviewId = null;
+
+            function showConfigPreview(type, id) {
+                var client = cfgPreviewTypes[type];
+                client.sync(id);
+                var config = client.list().find(function (c) { return c.Id === id; });
+                if (!config) return;
+
+                cfgPreviewId = id;
+                var frame = document.getElementById('CfgPreviewFrame');
+                document.getElementById('CfgPreviewTitle').textContent = 'Preview: ' + config.Name;
+                document.querySelector('#NewsletterConfigPage .content-primary').classList.add('cfg-preview-open');
+                document.getElementById('CfgPreviewPane').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                frame.srcdoc = '<p style="font-family: sans-serif">Loading&hellip;</p>';
+
+                // Send the current config; the server returns the HTML of the next newsletter
+                ApiClient.ajax({
+                    type: 'POST',
+                    url: ApiClient.getUrl('Newsletters/ClientPreview/' + client.route),
+                    contentType: 'application/json',
+                    data: JSON.stringify(config),
+                    dataType: 'text'
+                }).then(function (html) {
+                    // Open links in a new tab instead of inside the preview
+                    frame.srcdoc = html.replace(/<head[^>]*>/i, '$&<base target="_blank">');
+                }).catch(function (error) {
+                    console.error('Error building client preview:', error);
+                    frame.srcdoc = '<p style="font-family: sans-serif">Could not build the preview. Check the Jellyfin logs.</p>';
+                });
+            }
+
+            function hideConfigPreview() {
+                cfgPreviewId = null;
+                document.querySelector('#NewsletterConfigPage .content-primary').classList.remove('cfg-preview-open');
+                document.getElementById('CfgPreviewFrame').srcdoc = '';
+            }
+
+            // Closes the pane when the configuration it is previewing is deleted.
+            function hideConfigPreviewFor(id) {
+                if (cfgPreviewId === id) hideConfigPreview();
             }
 
             // ===================== PREVIEW TAB =====================
