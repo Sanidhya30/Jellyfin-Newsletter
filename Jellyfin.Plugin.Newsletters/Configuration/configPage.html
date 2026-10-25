@@ -16,7 +16,7 @@
                     <div class="tab-bar">
                         <button type="button" class="tab-link active"
                             onclick="openTab(event, 'General')">General</button>
-                        <button type="button" class="tab-link" onclick="openTab(event, 'Preview')">Preview</button>
+                        <button type="button" class="tab-link" onclick="openTab(event, 'Queue')">Queue</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Featured')">Featured</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Email')">Email</button>
                         <button type="button" class="tab-link" onclick="openTab(event, 'Discord')">Discord</button>
@@ -135,33 +135,34 @@
                         </div>
                     </div>
 
-                    <!-- Preview Tab -->
-                    <div id="Preview" class="tab-content">
+                    <!-- Queue Tab -->
+                    <div id="Queue" class="tab-content">
                         <div class="config-header">
                             <h3>Next Newsletter</h3>
                             <button type="button" is="emby-button" class="raised button-submit"
-                                onclick="loadPreview()">
+                                onclick="loadQueue()">
                                 <span>Refresh</span>
                             </button>
                         </div>
                         <div class="fieldDescription" style="margin-bottom: 15px;">
-                            Everything queued for the next newsletter. Removing an entry here excludes it
-                            from every client and takes effect immediately &mdash; you do not need to press Save.
+                            Everything queued for the next newsletter. Excluding an entry leaves it out of the
+                            newsletter for every client, but does not delete anything from your library. It takes
+                            effect immediately &mdash; you do not need to press Save.
                             Excluded entries can be restored until the newsletter sends.
                             <br>
                             Upcoming items from Radarr/Sonarr are fetched live when the newsletter is built and
                             are not listed here.
                         </div>
-                        <div id="PreviewSummary" class="fieldDescription" style="margin-bottom: 10px;"></div>
-                        <div class="preview-filter-bar">
-                            <button type="button" class="preview-filter-btn active" data-preview-filter="all"
-                                onclick="setPreviewFilter('all')">All</button>
-                            <button type="button" class="preview-filter-btn" data-preview-filter="included"
-                                onclick="setPreviewFilter('included')">Will be sent</button>
-                            <button type="button" class="preview-filter-btn" data-preview-filter="excluded"
-                                onclick="setPreviewFilter('excluded')">Removed</button>
+                        <div id="QueueSummary" class="fieldDescription" style="margin-bottom: 10px;"></div>
+                        <div class="queue-filter-bar">
+                            <button type="button" class="queue-filter-btn active" data-queue-filter="all"
+                                onclick="setQueueFilter('all')">All</button>
+                            <button type="button" class="queue-filter-btn" data-queue-filter="included"
+                                onclick="setQueueFilter('included')">Will be sent</button>
+                            <button type="button" class="queue-filter-btn" data-queue-filter="excluded"
+                                onclick="setQueueFilter('excluded')">Excluded</button>
                         </div>
-                        <div id="PreviewList" class="config-list">
+                        <div id="QueueList" class="config-list">
                             <p class="no-configs-text">Loading&hellip;</p>
                         </div>
                     </div>
@@ -492,14 +493,14 @@
                 min-width: 200px;
             }
 
-            /* Preview Tab */
-            .preview-group {
+            /* Queue Tab */
+            .queue-group {
                 border: 1px solid #444;
                 border-radius: 4px;
                 margin-bottom: 8px;
             }
 
-            .preview-group-header {
+            .queue-group-header {
                 display: flex;
                 align-items: center;
                 gap: 10px;
@@ -507,17 +508,17 @@
                 cursor: pointer;
             }
 
-            .preview-group .expand-icon {
+            .queue-group .expand-icon {
                 transition: transform 0.3s;
                 display: inline-block;
                 width: 1em;
             }
 
-            .preview-group.expanded .expand-icon {
+            .queue-group.expanded .expand-icon {
                 transform: rotate(90deg);
             }
 
-            .preview-title {
+            .queue-title {
                 flex: 1;
                 min-width: 0;
                 overflow: hidden;
@@ -550,17 +551,17 @@
                 white-space: nowrap;
             }
 
-            .preview-meta {
+            .queue-meta {
                 opacity: 0.7;
                 font-size: 0.85em;
                 white-space: nowrap;
             }
 
-            .preview-section {
+            .queue-section {
                 margin-bottom: 22px;
             }
 
-            .preview-section-header {
+            .queue-section-header {
                 font-size: 1.05em;
                 font-weight: 700;
                 letter-spacing: 0.4px;
@@ -569,7 +570,7 @@
                 border-bottom: 2px solid;
             }
 
-            .preview-section-count {
+            .queue-section-count {
                 font-weight: 400;
                 font-size: 0.8em;
                 opacity: 0.7;
@@ -577,32 +578,32 @@
             }
 
             /* Only groups with more than one file can expand, so only those look clickable. */
-            .preview-group-header {
+            .queue-group-header {
                 cursor: default;
             }
 
-            .preview-expandable > .preview-group-header {
+            .queue-expandable > .queue-group-header {
                 cursor: pointer;
             }
 
-            .preview-episodes {
+            .queue-episodes {
                 display: none;
                 border-top: 1px solid #444;
                 padding: 6px 12px 10px 12px;
             }
 
-            .preview-group.expanded .preview-episodes {
+            .queue-group.expanded .queue-episodes {
                 display: block;
             }
 
-            .preview-episode {
+            .queue-episode {
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 padding: 4px 0;
             }
 
-            .preview-episode-label {
+            .queue-episode-label {
                 flex: 1;
                 min-width: 0;
                 overflow: hidden;
@@ -611,20 +612,20 @@
                 font-size: 0.9em;
             }
 
-            .preview-excluded .preview-title,
-            .preview-excluded .preview-episode-label {
+            .queue-excluded .queue-title,
+            .queue-excluded .queue-episode-label {
                 opacity: 0.45;
                 text-decoration: line-through;
             }
 
-            .preview-filter-bar {
+            .queue-filter-bar {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 6px;
                 margin-bottom: 10px;
             }
 
-            .preview-filter-btn {
+            .queue-filter-btn {
                 background-color: transparent;
                 border: 1px solid #444;
                 border-radius: 14px;
@@ -636,12 +637,12 @@
                 transition: 0.2s;
             }
 
-            .preview-filter-btn:hover {
+            .queue-filter-btn:hover {
                 color: #fff;
                 background-color: rgba(255, 255, 255, 0.05);
             }
 
-            .preview-filter-btn.active {
+            .queue-filter-btn.active {
                 color: #fff;
                 background-color: #00a4dc;
                 border-color: #00a4dc;
@@ -2065,45 +2066,45 @@
                 if (cfgPreviewId === id) hideConfigPreview();
             }
 
-            // ===================== PREVIEW TAB =====================
+            // ===================== QUEUE TAB =====================
 
-            var previewData = null;
-            var previewExpanded = {};
-            var previewFilter = 'all';
+            var queueData = null;
+            var queueExpanded = {};
+            var queueFilter = 'all';
 
-            function previewGroupKey(group) {
+            function queueGroupKey(group) {
                 return group.Title + ' ' + group.EventType;
             }
 
-            function setPreviewFilter(filter) {
-                previewFilter = filter;
-                document.querySelectorAll('.preview-filter-btn').forEach(function (btn) {
-                    btn.classList.toggle('active', btn.getAttribute('data-preview-filter') === filter);
+            function setQueueFilter(filter) {
+                queueFilter = filter;
+                document.querySelectorAll('.queue-filter-btn').forEach(function (btn) {
+                    btn.classList.toggle('active', btn.getAttribute('data-queue-filter') === filter);
                 });
-                renderPreview();
+                renderQueue();
             }
 
-            function loadPreview() {
-                var list = document.getElementById('PreviewList');
+            function loadQueue() {
+                var list = document.getElementById('QueueList');
                 if (!list) return;
 
                 list.innerHTML = '<p class="no-configs-text">Loading&hellip;</p>';
 
                 ApiClient.getJSON(ApiClient.getUrl('Newsletters/Preview')).then(function (data) {
-                    previewData = data;
-                    renderPreview();
+                    queueData = data;
+                    renderQueue();
                 }).catch(function (error) {
-                    console.error('Error loading newsletter preview:', error);
-                    list.innerHTML = '<p class="no-configs-text">Could not load the preview. Check the Jellyfin logs.</p>';
+                    console.error('Error loading newsletter queue:', error);
+                    list.innerHTML = '<p class="no-configs-text">Could not load the queue. Check the Jellyfin logs.</p>';
                 });
             }
 
-            function renderPreview() {
-                var list = document.getElementById('PreviewList');
-                var summary = document.getElementById('PreviewSummary');
-                if (!list || !previewData) return;
+            function renderQueue() {
+                var list = document.getElementById('QueueList');
+                var summary = document.getElementById('QueueSummary');
+                if (!list || !queueData) return;
 
-                var allGroups = previewData.Groups || [];
+                var allGroups = queueData.Groups || [];
 
                 // The newsletter shows one card per title, not one per episode/file, so the
                 // summary counts entries (titles) rather than the raw file/episode totals.
@@ -2111,8 +2112,8 @@
                 var includedEntries = allGroups.length - excludedEntries;
 
                 if (summary) {
-                    var sent = previewData.LastPublishedDate
-                        ? new Date(previewData.LastPublishedDate).toLocaleString()
+                    var sent = queueData.LastPublishedDate
+                        ? new Date(queueData.LastPublishedDate).toLocaleString()
                         : 'never';
                     summary.innerHTML = '<b>' + includedEntries + '</b> '
                         + (includedEntries === 1 ? 'entry' : 'entries') + ' will be sent'
@@ -2126,8 +2127,8 @@
                 }
 
                 var groups = allGroups.filter(function (g) {
-                    if (previewFilter === 'included') return g.ExcludedCount !== g.TotalCount;
-                    if (previewFilter === 'excluded') return g.ExcludedCount === g.TotalCount;
+                    if (queueFilter === 'included') return g.ExcludedCount !== g.TotalCount;
+                    if (queueFilter === 'excluded') return g.ExcludedCount === g.TotalCount;
                     return true;
                 });
 
@@ -2152,10 +2153,10 @@
                     // Entries are what the newsletter actually shows - one card per title, so
                     // fully excluded titles are left out and excluded files are not counted. The
                     // file count only differs when a title covers several episodes, so it goes in
-                    // parentheses and is dropped when the two are equal. The "Removed" view lists
+                    // parentheses and is dropped when the two are equal. The "Excluded" view lists
                     // only fully excluded titles, so there it counts what is being left out
                     // instead, which would otherwise always be zero.
-                    var countingExcluded = previewFilter === 'excluded';
+                    var countingExcluded = queueFilter === 'excluded';
                     var entries = countingExcluded
                         ? inSection.length
                         : inSection.filter(function (g) { return g.ExcludedCount < g.TotalCount; }).length;
@@ -2167,14 +2168,14 @@
                         countLabel += ' (' + items + ' item' + (items === 1 ? '' : 's') + ')';
                     }
 
-                    html += '<div class="preview-section">';
-                    html += '  <div class="preview-section-header" style="color: ' + section.color
+                    html += '<div class="queue-section">';
+                    html += '  <div class="queue-section-header" style="color: ' + section.color
                         + '; border-bottom-color: ' + section.color + ';">'
-                        + escapeHtml(section.label) + ' <span class="preview-section-count">'
+                        + escapeHtml(section.label) + ' <span class="queue-section-count">'
                         + escapeHtml(countLabel) + '</span></div>';
 
                     inSection.forEach(function (group) {
-                        html += renderPreviewGroup(group);
+                        html += renderQueueGroup(group);
                     });
 
                     html += '</div>';
@@ -2183,13 +2184,13 @@
                 list.innerHTML = html;
             }
 
-            function renderPreviewGroup(group) {
-                var key = previewGroupKey(group);
+            function renderQueueGroup(group) {
+                var key = queueGroupKey(group);
                 var allExcluded = group.ExcludedCount === group.TotalCount;
                 var expandable = group.TotalCount > 1;
-                var classes = 'preview-group' + (previewExpanded[key] ? ' expanded' : '')
-                    + (allExcluded ? ' preview-excluded' : '')
-                    + (expandable ? ' preview-expandable' : '');
+                var classes = 'queue-group' + (queueExpanded[key] ? ' expanded' : '')
+                    + (allExcluded ? ' queue-excluded' : '')
+                    + (expandable ? ' queue-expandable' : '');
 
                 var meta = [];
                 if (group.SeasonSummary) meta.push(group.SeasonSummary);
@@ -2199,31 +2200,31 @@
                     meta.push(group.ExcludedCount + ' of ' + group.TotalCount + ' excluded');
                 }
 
-                var html = '<div class="' + classes + '" data-preview-key="' + escapeHtml(key) + '">';
-                html += '  <div class="preview-group-header" onclick="togglePreviewGroup(this)">';
+                var html = '<div class="' + classes + '" data-queue-key="' + escapeHtml(key) + '">';
+                html += '  <div class="queue-group-header" onclick="toggleQueueGroup(this)">';
                 html += '    <span class="expand-icon">' + (expandable ? '&#9656;' : '&nbsp;') + '</span>';
-                html += '    <span class="preview-title">' + escapeHtml(group.Title) + '</span>';
-                html += '    <span class="preview-meta">' + escapeHtml(meta.join(' \u00b7 ')) + '</span>';
+                html += '    <span class="queue-title">' + escapeHtml(group.Title) + '</span>';
+                html += '    <span class="queue-meta">' + escapeHtml(meta.join(' \u00b7 ')) + '</span>';
                 html += allExcluded
-                    ? '    <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, false)">Restore</button>'
-                    : '    <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); setPreviewGroupExcluded(this, true)">Remove</button>';
+                    ? '    <button type="button" class="config-action-btn test-btn" onclick="event.stopPropagation(); setQueueGroupExcluded(this, false)">Restore</button>'
+                    : '    <button type="button" class="config-action-btn delete-btn" onclick="event.stopPropagation(); setQueueGroupExcluded(this, true)">Exclude</button>';
                 html += '  </div>';
 
                 if (expandable) {
-                    html += '  <div class="preview-episodes">';
+                    html += '  <div class="queue-episodes">';
                     group.Items.forEach(function (item) {
                         var isEpisode = group.Type !== 'Movie' && item.Season >= 0 && item.Episode >= 0;
                         var label = isEpisode
                             ? 'S' + ('0' + item.Season).slice(-2) + 'E' + ('0' + item.Episode).slice(-2)
                             : item.Filename.split(/[\\/]/).pop();
 
-                        html += '<div class="preview-episode' + (item.Excluded ? ' preview-excluded' : '') + '"'
-                            + ' data-preview-file="' + escapeHtml(item.Filename) + '">';
-                        html += '  <span class="preview-episode-label" title="' + escapeHtml(item.Filename) + '">'
+                        html += '<div class="queue-episode' + (item.Excluded ? ' queue-excluded' : '') + '"'
+                            + ' data-queue-file="' + escapeHtml(item.Filename) + '">';
+                        html += '  <span class="queue-episode-label" title="' + escapeHtml(item.Filename) + '">'
                             + escapeHtml(label) + '</span>';
                         html += item.Excluded
-                            ? '  <button type="button" class="config-action-btn test-btn" onclick="setPreviewItemExcluded(this, false)">Restore</button>'
-                            : '  <button type="button" class="config-action-btn delete-btn" onclick="setPreviewItemExcluded(this, true)">Remove</button>';
+                            ? '  <button type="button" class="config-action-btn test-btn" onclick="setQueueItemExcluded(this, false)">Restore</button>'
+                            : '  <button type="button" class="config-action-btn delete-btn" onclick="setQueueItemExcluded(this, true)">Exclude</button>';
                         html += '</div>';
                     });
                     html += '  </div>';
@@ -2233,18 +2234,18 @@
                 return html;
             }
 
-            function togglePreviewGroup(headerEl) {
-                var groupEl = headerEl.closest('.preview-group');
-                if (!groupEl || !groupEl.querySelector('.preview-episodes')) return;
+            function toggleQueueGroup(headerEl) {
+                var groupEl = headerEl.closest('.queue-group');
+                if (!groupEl || !groupEl.querySelector('.queue-episodes')) return;
 
-                var key = groupEl.getAttribute('data-preview-key');
-                previewExpanded[key] = !previewExpanded[key];
+                var key = groupEl.getAttribute('data-queue-key');
+                queueExpanded[key] = !queueExpanded[key];
                 groupEl.classList.toggle('expanded');
             }
 
             // Mirrors SeasonSummary.Format on the server: excluded items are left out so the
             // summary describes what will be sent, falling back to the full set when everything
-            // is excluded. Recomputed locally because nothing re-fetches after a remove/restore.
+            // is excluded. Recomputed locally because nothing re-fetches after an exclude/restore.
             function buildSeasonSummary(group) {
                 if ((group.Type || '').toLowerCase() === 'movie') return '';
 
@@ -2280,11 +2281,11 @@
                 }).join(', ');
             }
 
-            function applyLocalPreviewChange(filenames, excluded) {
+            function applyLocalQueueChange(filenames, excluded) {
                 var fileSet = {};
                 filenames.forEach(function (f) { fileSet[f] = true; });
 
-                (previewData.Groups || []).forEach(function (group) {
+                (queueData.Groups || []).forEach(function (group) {
                     group.Items.forEach(function (item) {
                         if (fileSet[item.Filename]) item.Excluded = excluded;
                     });
@@ -2293,12 +2294,12 @@
                 });
             }
 
-            function postPreviewChange(filenames, excluded) {
-                if (!filenames.length || !previewData) return;
+            function postQueueChange(filenames, excluded) {
+                if (!filenames.length || !queueData) return;
 
-                var previousSnapshot = JSON.parse(JSON.stringify(previewData));
-                applyLocalPreviewChange(filenames, excluded);
-                renderPreview();
+                var previousSnapshot = JSON.parse(JSON.stringify(queueData));
+                applyLocalQueueChange(filenames, excluded);
+                renderQueue();
 
                 var url = ApiClient.getUrl('Newsletters/Preview/' + (excluded ? 'Exclude' : 'Include'));
                 ApiClient.ajax({
@@ -2307,31 +2308,31 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ Filenames: filenames })
                 }).catch(function (error) {
-                    console.error('Error updating newsletter preview:', error);
-                    alert('Could not update the newsletter preview. Check the Jellyfin logs.');
-                    previewData = previousSnapshot;
-                    renderPreview();
+                    console.error('Error updating newsletter queue:', error);
+                    alert('Could not update the newsletter queue. Check the Jellyfin logs.');
+                    queueData = previousSnapshot;
+                    renderQueue();
                 });
             }
 
-            function setPreviewGroupExcluded(buttonEl, excluded) {
-                var groupEl = buttonEl.closest('.preview-group');
-                if (!groupEl || !previewData) return;
+            function setQueueGroupExcluded(buttonEl, excluded) {
+                var groupEl = buttonEl.closest('.queue-group');
+                if (!groupEl || !queueData) return;
 
-                var key = groupEl.getAttribute('data-preview-key');
-                var group = (previewData.Groups || []).filter(function (g) {
-                    return previewGroupKey(g) === key;
+                var key = groupEl.getAttribute('data-queue-key');
+                var group = (queueData.Groups || []).filter(function (g) {
+                    return queueGroupKey(g) === key;
                 })[0];
                 if (!group) return;
 
-                postPreviewChange(group.Items.map(function (i) { return i.Filename; }), excluded);
+                postQueueChange(group.Items.map(function (i) { return i.Filename; }), excluded);
             }
 
-            function setPreviewItemExcluded(buttonEl, excluded) {
-                var episodeEl = buttonEl.closest('.preview-episode');
+            function setQueueItemExcluded(buttonEl, excluded) {
+                var episodeEl = buttonEl.closest('.queue-episode');
                 if (!episodeEl) return;
 
-                postPreviewChange([episodeEl.getAttribute('data-preview-file')], excluded);
+                postQueueChange([episodeEl.getAttribute('data-queue-file')], excluded);
             }
 
             function loadConfig() {
@@ -2392,7 +2393,7 @@
                         renderEmailConfigs();
                         renderRadarrConfigs();
                         renderSonarrConfigs();
-                        loadPreview();
+                        loadQueue();
                         loadFeatured(config.FeaturedItemIds || []);
                         Dashboard.hideLoadingMsg();
                     });
