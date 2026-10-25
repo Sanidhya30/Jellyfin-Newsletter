@@ -19,6 +19,9 @@ namespace Jellyfin.Plugin.Newsletters.Scanner;
 /// </summary>
 public class Scraper
 {
+    // Tables holding items that have not been sent in a newsletter yet.
+    private static readonly string[] PendingTables = { "CurrRunData", "CurrNewsletterData" };
+
     // Global Vars
     // Non-readonly
     private readonly PosterImageHandler imageHandler;
@@ -356,10 +359,28 @@ public class Scraper
                 return;
             }
 
-            string[] tables = { "CurrRunData", "CurrNewsletterData" };
-            foreach (var table in tables)
+            string sanitizedFilename = SanitizeDbItem(updatedObj.Filename);
+            string[] trackedTables = PendingTables
+                .Where(table => IsFilenameInTable(table, sanitizedFilename))
+                .ToArray();
+
+            if (trackedTables.Length == 0)
             {
-                UpdateMetadataInTable(table, updatedObj);
+                logger.Debug($"Item '{updatedObj.Title}' is not queued for a newsletter - skipping metadata update");
+                return;
+            }
+
+            // Look the poster up again from the item's current provider IDs instead of keeping the stored URL.
+            // If the item was re-identified in Jellyfin, the stored URL still points at the old match's poster.
+            string freshImageUrl = imageHandler.FetchImagePoster(updatedObj);
+            if (string.IsNullOrEmpty(freshImageUrl))
+            {
+                logger.Warn($"Could not obtain a poster URL for '{updatedObj.Title}' during metadata update. Keeping the stored one.");
+            }
+
+            foreach (var table in trackedTables)
+            {
+                UpdateMetadataInTable(table, updatedObj, sanitizedFilename, freshImageUrl);
             }
         }
         catch (Exception e)
@@ -372,50 +393,36 @@ public class Scraper
         }
     }
 
-    private void UpdateMetadataInTable(string table, JsonFileObj item)
+    private bool IsFilenameInTable(string table, string sanitizedFilename)
     {
-        // Check if item exists in this table and get its current ImageURL
-        string sanitizedFilename = SanitizeDbItem(item.Filename);
+        foreach (var row in db.Query($"SELECT 1 FROM {table} WHERE Filename={sanitizedFilename} LIMIT 1;"))
+        {
+            if (row is not null)
+            {
+                return true;
+            }
+        }
 
-        bool exists = false;
+        return false;
+    }
+
+    private void UpdateMetadataInTable(string table, JsonFileObj item, string sanitizedFilename, string freshImageUrl)
+    {
         string currentImageURL = string.Empty;
-
         foreach (var row in db.Query($"SELECT ImageURL FROM {table} WHERE Filename={sanitizedFilename};"))
         {
             if (row is not null)
             {
-                exists = true;
                 currentImageURL = row[0].ToString();
                 break;
             }
         }
 
-        if (!exists)
+        // Prefer the poster for the item's current match; fall back to the stored one if the lookup failed.
+        item.ImageURL = string.IsNullOrEmpty(freshImageUrl) ? currentImageURL : freshImageUrl;
+        if (item.ImageURL != currentImageURL)
         {
-            logger.Debug($"Item '{item.Title}' not in {table} - skipping metadata update");
-            return; // Item not in our DB
-        }
-
-        if (string.IsNullOrEmpty(currentImageURL))
-        {
-            if (string.IsNullOrEmpty(item.ImageURL))
-            {
-                logger.Debug($"ImageURL for '{item.Title}' is empty in {table}. Attempting to set it.");
-                string url = imageHandler.FetchImagePoster(item);
-                if (url == "429" || url == "ERR" || string.IsNullOrEmpty(url))
-                {
-                    logger.Warn($"Could not obtain ImageURL for '{item.Title}' during metadata update.");
-                }
-                else
-                {
-                    item.ImageURL = url;
-                }
-            }
-        }
-        else
-        {
-            // Preserve the existing valid URL during the update
-            item.ImageURL = currentImageURL;
+            logger.Info($"Poster URL for '{item.Title}' changed in {table}: {currentImageURL} -> {item.ImageURL}");
         }
 
         // Update all mutable metadata fields

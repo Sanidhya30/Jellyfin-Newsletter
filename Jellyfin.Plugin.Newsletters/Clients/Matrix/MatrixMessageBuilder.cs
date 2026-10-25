@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -198,7 +199,13 @@ public class MatrixMessageBuilder(
 
         var homeserverUrl = config.HomeserverUrl.TrimEnd('/');
 
-        string? cachedMxcUrl = GetCachedMxcUrl(source, homeserverUrl);
+        // Jellyfin can overwrite a poster in place (e.g. after re-identifying an item), keeping the same path.
+        // Keying local files by path plus last write time makes a replaced poster upload again.
+        string cacheKey = !isUrl && File.Exists(source)
+            ? $"{source}|{File.GetLastWriteTimeUtc(source).Ticks.ToString(CultureInfo.InvariantCulture)}"
+            : source;
+
+        string? cachedMxcUrl = GetCachedMxcUrl(cacheKey, homeserverUrl);
         if (!string.IsNullOrEmpty(cachedMxcUrl))
         {
             Logger.Debug($"Using cached MXC URL for {source} on {homeserverUrl}: {cachedMxcUrl}");
@@ -271,7 +278,10 @@ public class MatrixMessageBuilder(
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.AccessToken);
                 request.Content = streamContent;
 
+                // CA2025 is a false positive: GetResult() blocks until the upload finishes, before request is disposed.
+#pragma warning disable CA2025
                 var uploadResponse = _httpClient.SendAsync(request).GetAwaiter().GetResult();
+#pragma warning restore CA2025
                 if (uploadResponse.IsSuccessStatusCode)
                 {
                     var responseContent = uploadResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
@@ -281,7 +291,7 @@ public class MatrixMessageBuilder(
                     
                     if (!string.IsNullOrEmpty(mxcUrl))
                     {
-                        SaveCachedMxcUrl(source, homeserverUrl, mxcUrl);
+                        SaveCachedMxcUrl(cacheKey, homeserverUrl, mxcUrl);
                     }
 
                     return mxcUrl;
