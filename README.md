@@ -17,7 +17,7 @@ This repository is a maintained fork of the [Jellyfin Newsletter Plugin](https:/
 * Event-Based item detection and notifications (Add/Update/Delete)
 * Per-library selection for series and movies per client
 * Radarr & Sonarr Integration for Upcoming Media
-* Newsletter Preview to review and curate the queue before it is sent
+* Newsletter Queue to review and curate what will be sent, with per-section Exclude all / Restore all
 * Per-client rendered preview of the next newsletter, without sending it
 * Featured section to pin hand-picked titles to the top of the newsletter
 * Multiple Bug Fixes, Enhancements and much more!!!
@@ -28,7 +28,7 @@ This plugin uses event-driven notifications with scheduled processing. When libr
 
 Additionally, the plugin integrates with **Radarr** and **Sonarr** to include upcoming media in your newsletters, giving users a preview of what's coming soon to your server.
 
-Before a newsletter goes out you can review the queue on the **Preview** tab and drop anything you do not want to announce, and pin hand-picked titles to the top of the issue from the **Featured** tab.
+Before a newsletter goes out you can review the queue on the **Queue** tab and drop anything you do not want to announce, and pin hand-picked titles to the top of the issue from the **Featured** tab.
 
 # Screenshots
 
@@ -219,12 +219,13 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 </details>
 
 <details>
-<summary>Preview</summary>
+<summary>Queue & Preview</summary>
 
-> ***The "Preview" tab shows everything currently queued for the next newsletter, so you can review and curate it before it is sent.***
+> ***The "Queue" tab shows everything currently queued for the next newsletter, so you can review and curate it before it is sent.***
 
 - Entries are grouped by event section (**Added**, **Updated**, **Removed**) and, within each section, by library. Series entries are summarised by season/episode.
-- Removing an entry excludes it from **every** client. Excluded entries stay listed and can be restored at any time until the newsletter is sent.
+- Excluding an entry leaves it out for **every** client. Excluded entries stay listed and can be restored at any time until the newsletter is sent.
+- Each section has **Exclude all** and **Restore all** buttons to change the whole section at once, for example after a server migration re-queues your entire library.
 - Changes take effect immediately &mdash; you do **not** need to press Save.
 - Upcoming items from Radarr/Sonarr are fetched live when the newsletter is built, so they are not listed here.
 - Use the "Refresh" button to reload the queue.
