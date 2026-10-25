@@ -149,6 +149,8 @@
                             newsletter for every client, but does not delete anything from your library. It takes
                             effect immediately &mdash; you do not need to press Save.
                             Excluded entries can be restored until the newsletter sends.
+                            Use <b>Exclude all</b> on a section to clear it in one go, for example after a
+                            server migration re-queues your whole library.
                             <br>
                             Upcoming items from Radarr/Sonarr are fetched live when the newsletter is built and
                             are not listed here.
@@ -562,12 +564,25 @@
             }
 
             .queue-section-header {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 6px;
                 font-size: 1.05em;
                 font-weight: 700;
                 letter-spacing: 0.4px;
                 padding-bottom: 6px;
                 margin-bottom: 10px;
                 border-bottom: 2px solid;
+            }
+
+            .queue-section-actions {
+                margin-left: auto;
+                display: flex;
+                gap: 6px;
+                font-size: 0.85rem;
+                font-weight: 400;
+                letter-spacing: normal;
             }
 
             .queue-section-count {
@@ -2072,8 +2087,30 @@
             var queueExpanded = {};
             var queueFilter = 'all';
 
+            var QUEUE_SECTIONS = [
+                { key: 'add', label: 'Added', color: '#2e7d32' },
+                { key: 'update', label: 'Updated', color: '#1565c0' },
+                { key: 'delete', label: 'Removed', color: '#c62828' }
+            ];
+
             function queueGroupKey(group) {
                 return group.Title + ' ' + group.EventType;
+            }
+
+            // Groups shown under the current filter.
+            function queueVisibleGroups() {
+                return ((queueData && queueData.Groups) || []).filter(function (g) {
+                    if (queueFilter === 'included') return g.ExcludedCount !== g.TotalCount;
+                    if (queueFilter === 'excluded') return g.ExcludedCount === g.TotalCount;
+                    return true;
+                });
+            }
+
+            // Groups shown in one event section (add/update/delete) under the current filter.
+            function queueSectionGroups(sectionKey) {
+                return queueVisibleGroups().filter(function (g) {
+                    return (g.EventType || 'add').toLowerCase() === sectionKey;
+                });
             }
 
             function setQueueFilter(filter) {
@@ -2126,28 +2163,14 @@
                     return;
                 }
 
-                var groups = allGroups.filter(function (g) {
-                    if (queueFilter === 'included') return g.ExcludedCount !== g.TotalCount;
-                    if (queueFilter === 'excluded') return g.ExcludedCount === g.TotalCount;
-                    return true;
-                });
-
-                if (!groups.length) {
+                if (!queueVisibleGroups().length) {
                     list.innerHTML = '<p class="no-configs-text">Nothing matches this filter.</p>';
                     return;
                 }
 
-                var EVENT_SECTIONS = [
-                    { key: 'add', label: 'Added', color: '#2e7d32' },
-                    { key: 'update', label: 'Updated', color: '#1565c0' },
-                    { key: 'delete', label: 'Removed', color: '#c62828' }
-                ];
-
                 var html = '';
-                EVENT_SECTIONS.forEach(function (section) {
-                    var inSection = groups.filter(function (g) {
-                        return (g.EventType || 'add').toLowerCase() === section.key;
-                    });
+                QUEUE_SECTIONS.forEach(function (section) {
+                    var inSection = queueSectionGroups(section.key);
                     if (!inSection.length) return;
 
                     // Entries are what the newsletter actually shows - one card per title, so
@@ -2168,11 +2191,22 @@
                         countLabel += ' (' + items + ' item' + (items === 1 ? '' : 's') + ')';
                     }
 
+                    var hasIncluded = inSection.some(function (g) { return g.ExcludedCount < g.TotalCount; });
+                    var hasExcluded = inSection.some(function (g) { return g.ExcludedCount > 0; });
+
                     html += '<div class="queue-section">';
                     html += '  <div class="queue-section-header" style="color: ' + section.color
                         + '; border-bottom-color: ' + section.color + ';">'
-                        + escapeHtml(section.label) + ' <span class="queue-section-count">'
-                        + escapeHtml(countLabel) + '</span></div>';
+                        + '<span>' + escapeHtml(section.label) + '</span><span class="queue-section-count">'
+                        + escapeHtml(countLabel) + '</span>';
+                    html += '<span class="queue-section-actions">';
+                    if (hasExcluded) {
+                        html += '<button type="button" class="config-action-btn test-btn" onclick="setQueueSectionExcluded(\'' + section.key + '\', false)">Restore all</button>';
+                    }
+                    if (hasIncluded) {
+                        html += '<button type="button" class="config-action-btn delete-btn" onclick="setQueueSectionExcluded(\'' + section.key + '\', true)">Exclude all</button>';
+                    }
+                    html += '</span></div>';
 
                     inSection.forEach(function (group) {
                         html += renderQueueGroup(group);
@@ -2326,6 +2360,37 @@
                 if (!group) return;
 
                 postQueueChange(group.Items.map(function (i) { return i.Filename; }), excluded);
+            }
+
+            // Bulk version of the per-title buttons, for clearing out a large queue (for example
+            // after a server migration re-queues the whole library). Acts on what the section
+            // currently shows, so it respects the active filter.
+            function setQueueSectionExcluded(sectionKey, excluded) {
+                if (!queueData) return;
+
+                var section = QUEUE_SECTIONS.filter(function (s) { return s.key === sectionKey; })[0];
+                var groups = queueSectionGroups(sectionKey);
+                var filenames = [];
+                var entries = 0;
+                groups.forEach(function (group) {
+                    var matching = group.Items.filter(function (i) { return !!i.Excluded !== excluded; });
+                    if (!matching.length) return;
+                    entries++;
+                    matching.forEach(function (i) { filenames.push(i.Filename); });
+                });
+                if (!filenames.length) return;
+
+                var what = entries + ' ' + (entries === 1 ? 'entry' : 'entries')
+                    + (filenames.length !== entries
+                        ? ' (' + filenames.length + ' item' + (filenames.length === 1 ? '' : 's') + ')'
+                        : '');
+                var message = excluded
+                    ? 'Exclude ' + what + ' in "' + section.label + '" from the next newsletter?\n\n'
+                        + 'Nothing is deleted from your library, and you can restore them until the newsletter sends.'
+                    : 'Restore ' + what + ' in "' + section.label + '" to the next newsletter?';
+                if (!confirm(message)) return;
+
+                postQueueChange(filenames, excluded);
             }
 
             function setQueueItemExcluded(buttonEl, excluded) {
