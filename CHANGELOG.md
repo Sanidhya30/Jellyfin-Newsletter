@@ -1,3 +1,10 @@
+# 2.2.0.0
+
+- **Feature**: Added **Exclude all** and **Restore all** buttons to each section (Added, Updated, Removed) of the queue, so a whole section can be left out of or brought back into the next newsletter in one click
+- **Feature**: Renamed the Preview tab to **Queue** so it is not confused with the per-client Preview button, and renamed its "Removed" filter to "Excluded"
+- **Bug Fix**: When a queued item is re-identified in Jellyfin, its metadata update now looks the poster up again from the item's new provider IDs instead of keeping the poster of the old match. The Matrix client also re-uploads a local poster that Jellyfin replaced in place, rather than reusing the cached upload of the old image
+- **Maintenance**: Updated MailKit from 4.18.1 to 4.18.2 and SixLabors.ImageSharp from 4.1.2 to 4.1.3
+
 # 2.1.0.0
 
 - **Feature**: Added a Preview button to every Email, Discord, Telegram and Matrix configuration that renders what the next newsletter would look like for that client, side by side with the configuration. Nothing is sent, saved or uploaded, unsaved changes are included in the preview, and local poster attachments are shown through the server's own image endpoint

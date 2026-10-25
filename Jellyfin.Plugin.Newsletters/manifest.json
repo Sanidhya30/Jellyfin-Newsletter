@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/images/logo.png",
         "versions": [
             {
+                "version": "2.2.0.0",
+                "changelog": "- Feature: Added Exclude all and Restore all buttons to each section of the queue, to clear or bring back a whole section in one click.\n- Feature: Renamed the Preview tab to Queue, so it is not confused with the per-client Preview button.\n- Bug Fix: A queued item that is re-identified in Jellyfin now gets the poster of its new match instead of keeping the old one.\n- Maintenance: Updated MailKit from 4.18.1 to 4.18.2 and SixLabors.ImageSharp from 4.1.2 to 4.1.3.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
+                "targetAbi": "12.0.0.0",
+                "sourceUrl": "https://github.com/Sanidhya30/Jellyfin-Newsletter/releases/download/v2.2.0.0/newsletters_2.2.0.0.zip",
+                "checksum": "d7b05339b2d6ebaa0997ebb7bb0cb7d4",
+                "timestamp": "2026-10-25T17:01:38Z"
+            },
+            {
                 "version": "2.1.0.0",
                 "changelog": "- Feature: Added a Preview button to every client configuration that renders the next newsletter beside the config, without sending anything. Unsaved changes are previewed too.\n- Maintenance: Updated MailKit from 4.18.0 to 4.18.1.\n- FULL CHANGELOG: https://raw.githubusercontent.com/Sanidhya30/Jellyfin-Newsletter/master/CHANGELOG.md\n",
                 "targetAbi": "12.0.0.0",
