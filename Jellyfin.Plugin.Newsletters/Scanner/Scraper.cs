@@ -656,7 +656,7 @@ public class Scraper
         // The copy below replaces queued rows by Filename, and scanned rows carry no Excluded value,
         // so carry any admin exclusion across first. Without this, re-queuing a file (a Sonarr/Radarr
         // upgrade fires Delete then Add, which lands as an Update for the same path) silently puts an
-        // item the admin removed in the Preview tab back into the next newsletter.
+        // item the admin excluded in the Queue tab back into the next newsletter.
         db.ExecuteSQL("UPDATE CurrRunData SET Excluded = (SELECT n.Excluded FROM CurrNewsletterData n WHERE n.Filename = CurrRunData.Filename) " +
                       "WHERE EXISTS (SELECT 1 FROM CurrNewsletterData n WHERE n.Filename = CurrRunData.Filename);");
 
