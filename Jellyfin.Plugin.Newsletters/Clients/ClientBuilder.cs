@@ -386,14 +386,13 @@ public class ClientBuilder(Logger loggerInstance,
             {
                 AddCurrentSeason();
             }
-            else if (count < list_len)
-            {
-                EndOfSeason();
-                AddNewSeason();
-            }
             else
             {
+                // Close the previous season and start this one, even when this is the last item:
+                // the count == list_len check below closes it. Skipping AddNewSeason on the last
+                // item dropped a final season that held a single episode (e.g. specials + a finale).
                 EndOfSeason();
+                AddNewSeason();
             }
 
             if (count == list_len)
