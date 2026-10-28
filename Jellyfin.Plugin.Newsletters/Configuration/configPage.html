@@ -60,34 +60,6 @@
                                 Number of decimal places to display for community ratings (0-4). Default: 1
                             </div>
                         </div>
-                        <div class="selectContainer">
-                            <label class="selectLabel" for="HostingSelector">Poster Type:</label>
-                            <select is="emby-select" id="HostingSelector" name="HostingSelector"
-                                class="emby-select-withcolor emby-select">
-                                <option id="defaultTmdb" value="tmdb">TMDB Poster (Default)</option>
-                                <option id="localJFHosting" value="attachment">Local Poster Images</option>
-                            </select>
-                        </div>
-                        <div id="MaxEmailSizeContainer" name="options" style="display: none;">
-                            <div class="inputContainer" id="MaxEmailSize">
-                                <label class="inputLabel inputLabelUnfocused" for="EmailSize">Maximum Email
-                                    Size:</label>
-                                <input id="EmailSize" name="EmailSize" type="text" type="number" is="emby-input"
-                                    min="5" />
-                                <div class="fieldDescription">
-                                    Enter the maximum email size allowed by your email provider (in MB).
-                                    For reliable delivery, set this value slightly below your provider's official limit
-                                    (e.g., use 20 MB if your provider supports up to 25 MB).
-                                    <b>Default: 15 MB</b>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="fieldDescription">
-                            Choose how newsletter posters should be included in the emails.<br>
-                            <b>TMDB</b>: Uses image URLs from TheMovieDB (default, smallest emails).<br>
-                            <b>Local Attachments</b>: Embeds images directly in the email (larger messages).
-                        </div>
-
                         <hr>
                         <h3>Upcoming Media Integration</h3>
                         <div class="fieldDescription" style="margin-bottom: 15px;">
@@ -765,16 +737,8 @@
             // Configuration fields mapping (for General tab only now)
             var FIELDS = {
                 checkboxes: ['DebugMode'],
-                inputs: ['Hostname', 'HostingSelector', 'EmailSize', 'UpcomingDaysAhead']
+                inputs: ['Hostname', 'UpcomingDaysAhead']
             };
-
-            function updateMaxEmailSizeVisibility() {
-                var posterType = document.querySelector('#HostingSelector').value;
-                var maxEmailSizeDiv = document.getElementById('MaxEmailSizeContainer');
-                if (maxEmailSizeDiv) {
-                    maxEmailSizeDiv.style.display = (posterType === "attachment") ? '' : 'none';
-                }
-            }
 
             // RADARR/SONARR CONFIG FUNCTIONS
 
@@ -1064,6 +1028,29 @@
                 return html;
             }
 
+            function getPosterTypeHtml(clientId, configType, posterType) {
+                var updateFn = 'update' + (configType.charAt(0).toUpperCase() + configType.slice(1)) + 'ConfigFromUI(\'' + clientId + '\')';
+                var isAttachment = posterType === 'attachment';
+                var html = '<div class="selectContainer">';
+                html += '  <label class="selectLabel" for="' + configType + '-poster-type-' + clientId + '">Poster Type:</label>';
+                html += '  <select id="' + configType + '-poster-type-' + clientId + '" is="emby-select" onchange="' + updateFn + '" class="emby-select-withcolor emby-select">';
+                html += '    <option value="tmdb" ' + (isAttachment ? '' : 'selected') + '>TMDB Poster (Default)</option>';
+                html += '    <option value="attachment" ' + (isAttachment ? 'selected' : '') + '>Local Poster Images</option>';
+                html += '  </select>';
+                html += '  <div class="fieldDescription"><b>TMDB</b>: Links to poster images on TheMovieDB (smallest messages).<br><b>Local Poster Images</b>: Sends the poster files from your Jellyfin server (larger messages).</div>';
+                html += '</div>';
+                return html;
+            }
+
+            function getMaxEmailSizeHtml(clientId, posterType, maxEmailSize) {
+                var html = '<div id="email-max-email-size-container-' + clientId + '" class="inputContainer" style="display: ' + (posterType === 'attachment' ? '' : 'none') + ';">';
+                html += '  <label class="inputLabel inputLabelUnfocused">Maximum Email Size (MB):</label>';
+                html += '  <input id="email-max-email-size-' + clientId + '" type="number" is="emby-input" min="5" value="' + (maxEmailSize || 15) + '" onchange="updateEmailConfigFromUI(\'' + clientId + '\')" />';
+                html += '  <div class="fieldDescription">The largest email your provider accepts. Newsletters with local posters are split into several emails to stay under it. For reliable delivery, set this slightly below your provider\'s limit (e.g., use 20 MB if your provider supports up to 25 MB). <b>Default: 15 MB</b></div>';
+                html += '</div>';
+                return html;
+            }
+
             // ===================== DISCORD CONFIG FUNCTIONS =====================
 
             function addDiscordConfig() {
@@ -1098,7 +1085,8 @@
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
                     NewsletterOnFeaturedEnabled: true,
-                    MaxItemsPerSection: 0
+                    MaxItemsPerSection: 0,
+                    PosterType: 'tmdb'
                 };
                 discordConfigs.push(newConfig);
                 renderDiscordConfigs();
@@ -1166,6 +1154,7 @@
                 config.MoviesUpcomingEmbedColor = document.getElementById('discord-movies-upcoming-color-' + id).value;
                 config.MoviesFeaturedEmbedColor = document.getElementById('discord-movies-featured-color-' + id).value;
                 config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('discord-max-items-' + id).value) || 0);
+                config.PosterType = document.getElementById('discord-poster-type-' + id).value;
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('discord-event-add-' + id).checked;
@@ -1233,6 +1222,7 @@
                     html += getLibrarySelectionHtml(config.Id, 'discord', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'discord', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'discord', config.MaxItemsPerSection);
+                    html += getPosterTypeHtml(config.Id, 'discord', config.PosterType);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
@@ -1296,7 +1286,8 @@
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
                     NewsletterOnFeaturedEnabled: true,
-                    MaxItemsPerSection: 0
+                    MaxItemsPerSection: 0,
+                    PosterType: 'tmdb'
                 };
                 telegramConfigs.push(newConfig);
                 renderTelegramConfigs();
@@ -1353,6 +1344,7 @@
                 config.EpisodesEnabled = document.getElementById('telegram-episodes-' + id).checked;
                 config.GenresEnabled = document.getElementById('telegram-genres-' + id).checked;
                 config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('telegram-max-items-' + id).value) || 0);
+                config.PosterType = document.getElementById('telegram-poster-type-' + id).value;
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('telegram-event-add-' + id).checked;
@@ -1415,6 +1407,7 @@
                     html += getLibrarySelectionHtml(config.Id, 'telegram', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'telegram', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'telegram', config.MaxItemsPerSection);
+                    html += getPosterTypeHtml(config.Id, 'telegram', config.PosterType);
                     html += '    <div>';
                     html += '      <label class="inputLabel">Message Fields:</label>';
                     html += '      <table><tr>';
@@ -1463,7 +1456,9 @@
                     NewsletterOnFeaturedEnabled: true,
                     EnableSsl: true,
                     UseAuthentication: true,
-                    MaxItemsPerSection: 0
+                    MaxItemsPerSection: 0,
+                    PosterType: 'tmdb',
+                    MaxEmailSize: 15
                 };
                 emailConfigs.push(newConfig);
                 renderEmailConfigs();
@@ -1526,6 +1521,12 @@
                 config.EnableSsl = document.getElementById('email-ssl-' + id).checked;
                 config.UseAuthentication = document.getElementById('email-auth-' + id).checked;
                 config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('email-max-items-' + id).value) || 0);
+                config.PosterType = document.getElementById('email-poster-type-' + id).value;
+                config.MaxEmailSize = Math.max(1, parseInt(document.getElementById('email-max-email-size-' + id).value) || 15);
+
+                // Max email size only matters when posters are attached to the email
+                var maxEmailSizeContainer = document.getElementById('email-max-email-size-container-' + id);
+                if (maxEmailSizeContainer) maxEmailSizeContainer.style.display = config.PosterType === 'attachment' ? '' : 'none';
 
                 // Update Event Toggles
                 config.NewsletterOnItemAddedEnabled = document.getElementById('email-event-add-' + id).checked;
@@ -1637,6 +1638,8 @@
                     html += getLibrarySelectionHtml(config.Id, 'email', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'email', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'email', config.MaxItemsPerSection);
+                    html += getPosterTypeHtml(config.Id, 'email', config.PosterType);
+                    html += getMaxEmailSizeHtml(config.Id, config.PosterType, config.MaxEmailSize);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="email-category-' + config.Id + '">Template Category:</label>';
                     html += '      <select id="email-category-' + config.Id + '" is="emby-select" onchange="updateEmailConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';
@@ -1689,7 +1692,8 @@
                     NewsletterOnItemDeletedEnabled: true,
                     NewsletterOnUpcomingItemEnabled: false,
                     NewsletterOnFeaturedEnabled: true,
-                    MaxItemsPerSection: 0
+                    MaxItemsPerSection: 0,
+                    PosterType: 'tmdb'
                 };
                 matrixConfigs.push(newConfig);
                 renderMatrixConfigs();
@@ -1743,6 +1747,7 @@
                 config.Header = document.getElementById('matrix-header-' + id).value;
                 config.TemplateCategory = document.getElementById('matrix-category-' + id).value;
                 config.MaxItemsPerSection = Math.max(0, parseInt(document.getElementById('matrix-max-items-' + id).value) || 0);
+                config.PosterType = document.getElementById('matrix-poster-type-' + id).value;
 
                 config.NewsletterOnItemAddedEnabled = document.getElementById('matrix-event-add-' + id).checked;
                 config.NewsletterOnItemUpdatedEnabled = document.getElementById('matrix-event-update-' + id).checked;
@@ -1812,6 +1817,7 @@
                     html += getLibrarySelectionHtml(config.Id, 'matrix', config.SelectedSeriesLibraries, config.SelectedMoviesLibraries);
                     html += getEventTogglesHtml(config.Id, 'matrix', config.NewsletterOnItemAddedEnabled, config.NewsletterOnItemUpdatedEnabled, config.NewsletterOnItemDeletedEnabled, config.NewsletterOnUpcomingItemEnabled, config.NewsletterOnFeaturedEnabled);
                     html += getMaxItemsHtml(config.Id, 'matrix', config.MaxItemsPerSection);
+                    html += getPosterTypeHtml(config.Id, 'matrix', config.PosterType);
                     html += '    <div class="inputContainer">';
                     html += '      <label class="selectLabel" for="matrix-category-' + config.Id + '">Template Category:</label>';
                     html += '      <select id="matrix-category-' + config.Id + '" is="emby-select" onchange="updateMatrixConfigFromUI(\'' + config.Id + '\')" class="emby-select-withcolor emby-select">';
@@ -1993,10 +1999,7 @@
                     });
                     FIELDS.inputs.forEach(function (id) {
                         var el = document.querySelector('#' + id);
-                        if (!el) return;
-                        // Handle manual name mapping
-                        if (id === 'HostingSelector') config.PosterType = el.value;
-                        else config[id] = el.value;
+                        if (el) config[id] = el.value;
                     });
 
                     // Formatting Settings
@@ -2427,16 +2430,11 @@
                     });
 
                     // Specific Mappings
-                    var hostingEl = document.querySelector('#HostingSelector');
-                    if (hostingEl && config.PosterType) hostingEl.value = config.PosterType;
-
                     var featuredEmojiEl = document.querySelector('#FeaturedEmoji');
                     if (featuredEmojiEl) featuredEmojiEl.value = config.FeaturedEmoji || '\u2B50';
 
                     var ratingEl = document.querySelector('#CommunityRatingDecimalPlaces');
                     if (ratingEl) ratingEl.value = config.CommunityRatingDecimalPlaces !== undefined ? config.CommunityRatingDecimalPlaces : 1;
-
-                    updateMaxEmailSizeVisibility();
 
                     // Load Upcoming Days Ahead
                     var daysAheadEl = document.querySelector('#UpcomingDaysAhead');
@@ -2478,11 +2476,6 @@
 
                     e.preventDefault();
                     return false;
-                });
-
-            document.querySelector('#HostingSelector')
-                .addEventListener('change', function () {
-                    updateMaxEmailSizeVisibility();
                 });
         </script>
     </div>

@@ -187,11 +187,6 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 
 - Configure the number of decimal places to display for community ratings in newsletters (0-4 places, default: 1)
 
-### Poster Type
-
-* TMDB Poster - Uses image URLs from TheMovieDB (default, smallest emails).
-* Local Poster Images - Embeds local poster images directly in the email/discord embed (larger messages).
-
 ### Radarr / Sonarr Configuration
 
 > ***You can configure multiple Radarr and Sonarr instances. Each instance has its own URL, API key, and instance name. The plugin uses these to fetch upcoming media via the Radarr/Sonarr calendar APIs.***
@@ -325,6 +320,16 @@ Manifest is up and running! You can now import the manifest in Jellyfin and this
 
 - Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are left out of the newsletter entirely (they are not sent, just skipped), and a small "…" note is shown at the end of the section. Set to 0 to show all items (default).
 
+### Poster Type
+
+- How posters are included in this client's newsletters:
+  - **TMDB Poster** - Links to poster images on TheMovieDB (default, smallest messages).
+  - **Local Poster Images** - Sends the poster files from your Jellyfin server (larger messages).
+
+### Maximum Email Size
+
+- Only shown when **Poster Type** is **Local Poster Images**. The largest email your provider accepts, in MB. Newsletters are split into several emails to stay under it. Set this slightly below your provider's limit (default: 15 MB).
+
 ### Newsletter Template Category
 
 You can select between different email templates:
@@ -392,6 +397,12 @@ You can select between different email templates:
 
 - Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are left out of the newsletter entirely (they are not sent, just skipped). Set to 0 to show all items (default).
 
+### Poster Type
+
+- How posters are included in this client's newsletters:
+  - **TMDB Poster** - Links to poster images on TheMovieDB (default, smallest messages).
+  - **Local Poster Images** - Sends the poster files from your Jellyfin server (larger messages).
+
 ### Fields & Color selection
 
 - Select the fields that you want as part of your embed.
@@ -428,6 +439,12 @@ You can select between different email templates:
 ### Max Items Per Section
 
 - Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are left out of the newsletter entirely (they are not sent, just skipped). Set to 0 to show all items (default).
+
+### Poster Type
+
+- How posters are included in this client's newsletters:
+  - **TMDB Poster** - Links to poster images on TheMovieDB (default, smallest messages).
+  - **Local Poster Images** - Sends the poster files from your Jellyfin server (larger messages).
 
 ### Fields selection
 
@@ -477,6 +494,12 @@ You can select between different email templates:
 ### Max Items Per Section
 
 - Limit how many items are shown in each section of the newsletter (for example, "Added to Movies"). Items beyond the limit are skipped and a small "…" note is shown at the end of the section. Set to 0 to show all items (default).
+
+### Poster Type
+
+- How posters are included in this client's newsletters:
+  - **TMDB Poster** - Links to poster images on TheMovieDB (default, smallest messages).
+  - **Local Poster Images** - Sends the poster files from your Jellyfin server (larger messages).
 
 ### Newsletter Template Category
 

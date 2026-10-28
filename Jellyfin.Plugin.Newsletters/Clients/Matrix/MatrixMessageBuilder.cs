@@ -119,7 +119,7 @@ public class MatrixMessageBuilder(
         }
 
         string? mxcUrl = null;
-        if (Config.PosterType == "attachment" && eventType != "upcoming")
+        if (matrixConfig.PosterType == "attachment" && eventType != "upcoming")
         {
             mxcUrl = UploadImageToMatrix(item.PosterPath, false, matrixConfig);
         }
@@ -143,7 +143,7 @@ public class MatrixMessageBuilder(
         }
 
         string? mxcUrl = null;
-        if (Config.PosterType == "attachment" && eventType != "upcoming")
+        if (matrixConfig.PosterType == "attachment" && eventType != "upcoming")
         {
             mxcUrl = UploadImageToMatrix(item.PosterPath, false, matrixConfig);
         }

@@ -291,12 +291,14 @@ public class PluginConfiguration : BasePluginConfiguration
     // Scraper Config
 
     /// <summary>
-    /// Gets or sets a value indicating poster type.
+    /// Gets or sets the legacy global poster type.
+    /// Each client now has its own PosterType; this is only read to migrate older configurations.
     /// </summary>
     public string PosterType { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating maximum email size.
+    /// Gets or sets the legacy global maximum email size.
+    /// Each Email client now has its own MaxEmailSize; this is only read to migrate older configurations.
     /// </summary>
     public int EmailSize { get; set; }
 
@@ -574,6 +576,46 @@ public class PluginConfiguration : BasePluginConfiguration
                 NewsletterOnItemUpdatedEnabled = NewsletterOnItemUpdatedEnabled,
                 NewsletterOnItemDeletedEnabled = NewsletterOnItemDeletedEnabled
             });
+        }
+
+        MigratePosterSettings();
+    }
+
+    /// <summary>
+    /// Copies the legacy global poster type and email size into clients that don't have their own yet.
+    /// Only empty values are filled, so this is safe to run on every startup.
+    /// </summary>
+    private void MigratePosterSettings()
+    {
+        string posterType = string.IsNullOrEmpty(PosterType) ? "tmdb" : PosterType;
+        int emailSize = EmailSize > 0 ? EmailSize : 15;
+
+        foreach (var config in DiscordConfigurations.Where(c => string.IsNullOrEmpty(c.PosterType)))
+        {
+            config.PosterType = posterType;
+        }
+
+        foreach (var config in TelegramConfigurations.Where(c => string.IsNullOrEmpty(c.PosterType)))
+        {
+            config.PosterType = posterType;
+        }
+
+        foreach (var config in MatrixConfigurations.Where(c => string.IsNullOrEmpty(c.PosterType)))
+        {
+            config.PosterType = posterType;
+        }
+
+        foreach (var config in EmailConfigurations)
+        {
+            if (string.IsNullOrEmpty(config.PosterType))
+            {
+                config.PosterType = posterType;
+            }
+
+            if (config.MaxEmailSize <= 0)
+            {
+                config.MaxEmailSize = emailSize;
+            }
         }
     }
 }

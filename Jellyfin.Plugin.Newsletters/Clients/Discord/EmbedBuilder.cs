@@ -136,7 +136,7 @@ public class EmbedBuilder(
                 // Check if DiscordThumbnailEnabled is true
                 if (discordConfig.ThumbnailEnabled)
                 {
-                    if (Config.PosterType == "attachment")
+                    if (discordConfig.PosterType == "attachment")
                     {
                         if (item.EventType == "upcoming")
                         {

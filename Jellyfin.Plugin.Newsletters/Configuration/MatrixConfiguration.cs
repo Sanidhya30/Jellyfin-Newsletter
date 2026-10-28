@@ -108,6 +108,12 @@ public class MatrixConfiguration : ITemplatedConfiguration
     public int MaxItemsPerSection { get; set; } = 0;
 
     /// <summary>
+    /// Gets or sets how posters are sent: "tmdb" for remote image URLs, or "attachment" for local poster files.
+    /// Empty until set; treated like "tmdb".
+    /// </summary>
+    public string PosterType { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the per-library movie counts captured when the last newsletter was sent.
     /// </summary>
     public Collection<StoredLibraryCount> PrevMovieLibraryCounts { get; set; } = new Collection<StoredLibraryCount>();
