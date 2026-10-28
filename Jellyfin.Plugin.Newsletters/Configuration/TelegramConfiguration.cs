@@ -108,4 +108,10 @@ public class TelegramConfiguration : INewsletterConfiguration
     /// A value of 0 means unlimited (default).
     /// </summary>
     public int MaxItemsPerSection { get; set; } = 0;
+
+    /// <summary>
+    /// Gets or sets how posters are sent: "tmdb" for remote image URLs, or "attachment" for local poster files.
+    /// Empty until set; treated like "tmdb".
+    /// </summary>
+    public string PosterType { get; set; } = string.Empty;
 }

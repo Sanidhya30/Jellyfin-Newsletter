@@ -331,7 +331,7 @@ public class SmtpMailer(IServerApplicationHost appHost,
 
                     var bodyBuilder = new BodyBuilder();
 
-                    if (Config.PosterType == "attachment")
+                    if (emailConfig.PosterType == "attachment")
                     {
                         bodyBuilder.HtmlBody = finalBody;
 

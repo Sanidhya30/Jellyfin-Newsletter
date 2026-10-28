@@ -170,7 +170,7 @@ public class ClientBuilder(Logger loggerInstance,
         {
             foreach (var item in sortedItems)
             {
-                item.ImageURL = PreviewImageSource(item);
+                item.ImageURL = PreviewImageSource(item, config.PosterType);
             }
         }
 
@@ -484,10 +484,11 @@ public class ClientBuilder(Logger loggerInstance,
     /// Falls back to the poster URL whenever that endpoint would not serve the poster the newsletter uses.
     /// </summary>
     /// <param name="item">The item being previewed.</param>
+    /// <param name="posterType">The poster type of the client being previewed.</param>
     /// <returns>A value usable as an HTML image source.</returns>
-    private string PreviewImageSource(JsonFileObj item)
+    private string PreviewImageSource(JsonFileObj item, string? posterType)
     {
-        if (Config.PosterType != "attachment" || string.IsNullOrEmpty(item.PosterPath))
+        if (posterType != "attachment" || string.IsNullOrEmpty(item.PosterPath))
         {
             return item.ImageURL;
         }

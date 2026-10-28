@@ -73,7 +73,7 @@ public class HtmlBuilder(
         var currentChunkImages = new List<(MemoryStream? ImageStream, string ContentId)>();
         int currentChunkBytes = 0;
         const int overheadPerMail = 50000;
-        int maxChunkSizeBytes = Config.EmailSize * 1024 * 1024; // Convert MB to bytes
+        int maxChunkSizeBytes = (config.MaxEmailSize > 0 ? config.MaxEmailSize : 15) * 1024 * 1024; // Convert MB to bytes
         Logger.Debug($"Max email size set to {maxChunkSizeBytes} bytes");
 
         try
@@ -173,7 +173,7 @@ public class HtmlBuilder(
             // Track image size if needed
             int entryImageBytes = 0;
             (MemoryStream? ImageStream, string ContentId) imgToAdd = default;
-            if (Config.PosterType == "attachment")
+            if (config.PosterType == "attachment")
             {
                 var (resizedStream, contentId, success) = ResizeImage(item.PosterPath);
 

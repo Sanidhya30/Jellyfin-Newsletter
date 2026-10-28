@@ -52,4 +52,9 @@ public interface INewsletterConfiguration
     /// A value of 0 means unlimited.
     /// </summary>
     int MaxItemsPerSection { get; }
+
+    /// <summary>
+    /// Gets how posters are sent: "tmdb" for remote image URLs, or "attachment" for local poster files.
+    /// </summary>
+    string PosterType { get; }
 }

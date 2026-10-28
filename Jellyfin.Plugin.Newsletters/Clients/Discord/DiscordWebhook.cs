@@ -293,7 +293,7 @@ public class DiscordWebhook(IServerApplicationHost appHost,
                         using var payloadContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
                         multipartContent.Add(payloadContent, "payload_json");
 
-                        if (Config.PosterType == "attachment")
+                        if (discordConfig.PosterType == "attachment")
                         {
                             foreach (var (embed, resizedImageStream, uniqueImageName) in chunk)
                             {
